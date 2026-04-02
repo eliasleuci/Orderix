@@ -8,6 +8,7 @@ import LoginPage from './modules/auth/LoginPage';
 import POSPage from './modules/pos/POSPage';
 import KitchenPage from './modules/kitchen/KitchenPage';
 import DashboardPage from './modules/dashboard/DashboardPage';
+import FinancialPage from './modules/financial/FinancialPage';
 import CatalogPage from './modules/catalog/CatalogPage';
 import TablesPage from './modules/tables/TablesPage';
 import Sidebar from './layouts/Sidebar';
@@ -67,6 +68,7 @@ const AppContent = () => {
             <Route path="/pos" element={<POSPage />} />
             <Route path="/kitchen" element={<KitchenPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/financial" element={<FinancialPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/tables" element={<TablesPage />} />
             <Route path="*" element={<Navigate to="/pos" replace />} />

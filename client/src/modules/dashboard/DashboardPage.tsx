@@ -2,11 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { orderService } from '../../services/orderService';
 import { useAuthStore } from '../../store/authStore';
 import { 
-  TrendingUp, 
   ShoppingBag, 
   ChefHat, 
-  Clock, 
-  ArrowUpRight, 
   LayoutDashboard,
   Calendar,
   History,
@@ -14,8 +11,7 @@ import {
   Timer,
   PackageCheck,
   CheckCircle,
-  Banknote,
-  CreditCard
+  ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Order } from '../../types/domain';
@@ -159,14 +155,9 @@ const DashboardPage: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<'hoy' | 'ayer' | 'personalizado'>('hoy');
   const [customDate, setCustomDate] = useState<string>('');
   const [stats, setStats] = useState<any>({
-    sales: 0,
     orders: 0,
-    avgTicket: 0,
     activeOrders: 0,
-    cashTotal: 0,
-    cardTotal: 0,
     recentOrders: [],
-    trendSales: [40, 25, 55, 45, 75, 60, 90],
   });
 
   useEffect(() => {
@@ -202,31 +193,16 @@ const DashboardPage: React.FC = () => {
           return d >= startDate && d <= filterEnd;
         });
 
-        const totalSales = filteredOrders.reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
         const orderCount = filteredOrders.length;
-        const avg = orderCount > 0 ? totalSales / orderCount : 0;
         const active = filteredOrders.filter((o: Order) => o.status === 'PENDING' || o.status === 'PREPARING').length;
-        
-        // Desglose por método de pago
-        const cashTotal = filteredOrders
-          .filter((o: Order) => o.payment_method === 'CASH')
-          .reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
-        const cardTotal = filteredOrders
-          .filter((o: Order) => o.payment_method === 'CARD' || o.payment_method === 'DIGITAL')
-          .reduce((acc: number, o: Order) => acc + Number(o.total || 0), 0);
 
         setStats({
-          sales: totalSales,
           orders: orderCount,
-          avgTicket: avg,
           activeOrders: active,
-          cashTotal,
-          cardTotal,
           recentOrders: filteredOrders
             .filter((o: Order) => ['PENDING', 'PREPARING', 'READY'].includes(o.status))
             .sort((a: Order, b: Order) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 8),
-          trendSales: dateFilter === 'hoy' ? [10, 25, 15, 45, 30, 60] : [40, 30, 50, 20, 70, 45]
         });
       }
       setLoading(false);
@@ -333,22 +309,11 @@ const DashboardPage: React.FC = () => {
       {loading ? <DashboardSkeleton /> : (
         <div className="space-y-10 relative z-10">
           {/* TOP KPIs GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <DashboardStat 
-              title="Ventas de Hoy" 
-              value={`$${stats.sales.toLocaleString()}`} 
-              subValue="+12.4%"
-              trend="up"
-              icon={<TrendingUp className="text-primary" />} 
-              sparkData={stats.trendSales}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <DashboardStat 
               title="Pedidos Totales" 
               value={stats.orders} 
-              subValue="+5 hoy"
-              trend="up"
               icon={<ShoppingBag className="text-text-secondary" />} 
-              sparkData={[20, 40, 30, 50, 40, 60]}
             />
             <DashboardStat 
               title="Pedidos Activos" 
@@ -356,32 +321,6 @@ const DashboardPage: React.FC = () => {
               icon={<ChefHat className="text-warning" />} 
               color="border-warning/20 bg-warning/5"
             />
-          </div>
-
-          {/* PAYMENT BREAKDOWN */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card variant="glass" padding="normal" className="border-white/5 bg-slate-900/40 flex items-center gap-5">
-              <div className="w-14 h-14 bg-success/10 rounded-2xl flex items-center justify-center border border-success/20 shrink-0">
-                <Banknote size={28} className="text-success" />
-              </div>
-              <div>
-                <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">Cobrado en Efectivo</h3>
-                <span className="text-3xl font-black text-text-primary tracking-tighter leading-none">
-                  ${stats.cashTotal.toLocaleString()}
-                </span>
-              </div>
-            </Card>
-            <Card variant="glass" padding="normal" className="border-white/5 bg-slate-900/40 flex items-center gap-5">
-              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shrink-0">
-                <CreditCard size={28} className="text-primary" />
-              </div>
-              <div>
-                <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">Tarjeta / QR / Transferencia</h3>
-                <span className="text-3xl font-black text-text-primary tracking-tighter leading-none">
-                  ${stats.cardTotal.toLocaleString()}
-                </span>
-              </div>
-            </Card>
           </div>
 
           {/* BENTO BOTTOM SECTION */}
