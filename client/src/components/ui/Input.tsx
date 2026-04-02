@@ -11,11 +11,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, errorMessage, icon, disabled, ...props }, ref) => {
     
     const inputStyles = cn(
-      'w-full bg-slate-950/50 border border-border-subtle rounded-2xl py-4 px-6 text-text-primary placeholder:text-text-muted transition-all',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary',
+      'w-full bg-surface-elevated border border-border-subtle rounded-2xl py-4 px-6 text-text-primary placeholder:text-text-muted transition-all duration-300',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary shadow-sm',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       errorMessage && 'border-danger focus-visible:ring-danger',
-      icon && 'pl-14',
+      icon && 'pl-14 transition-all',
       className
     );
 

@@ -14,8 +14,8 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'solid', title, actions, padding = 'large', children, ...props }, ref) => {
     
     const variantStyles = {
-      solid: 'bg-surface-elevated border-white/5',
-      glass: 'bg-surface-glass backdrop-blur-xl border-white/10 glass',
+      solid: 'bg-surface-elevated border-border-subtle',
+      glass: 'bg-surface-glass backdrop-blur-xl border-border-subtle glass',
     };
 
     const paddingStyles = {
@@ -31,7 +31,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         animate={ANIMATIONS.scaleIn.animate}
         transition={ANIMATIONS.scaleIn.transition}
         className={cn(
-          'rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col',
+          'rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-all duration-300',
           variantStyles[variant],
           paddingStyles[padding],
           className
@@ -39,7 +39,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         {...props}
       >
         {title || actions ? (
-          <div className="flex items-center justify-between mb-6 pb-2 border-b border-white/5">
+          <div className="flex items-center justify-between mb-6 pb-2 border-b border-border-subtle">
             {title && (
               <h3 className="text-xl font-black uppercase tracking-tight text-text-primary">
                 {title}

@@ -22,6 +22,8 @@ export interface CreateOrderParams {
   userId?: string;
   customerName?: string;
   customerAddress?: string;
+  orderType?: string; // MESA | DELIVERY | TAKEAWAY
+  tableId?: string | null;
   items: { product_id: string; quantity: number; price: number; modifiers?: OrderItemModifier[]; notes?: string }[];
   total: number;
   paymentMethod: string;

@@ -104,7 +104,7 @@ const LoginPage: React.FC = () => {
                 </label>
                 <div className="relative group">
                   <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-primary" size={20} />
-                  <div className="w-full bg-slate-950/50 border border-primary/30 rounded-2xl py-0 pl-14 pr-6 text-text-primary font-bold h-14 flex items-center shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] cursor-default">
+                  <div className="w-full bg-surface-elevated/50 border border-primary/30 rounded-2xl py-0 pl-14 pr-6 text-text-primary font-bold h-14 flex items-center shadow-inner cursor-default">
                     La Calera, Córdoba, Argentina 🇦🇷
                   </div>
                 </div>
@@ -132,7 +132,7 @@ const LoginPage: React.FC = () => {
                   setBranchId('b1111111-1111-1111-1111-111111111111');
                   window.location.href = '/kitchen';
                 }}
-                className="bg-white/5 border-white/10 hover:bg-white/10"
+                className="bg-primary/5 border-primary/10 hover:bg-primary/10 text-primary"
                 leftIcon={<ChefHat size={20} className="text-primary" />}
               >
                 Modo Cocina (Acceso Rápido)
@@ -140,7 +140,7 @@ const LoginPage: React.FC = () => {
             </div>
           </form>
 
-          <footer className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-2">
+          <footer className="mt-12 pt-8 border-t border-border-subtle flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               <span className="text-[10px] font-black text-text-muted uppercase tracking-widest leading-none">

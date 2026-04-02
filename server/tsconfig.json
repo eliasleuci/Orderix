@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "target": "ES2022",
-    "module": "CommonJS",
+    "module": "node16",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./src",
@@ -9,7 +10,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "sourceMap": true,
     "baseUrl": ".",

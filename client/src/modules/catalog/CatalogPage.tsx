@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { productService } from '../../services/productService';
 import { Product, Category } from '../../types/domain';
-import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle } from 'lucide-react';
+import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Button from '../../components/ui/Button';
@@ -28,6 +28,10 @@ const CatalogPage: React.FC = () => {
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error', visible: boolean }>({
     message: '', type: 'success', visible: false
   });
+
+  // New Category State
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const fetchData = async () => {
     if (!branchId) return;
@@ -71,7 +75,25 @@ const CatalogPage: React.FC = () => {
     } else {
       setEditingProduct({ branch_id: branchId || '', is_active: true, price: 0 });
     }
+    setShowNewCategory(false);
+    setNewCategoryName('');
     setIsModalOpen(true);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    const { data, error } = await productService.createCategory(newCategoryName);
+    if (error) {
+      showToast(`Error al crear categoría: ${error}`, 'error');
+      return;
+    }
+    if (data) {
+      setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setEditingProduct(prev => prev ? { ...prev, category_id: data.id } : prev);
+      showToast(`Categoría "${data.name}" creada.`, 'success');
+    }
+    setShowNewCategory(false);
+    setNewCategoryName('');
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
@@ -188,13 +210,13 @@ const CatalogPage: React.FC = () => {
             <AnimatePresence mode="popLayout">
               {filteredProducts.map((p) => (
                 <motion.div key={p.id} layout {...ANIMATIONS.scaleIn}>
-                  <Card variant="glass" padding="normal" className={`relative flex flex-col h-full border ${p.is_active ? 'border-primary/10 hover:border-primary/30' : 'border-danger/20 opacity-70'} transition-colors group`}>
+                  <Card variant="glass" padding="normal" className={`relative flex flex-col border ${p.is_active ? 'border-primary/10 hover:border-primary/30' : 'border-danger/20 opacity-70'} transition-all duration-300 group shadow-sm hover:shadow-xl`}>
                     
-                    <div className="aspect-[4/3] rounded-2xl bg-surface-base/50 mb-4 flex items-center justify-center overflow-hidden relative border border-white/5">
+                    <div className="aspect-[4/3] rounded-2xl bg-surface-base/50 mb-4 flex items-center justify-center overflow-hidden relative border border-border-subtle">
                       {p.image_url ? (
                         <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
-                        <ImageIcon size={48} className="text-white/10" />
+                        <ImageIcon size={48} className="text-text-muted/20" />
                       )}
                       <div className="absolute top-4 left-4">
                         <Badge variant={p.is_active ? "success" : "danger"}>
@@ -203,25 +225,27 @@ const CatalogPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-h-[80px]">
                       <h4 className="font-black text-xl tracking-tight uppercase leading-tight mb-2 text-text-primary">{p.name}</h4>
-                      <p className="text-text-muted text-xs line-clamp-2 h-8 font-medium">
+                      <p className="text-text-muted text-xs line-clamp-2 font-medium">
                         {p.description || "Sin descripción establecida."}
                       </p>
                     </div>
 
                     <div className="flex items-end justify-between mt-6">
                       <span className="text-2xl font-black text-primary tracking-tighter">${p.price}</span>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
                         <button 
                           onClick={() => handleOpenModal(p)}
-                          className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-text-primary transition-colors"
+                          className="w-10 h-10 bg-primary/10 hover:bg-primary/20 rounded-xl flex items-center justify-center text-primary transition-colors"
+                          title="Editar"
                         >
                           <Edit3 size={18} />
                         </button>
                         <button 
                           onClick={() => handleDeleteProduct(p.id)}
                           className="w-10 h-10 bg-danger/10 hover:bg-danger/20 rounded-xl flex items-center justify-center text-danger transition-colors"
+                          title="Eliminar"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -276,15 +300,61 @@ const CatalogPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Categoría *</label>
-                      <select 
-                        required
-                        className="w-full bg-surface-base border border-white/10 rounded-2xl h-14 px-4 text-text-primary uppercase tracking-widest text-sm font-bold focus:outline-none focus:border-primary appearance-none"
-                        value={editingProduct.category_id || ''}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, category_id: e.target.value })}
-                      >
-                        <option value="" disabled>Seleccionar...</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
+                      
+                      {!showNewCategory ? (
+                        <div className="flex gap-2">
+                          <select 
+                            required={!showNewCategory}
+                            className="flex-1 bg-surface-base border border-white/10 rounded-2xl h-14 px-4 text-text-primary uppercase tracking-widest text-sm font-bold focus:outline-none focus:border-primary appearance-none"
+                            value={editingProduct.category_id || ''}
+                            onChange={(e) => {
+                              if (e.target.value === '__NEW__') {
+                                setShowNewCategory(true);
+                              } else {
+                                setEditingProduct({ ...editingProduct, category_id: e.target.value });
+                              }
+                            }}
+                          >
+                            <option value="" disabled>Seleccionar...</option>
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            <option value="__NEW__">➕ Nueva categoría...</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Ej: POSTRES"
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateCategory())}
+                            className="flex-1 bg-surface-base border border-primary/50 rounded-2xl h-14 px-4 text-text-primary uppercase tracking-widest text-sm font-bold focus:outline-none focus:border-primary"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleCreateCategory}
+                            className="w-14 h-14 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-2xl flex items-center justify-center text-primary transition-colors shrink-0"
+                            title="Confirmar"
+                          >
+                            <CheckCircle size={20} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowNewCategory(false); setNewCategoryName(''); }}
+                            className="w-14 h-14 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center text-text-muted transition-colors shrink-0"
+                            title="Cancelar"
+                          >
+                            <XCircle size={20} />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {showNewCategory && (
+                        <p className="text-[10px] text-text-muted mt-1.5 font-bold uppercase tracking-widest">
+                          <Tag size={9} className="inline mr-1" />Escribí el nombre y presá ✔
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Estado *</label>

@@ -3,7 +3,8 @@ import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
 import { productService } from '../../services/productService';
 import { orderService } from '../../services/orderService';
-import { ShoppingCart, Search, LogOut } from 'lucide-react';
+import { tableService, Table } from '../../services/tableService';
+import { ShoppingCart, Search, LogOut, Utensils, Truck, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
@@ -21,13 +22,17 @@ const POSPage: React.FC = () => {
   
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [orderType, setOrderType] = useState<'MESA' | 'DELIVERY' | 'TAKEAWAY'>('TAKEAWAY');
+  const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
 
   // Modal State
   const [isModifierModalOpen, setIsModifierModalOpen] = useState(false);
@@ -46,12 +51,14 @@ const POSPage: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const [prodRes, catRes] = await Promise.all([
+        const [prodRes, catRes, tableRes] = await Promise.all([
           productService.getBranchProducts(branchId),
           productService.getCategories(),
+          tableService.getBranchTables(branchId)
         ]);
         setProducts(prodRes.data || []);
         setCategories(catRes.data || []);
+        setTables(tableRes.data || []);
       } catch (err) {
         console.error('Error fetching POS data:', err);
       } finally {
@@ -94,8 +101,14 @@ const POSPage: React.FC = () => {
     setSelectedCategory(id);
   }, []);
 
-  const handleCheckout = async (method: string) => {
+  const handleCheckout = async () => {
     if (!branchId || items.length === 0 || checkoutStatus === 'loading') return;
+
+    if (orderType === 'MESA' && !selectedTableId) {
+      setErrorMessage('Por favor selecciona una mesa.');
+      setCheckoutStatus('error');
+      return;
+    }
 
     setCheckoutStatus('loading');
     setErrorMessage('');
@@ -105,6 +118,8 @@ const POSPage: React.FC = () => {
       userId: user?.id,
       customerName: customerName.trim() || undefined,
       customerAddress: customerAddress.trim() || undefined,
+      orderType: orderType,
+      tableId: orderType === 'MESA' ? selectedTableId : null,
       items: items.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -113,7 +128,7 @@ const POSPage: React.FC = () => {
         notes: item.notes
       })),
       total: getTotal(),
-      paymentMethod: method
+      paymentMethod: paymentMethod
     });
 
     if (error) {
@@ -128,11 +143,18 @@ const POSPage: React.FC = () => {
       return;
     }
 
+    // Auto-ocupar mesa si aplica
+    if (orderType === 'MESA' && selectedTableId) {
+      await tableService.occupyTable(selectedTableId, customerName || 'Cliente POS');
+    }
+
     setCheckoutStatus('success');
     clearCart(); // Clear only on absolute success
     setSearchTerm(''); // Clear search state
     setCustomerName(''); // Clear customer name
     setCustomerAddress(''); // Clear address field
+    setOrderType('TAKEAWAY');
+    setSelectedTableId('');
     
     // Venta Rápida: Focus search input immediately
     setTimeout(() => {
@@ -210,7 +232,7 @@ const POSPage: React.FC = () => {
       </div>
 
       {/* 2. PERSISTENT CART (RIGHT) */}
-      <aside className="w-[360px] bg-surface-elevated shadow-[-20px_0_100px_rgba(0,0,0,0.5)] z-20 flex flex-col border-l border-white/5">
+      <aside className="w-[380px] bg-surface-elevated shadow-[-20px_0_100px_rgba(0,0,0,0.5)] z-20 flex flex-col border-l border-white/5">
         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-surface-elevated/50 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shrink-0">
@@ -258,22 +280,67 @@ const POSPage: React.FC = () => {
 
         {/* CHECKOUT AREA (STICKY FOOTER) */}
         <footer className="p-5 bg-surface-base border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.4)] z-40">
+          
+          {/* TIPO DE PEDIDO SELECTOR */}
+          <div className="flex gap-1 mb-6 bg-surface-elevated p-1 rounded-2xl border border-white/5">
+            {[
+              { id: 'TAKEAWAY', label: 'Mostrador', icon: <User size={14} /> },
+              { id: 'MESA', label: 'Mesa', icon: <Utensils size={14} /> },
+              { id: 'DELIVERY', label: 'Envío', icon: <Truck size={14} /> },
+            ].map((type) => (
+              <button
+                key={type.id}
+                onClick={() => setOrderType(type.id as any)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  orderType === type.id 
+                    ? 'bg-primary text-white shadow-lg' 
+                    : 'text-text-muted hover:bg-white/5'
+                }`}
+              >
+                {type.icon}
+                {type.label}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-3 mb-6">
-            <div className="flex gap-2">
+            <div className="space-y-2">
               <Input
                 type="text"
                 placeholder="Nombre Cliente"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="bg-slate-900 border-white/10 text-sm h-12 flex-1 px-4"
+                className="text-sm h-12 w-full px-4"
               />
-              <Input
-                type="text"
-                placeholder="Dirección / Local"
-                value={customerAddress}
-                onChange={(e) => setCustomerAddress(e.target.value)}
-                className="bg-slate-900 border-white/10 text-sm h-12 flex-1 px-4"
-              />
+              
+              {orderType === 'DELIVERY' && (
+                <motion.div {...ANIMATIONS.fadeIn}>
+                  <Input
+                    type="text"
+                    placeholder="Dirección de Envío"
+                    value={customerAddress}
+                    onChange={(e) => setCustomerAddress(e.target.value)}
+                    className="text-sm h-12 w-full px-4 border-primary/30"
+                  />
+                </motion.div>
+              )}
+
+              {orderType === 'MESA' && (
+                <motion.div {...ANIMATIONS.fadeIn}>
+                  <select 
+                    value={selectedTableId}
+                    onChange={(e) => setSelectedTableId(e.target.value)}
+                    className="w-full bg-surface-elevated border border-primary/30 rounded-2xl h-12 px-4 text-text-primary uppercase tracking-widest text-[10px] font-black focus:outline-none focus:border-primary appearance-none"
+                  >
+                    <option value="">Seleccionar Mesa...</option>
+                    {tables.map(t => (
+                      <option key={t.id} value={t.id} disabled={t.status === 'OCCUPIED'}>
+                        {t.label || `Mesa ${t.number}`} {t.status === 'OCCUPIED' ? '(OCUPADA)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </motion.div>
+              )}
             </div>
           </div>
 
@@ -290,7 +357,7 @@ const POSPage: React.FC = () => {
               fullWidth
               disabled={items.length === 0 || checkoutStatus === 'loading'}
               isLoading={checkoutStatus === 'loading'}
-              onClick={() => handleCheckout('DIGITAL')}
+              onClick={handleCheckout}
               className="h-14 text-base font-black uppercase tracking-widest"
             >
               {checkoutStatus === 'loading' ? 'Procesando...' : 'Confirmar Pedido'}
@@ -298,20 +365,21 @@ const POSPage: React.FC = () => {
             
             <div className="flex gap-2">
               <Button 
-                variant="secondary" 
+                variant={paymentMethod === 'CASH' ? 'primary' : 'secondary'} 
                 fullWidth 
-                disabled={items.length === 0 || checkoutStatus === 'loading'}
-                onClick={() => handleCheckout('CASH')}
+                disabled={checkoutStatus === 'loading'}
+                onClick={() => setPaymentMethod('CASH')}
               >
                 Efectivo
               </Button>
               <Button 
-                variant="secondary" 
+                variant={paymentMethod === 'CARD' ? 'primary' : 'secondary'} 
                 fullWidth 
-                disabled={items.length === 0 || checkoutStatus === 'loading'}
-                onClick={() => handleCheckout('CARD')}
+                disabled={checkoutStatus === 'loading'}
+                onClick={() => setPaymentMethod('CARD')}
+                className="text-xs"
               >
-                Tarjeta
+                Tarjeta / QR / Transferencia
               </Button>
             </div>
           </div>

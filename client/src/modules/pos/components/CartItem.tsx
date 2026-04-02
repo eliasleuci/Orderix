@@ -17,7 +17,7 @@ const CartItem: React.FC<CartItemProps> = React.memo(({ item, onUpdateQuantity, 
       layout
       {...ANIMATIONS.fadeInUp}
       exit={{ opacity: 0, x: -20 }}
-      className="bg-slate-950 rounded-2xl p-4 flex items-center justify-between border border-white/5 shadow-inner"
+      className="bg-surface-elevated rounded-2xl p-4 flex items-center justify-between border border-border-subtle shadow-inner transition-colors duration-300"
     >
       <div className="flex-1 min-w-0 mr-3">
         <h4 className="font-black text-[13px] text-text-primary uppercase tracking-tight truncate">
@@ -33,7 +33,7 @@ const CartItem: React.FC<CartItemProps> = React.memo(({ item, onUpdateQuantity, 
               </span>
             ))}
             {item.notes && (
-              <span className="text-[8px] font-black uppercase tracking-widest px-1 py-0.5 rounded bg-white/10 text-white truncate max-w-[100px]">
+              <span className="text-[8px] font-black uppercase tracking-widest px-1 py-0.5 rounded bg-primary/10 text-primary truncate max-w-[100px]">
                 Nota: {item.notes}
               </span>
             )}
@@ -52,17 +52,17 @@ const CartItem: React.FC<CartItemProps> = React.memo(({ item, onUpdateQuantity, 
         </div>
       </div>
 
-      <div className="flex items-center gap-1 bg-surface-elevated rounded-xl p-1 border border-white/5 shrink-0">
+      <div className="flex items-center gap-1 bg-surface-base rounded-xl p-1 border border-border-subtle shrink-0 transition-colors duration-300">
         {onEdit && (
           <button
             onClick={() => onEdit(item.cartItemId)}
-            className="w-8 h-8 flex flex-col items-center justify-center text-text-muted hover:text-white hover:bg-white/10 rounded-lg transition-all active:scale-95"
+            className="w-8 h-8 flex flex-col items-center justify-center text-text-muted hover:text-text-primary hover:bg-primary/10 rounded-lg transition-all active:scale-95"
             title="Personalizar"
           >
             <Settings2 size={14} />
           </button>
         )}
-        <div className="w-px h-5 bg-white/5 mx-0.5" />
+        <div className="w-px h-5 bg-border-subtle mx-0.5" />
         
         <button
           onClick={() => onUpdateQuantity(item.cartItemId, item.quantity - 1)}
@@ -83,7 +83,7 @@ const CartItem: React.FC<CartItemProps> = React.memo(({ item, onUpdateQuantity, 
           <Plus size={14} strokeWidth={3} />
         </button>
 
-        <div className="w-px h-5 bg-white/5 mx-0.5" />
+        <div className="w-px h-5 bg-border-subtle mx-0.5" />
 
         <button
           onClick={() => onRemove(item.cartItemId)}

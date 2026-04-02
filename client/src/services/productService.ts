@@ -40,6 +40,15 @@ class ProductService implements IProductService {
     const { error } = await supabase.from('products').delete().eq('id', id);
     return { data: !error, error: error?.message || null };
   }
+
+  async createCategory(name: string): Promise<ServiceResponse<Category>> {
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([{ name: name.trim().toUpperCase() }])
+      .select()
+      .single();
+    return { data, error: error?.message || null };
+  }
 }
 
 export const productService = new ProductService();

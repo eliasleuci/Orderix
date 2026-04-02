@@ -2,18 +2,31 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
+import { useThemeStore } from './store/themeStore';
 import { cn } from './lib/utils';
 import LoginPage from './modules/auth/LoginPage';
 import POSPage from './modules/pos/POSPage';
 import KitchenPage from './modules/kitchen/KitchenPage';
 import DashboardPage from './modules/dashboard/DashboardPage';
 import CatalogPage from './modules/catalog/CatalogPage';
+import TablesPage from './modules/tables/TablesPage';
 import Sidebar from './layouts/Sidebar';
 
 // Componente para manejar el Layout condicional
 const AppContent = () => {
   const { user, loading, setUser, role } = useAuthStore();
+  const { theme } = useThemeStore();
   const location = useLocation();
+
+  useEffect(() => {
+    // Aplicar clase de tema al root
+    const root = window.document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light');
+    } else {
+      root.classList.remove('light');
+    }
+  }, [theme]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,8 +42,8 @@ const AppContent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-surface-base flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -40,9 +53,9 @@ const AppContent = () => {
   const shouldHideSidebar = isKitchenRoute && (role === 'KITCHEN' || !user);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-surface-base text-text-primary transition-colors duration-300">
       {user && !shouldHideSidebar && <Sidebar />}
-      <main className={cn("flex-1 overflow-auto bg-slate-950", shouldHideSidebar && "w-full")}>
+      <main className={cn("flex-1 overflow-auto bg-surface-base relative", shouldHideSidebar && "w-full")}>
         {!user ? (
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -55,6 +68,7 @@ const AppContent = () => {
             <Route path="/kitchen" element={<KitchenPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/tables" element={<TablesPage />} />
             <Route path="*" element={<Navigate to="/pos" replace />} />
           </Routes>
         )}

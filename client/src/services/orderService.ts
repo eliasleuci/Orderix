@@ -4,15 +4,16 @@ import { ServiceResponse, Order, OrderStatus } from '../types/domain';
 
 class OrderService implements IOrderService {
   async createOrder(params: CreateOrderParams): Promise<ServiceResponse<any>> {
-    const fullCustomerDetail = [params.customerName, params.customerAddress].filter(Boolean).join(' - ');
-    
     const { data, error } = await supabase.rpc('create_order_secure', {
       p_branch_id: params.branchId,
       p_user_id: params.userId,
-      p_customer_name: fullCustomerDetail || null,
+      p_customer_name: params.customerName || null,
+      p_customer_address: params.customerAddress || null,
       p_items: params.items,
       p_total: params.total,
       p_payment_method: params.paymentMethod,
+      p_order_type: params.orderType || 'TAKEAWAY',
+      p_table_id: params.tableId || null,
     });
 
     return { 
@@ -24,7 +25,7 @@ class OrderService implements IOrderService {
   async getBranchOrders(branchId: string, limit?: number, startDate?: string): Promise<ServiceResponse<Order[]>> {
     let query = supabase
       .from('orders')
-      .select('*, order_items(*, products(*))')
+      .select('*, tables(*), order_items(*, products(*))')
       .eq('branch_id', branchId)
       .order('created_at', { ascending: false });
 
@@ -42,9 +43,16 @@ class OrderService implements IOrderService {
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<ServiceResponse<Order>> {
+    const now = new Date().toISOString();
+    const updatePayload: Record<string, any> = { status, updated_at: now };
+    
+    // Registrar timestamps de línea de tiempo
+    if (status === 'PREPARING') updatePayload.started_at = now;
+    if (status === 'READY') updatePayload.ready_at = now;
+
     const { data, error } = await supabase
       .from('orders')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('id', orderId)
       .select('*, order_items(*, products(*))')
       .single();
@@ -64,6 +72,15 @@ class OrderService implements IOrderService {
       .eq('branch_id', branchId)
       .gte('created_at', startDate)
       .lte('created_at', endDate);
+
+    return { data: !error, error: error?.message || null };
+  }
+
+  async deleteAllBranchOrders(branchId: string): Promise<ServiceResponse<boolean>> {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('branch_id', branchId);
 
     return { data: !error, error: error?.message || null };
   }

@@ -16,7 +16,7 @@ const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral', size = 'md
     success: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
     warning: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
     danger: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-    neutral: 'bg-slate-800/50 text-slate-400 border-white/5',
+    neutral: 'bg-slate-700/50 text-slate-100 border-white/10 shadow-sm',
     primary: 'bg-primary/20 text-primary border-primary/20',
   };
 

@@ -20,7 +20,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) 
       whileTap={isOutOfStock ? undefined : { scale: 0.96 }}
       onClick={() => !isOutOfStock && onAdd(product)}
       className={cn(
-        "group relative flex h-full text-left transition-all",
+        "group relative flex text-left transition-all",
         isOutOfStock && "opacity-50 pointer-events-none grayscale"
       )}
     >
@@ -28,12 +28,12 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) 
         variant="glass"
         padding="normal"
         className={cn(
-          "flex-1 border-white/5 shadow-xl hover:shadow-primary/10 hover:border-primary/30 transition-all",
-          "bg-slate-900/80 backdrop-blur-md" // More solid background for legibility
+          "w-full border-border-subtle shadow-xl hover:shadow-primary/10 hover:border-primary/30 transition-all",
+          "bg-surface-elevated/80 backdrop-blur-md"
         )}
       >
         {/* IMAGE / ICON */}
-        <div className="aspect-square bg-surface-base rounded-2xl mb-4 flex items-center justify-center overflow-hidden border border-white/5 relative">
+        <div className="aspect-square bg-surface-base rounded-2xl mb-4 flex items-center justify-center overflow-hidden border border-border-subtle relative">
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
           ) : (
@@ -53,7 +53,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) 
         </div>
 
         {/* INFO */}
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col">
           <h3 className="font-black text-lg text-text-primary uppercase tracking-tight leading-none mb-2 line-clamp-1">
             {product.name}
           </h3>
