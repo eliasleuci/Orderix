@@ -1,0 +1,16 @@
+{
+  "name": "primeburgers-print-server",
+  "version": "1.0.0",
+  "description": "Print server for PrimeBurgers thermal printer",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "escpos": "^3.0.0-alpha.6",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}

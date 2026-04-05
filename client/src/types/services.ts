@@ -1,4 +1,4 @@
-import { Category, Product, Order, OrderStatus, ServiceResponse, Branch } from './domain';
+import { Category, Product, Order, OrderStatus, ServiceResponse, Branch, Ingredient, StockMovement, StockReport, IngredientCategory } from './domain';
 import { User, Session } from '@supabase/supabase-js';
 
 export interface OrderItemModifier {
@@ -47,4 +47,15 @@ export interface IOrderService {
   createOrder(params: CreateOrderParams): Promise<ServiceResponse<{ order_id: string; status: string; message: string }>>;
   getBranchOrders(branchId: string): Promise<ServiceResponse<Order[]>>;
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<ServiceResponse<Order>>;
+}
+
+export interface IIngredientService {
+  getBranchStock(branchId: string): Promise<ServiceResponse<Ingredient[]>>;
+  createIngredient(data: { name: string; unit: string; stock: number; minStock: number; categoryId?: string }): Promise<ServiceResponse<Ingredient>>;
+  deleteIngredient(id: string): Promise<ServiceResponse<boolean>>;
+  updateStock(id: string, newStock: number, reason?: string): Promise<ServiceResponse<Ingredient>>;
+  getCategories(): Promise<ServiceResponse<IngredientCategory[]>>;
+  createCategory(name: string): Promise<ServiceResponse<IngredientCategory>>;
+  getMovements(branchId: string, startDate?: string, endDate?: string): Promise<ServiceResponse<StockMovement[]>>;
+  getReport(branchId: string): Promise<ServiceResponse<StockReport>>;
 }

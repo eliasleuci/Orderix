@@ -4,7 +4,8 @@ import { useAuthStore } from '../../store/authStore';
 import { productService } from '../../services/productService';
 import { orderService } from '../../services/orderService';
 import { tableService, Table } from '../../services/tableService';
-import { ShoppingCart, Search, LogOut, Utensils, Truck, User } from 'lucide-react';
+import { printService } from '../../lib/printService';
+import { ShoppingCart, Search, LogOut, Utensils, Truck, User, Printer, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
@@ -33,6 +34,12 @@ const POSPage: React.FC = () => {
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
+
+  // Print State
+  const [lastOrder, setLastOrder] = useState<any>(null);
+  const [printerReady, setPrinterReady] = useState(false);
+  const [printerError, setPrinterError] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
 
   // Modal State
   const [isModifierModalOpen, setIsModifierModalOpen] = useState(false);
@@ -68,6 +75,51 @@ const POSPage: React.FC = () => {
 
     fetchData();
   }, [branchId]);
+
+  // Check printer status
+  useEffect(() => {
+    const checkPrinter = async () => {
+      const result = await printService.checkStatus();
+      setPrinterReady(result.status === 'ready');
+      if (result.error) {
+        setPrinterError(result.error);
+      }
+    };
+    checkPrinter();
+    const interval = setInterval(checkPrinter, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Print handlers
+  const handlePrintKitchen = async () => {
+    if (!lastOrder) return;
+    setPrinting(true);
+    const result = await printService.printKitchen(lastOrder);
+    setPrinting(false);
+    if (result.error) {
+      setPrinterError(result.error);
+    }
+  };
+
+  const handlePrintCustomer = async () => {
+    if (!lastOrder) return;
+    setPrinting(true);
+    const result = await printService.printCustomer(lastOrder);
+    setPrinting(false);
+    if (result.error) {
+      setPrinterError(result.error);
+    }
+  };
+
+  const handlePrintBoth = async () => {
+    if (!lastOrder) return;
+    setPrinting(true);
+    const result = await printService.printBoth(lastOrder);
+    setPrinting(false);
+    if (result.error) {
+      setPrinterError(result.error);
+    }
+  };
 
 
   // 2. MEMOIZED HANDLERS (CRITICAL FOR PERFORMANCE)
@@ -147,6 +199,26 @@ const POSPage: React.FC = () => {
       await tableService.occupyTable(selectedTableId, customerName || 'Cliente POS');
     }
 
+    // Save order for printing
+    const tableLabel = orderType === 'MESA' ? tables.find(t => t.id === selectedTableId)?.label || `Mesa ${tables.find(t => t.id === selectedTableId)?.number}` : '';
+    setLastOrder({
+      ticketNumber: data?.ticket_number,
+      customerName: customerName.trim() || undefined,
+      customerAddress: customerAddress.trim() || undefined,
+      orderType,
+      table: tableLabel,
+      items: items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        modifiers: item.modifiers,
+        notes: item.notes
+      })),
+      paymentMethod,
+      total: getTotal(),
+      time: new Date().toISOString()
+    });
+
     setCheckoutStatus('success');
     clearCart();
     setSearchTerm('');
@@ -159,7 +231,7 @@ const POSPage: React.FC = () => {
       setCheckoutStatus('idle');
       searchInputRef.current?.focus();
     }, 2000);
-  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus]);
+  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables]);
 
   // 3. FILTERING LOGIC
   const filteredProducts = useMemo(() => {
@@ -397,6 +469,79 @@ const POSPage: React.FC = () => {
         isVisible={checkoutStatus === 'error'}
         onClose={() => setCheckoutStatus('idle')}
       />
+
+      {/* PRINT PANEL */}
+      <AnimatePresence>
+        {lastOrder && (
+          <div className="fixed bottom-6 right-6 z-50">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-surface-elevated border border-white/10 rounded-2xl shadow-2xl p-4 w-72"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Printer size={18} className="text-primary" />
+                  <span className="font-black text-sm uppercase tracking-widest">Imprimir Ticket</span>
+                </div>
+                <button 
+                  onClick={() => setLastOrder(null)}
+                  className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-text-muted"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="bg-surface-base rounded-xl p-3 mb-3 border border-white/5">
+                <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Orden</p>
+                <p className="text-2xl font-black text-primary">#{String(lastOrder.ticketNumber || '???').padStart(3, '0')}</p>
+              </div>
+
+              {printerError && (
+                <div className="bg-danger/10 border border-danger/20 rounded-xl p-2 mb-3">
+                  <p className="text-[10px] text-danger font-bold">{printerError}</p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handlePrintKitchen}
+                  disabled={printing || !printerReady}
+                  className="w-full bg-surface-base hover:bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-left disabled:opacity-50 transition-colors"
+                >
+                  <p className="font-black text-xs uppercase tracking-widest">Ticket Cocina</p>
+                  <p className="text-[10px] text-text-muted">Para la cocina</p>
+                </button>
+                
+                <button
+                  onClick={handlePrintCustomer}
+                  disabled={printing || !printerReady}
+                  className="w-full bg-surface-base hover:bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-left disabled:opacity-50 transition-colors"
+                >
+                  <p className="font-black text-xs uppercase tracking-widest">Ticket Cliente</p>
+                  <p className="text-[10px] text-text-muted">Para entregar al cliente</p>
+                </button>
+
+                <button
+                  onClick={handlePrintBoth}
+                  disabled={printing || !printerReady}
+                  className="w-full bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl py-3 px-4 text-left disabled:opacity-50 transition-colors"
+                >
+                  <p className="font-black text-xs uppercase tracking-widest text-primary">Imprimir Ambos</p>
+                  <p className="text-[10px] text-text-muted">Cocina + Cliente</p>
+                </button>
+              </div>
+
+              {!printerReady && !printerError && (
+                <p className="text-[10px] text-text-muted text-center mt-2">
+                  Conectando con impresora...
+                </p>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* POS CUSTOMIZATIONS MODAL */}
       <ModifierModal 
