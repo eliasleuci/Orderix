@@ -34,18 +34,7 @@ const KitchenPage: React.FC = () => {
     }
   }, [playBell]);
 
-  const { orders, loading, isConnected, lastUpdate, pendingCount } = useOrders(branchId, memoizedOptions, handleNewOrder);
-
-  // Estado local para actualización optimista
-  const [localOrders, setLocalOrders] = useState<Order[]>([]);
-  const isUpdatingRef = useRef(false);
-
-  // Sincronizar estado local con datos entrantes del hook (solo si no hay actualización activa)
-  useEffect(() => {
-    if (!isUpdatingRef.current) {
-      setLocalOrders(orders);
-    }
-  }, [orders]);
+  const { orders, loading, isConnected, lastUpdate, pendingCount, setOrders } = useOrders(branchId, memoizedOptions, handleNewOrder);
 
   const syncTimeDisplay = useMemo(() => {
     if (!lastUpdate) return 'Sincronizando...';
@@ -69,16 +58,10 @@ const KitchenPage: React.FC = () => {
 
   // 1. MEMOIZED STATUS HANDLER (with Optimistic Update)
   const handleStatusChange = useCallback(async (orderId: string, currentStatus: string) => {
-    // Evitar actualizaciones duplicadas
-    if (isUpdatingRef.current) return;
-    
-    isUpdatingRef.current = true;
-    
     const nextStatus: OrderStatus = currentStatus === 'PENDING' ? 'PREPARING' : 'READY';
     const now = new Date().toISOString();
     
-    // 1. Actualización optimista inmediata en el estado local
-    setLocalOrders((prev) => 
+    setOrders((prev) => 
       prev.map((order) => {
         if (order.id === orderId) {
           return {
@@ -93,56 +76,23 @@ const KitchenPage: React.FC = () => {
     );
 
     try {
-      // 2. Llamada a la API en segundo plano
       const { error } = await orderService.updateOrderStatus(orderId, nextStatus);
       if (error) {
-        // Revertir cambio si falla
-        const revertedStatus: OrderStatus = currentStatus as OrderStatus;
-        setLocalOrders((prev) => 
-          prev.map((order) => {
-            if (order.id === orderId) {
-              return {
-                ...order,
-                status: revertedStatus,
-                started_at: currentStatus === 'PENDING' ? null : order.started_at,
-                ready_at: currentStatus === 'PREPARING' ? null : order.ready_at
-              } as Order;
-            }
-            return order;
-          })
-        );
         setErrorToast('Error de conexión con cocina');
         return;
       }
       setSuccessToast(nextStatus === 'PREPARING' ? '¡Pedido en fuego!' : '¡Pedido despachado!');
     } catch (err: any) {
-      // Revertir cambio si falla
-      const revertedStatus: OrderStatus = currentStatus as OrderStatus;
-      setLocalOrders((prev) => 
-        prev.map((order) => {
-          if (order.id === orderId) {
-            return {
-              ...order,
-              status: revertedStatus,
-              started_at: currentStatus === 'PENDING' ? null : order.started_at,
-              ready_at: currentStatus === 'PREPARING' ? null : order.ready_at
-            } as Order;
-          }
-          return order;
-        })
-      );
       setErrorToast('Falla crítica de sistema');
-    } finally {
-      isUpdatingRef.current = false;
     }
-  }, []);
+  }, [setOrders]);
 
   // 2. FIFO LOGIC & FILTERING
   const activeOrders = useMemo(() => {
-    return localOrders
+    return orders
       .filter((o) => o.status === 'PENDING' || o.status === 'PREPARING')
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  }, [localOrders]);
+  }, [orders]);
 
   if (loading) {
     return (

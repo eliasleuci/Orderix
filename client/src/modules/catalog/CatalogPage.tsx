@@ -103,24 +103,30 @@ const CatalogPage: React.FC = () => {
       return;
     }
 
-    // Remover la propiedad 'categories' (join) para evitar el error de Supabase
-    const { categories, ...productDataToSave } = editingProduct as any;
+    const { categories: _, ...productDataToSave } = editingProduct as any;
 
-    let error;
     if (editingProduct.id) {
       const res = await productService.updateProduct(editingProduct.id, productDataToSave);
-      error = res.error;
+      if (res.error) {
+        showToast(res.error, 'error');
+      } else if (res.data) {
+        const newProduct = res.data as Product;
+        const category = categories.find((c) => c.id === newProduct.category_id);
+        setProducts(prev => prev.map(p => p.id === newProduct.id ? { ...newProduct, categories: category } : p));
+        showToast('Producto actualizado correctamente.', 'success');
+        setIsModalOpen(false);
+      }
     } else {
       const res = await productService.createProduct(productDataToSave);
-      error = res.error;
-    }
-
-    if (error) {
-      showToast(error, 'error');
-    } else {
-      showToast('Producto guardado correctamente.', 'success');
-      setIsModalOpen(false);
-      fetchData(); // Refresh list
+      if (res.error) {
+        showToast(res.error, 'error');
+      } else if (res.data) {
+        const newProduct = res.data as Product;
+        const category = categories.find((c) => c.id === newProduct.category_id);
+        setProducts(prev => [{ ...newProduct, categories: category }, ...prev]);
+        showToast('Producto creado correctamente.', 'success');
+        setIsModalOpen(false);
+      }
     }
   };
 
@@ -131,8 +137,8 @@ const CatalogPage: React.FC = () => {
     if (error) {
       showToast(error, 'error');
     } else {
+      setProducts(prev => prev.filter(p => p.id !== id));
       showToast('Producto eliminado.', 'success');
-      fetchData();
     }
   };
 

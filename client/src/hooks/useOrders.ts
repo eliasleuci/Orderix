@@ -20,7 +20,7 @@ interface UseOrdersReturn {
 
 const FULL_ORDER_SELECT = '*, tables(*), order_items(*, products(*))';
 const MAX_CACHE_SIZE = 200;
-const BATCH_DELAY_MS = 16;
+const BATCH_DELAY_MS = 0;
 
 export const useOrders = (
   branchId: string | null,

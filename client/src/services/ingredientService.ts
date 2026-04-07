@@ -7,7 +7,7 @@ class IngredientService implements IIngredientService {
     try {
       const { data, error } = await supabase
         .from('ingredients')
-        .select('*, category:ingredient_categories(*)')
+        .select('*, category:ingredient_categories(id, name)')
         .eq('is_active', true)
         .order('name');
       
