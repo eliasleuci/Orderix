@@ -50,6 +50,7 @@ model User {
 
   branch      Branch   @relation(fields: [branchId], references: [id])
   orders      Order[]
+  stockMovements StockMovement[]
 
   @@index([branchId])
   @@map("users")
@@ -90,21 +91,62 @@ model Product {
 }
 
 model Ingredient {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  unit        String   // gr, ml, unit, etc.
-  stock       Float    @default(0)
-  minStock    Float    @default(0)
+  unit        String    // gr, ml, unit, etc.
+  stock       Float     @default(0)
+  minStock    Float     @default(0)
+  categoryId  String?
   branchId    String
   deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  branch      Branch    @relation(fields: [branchId], references: [id])
+  category    IngredientCategory? @relation(fields: [categoryId], references: [id])
+  recipeItems RecipeItem[]
+  movements   StockMovement[]
+
+  @@index([branchId])
+  @@index([categoryId])
+  @@map("ingredients")
+}
+
+model IngredientCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  branch      Branch   @relation(fields: [branchId], references: [id])
-  recipeItems RecipeItem[]
+  ingredients Ingredient[]
 
-  @@index([branchId])
-  @@map("ingredients")
+  @@map("ingredient_categories")
+}
+
+enum MovementType {
+  ADD       // Reposición manual
+  REMOVE    // Consumo por orden
+  ADJUST    // Ajuste manual (positvo o negativo)
+  INITIAL   // Stock inicial
+}
+
+model StockMovement {
+  id            String        @id @default(uuid())
+  ingredientId  String
+  userId        String?
+  type          MovementType
+  quantity      Float         // Cantidad cambiada (puede ser negativa)
+  stockBefore   Float         // Stock antes del cambio
+  stockAfter    Float         // Stock después del cambio
+  reason        String?       // Nota o motivo del cambio
+  createdAt     DateTime      @default(now())
+
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
+
+  @@index([ingredientId])
+  @@index([createdAt])
+  @@map("stock_movements")
 }
 
 model RecipeItem {

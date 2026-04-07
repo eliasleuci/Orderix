@@ -17,4 +17,27 @@ export class AuthController {
       next(error);
     }
   }
+
+  async exchangeToken(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { supabaseToken } = req.body;
+      
+      if (!supabaseToken) {
+        res.status(400).json({
+          status: 'error',
+          message: 'supabaseToken is required'
+        });
+        return;
+      }
+
+      const data = await authService.exchangeToken(supabaseToken);
+
+      res.status(200).json({
+        status: 'success',
+        data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

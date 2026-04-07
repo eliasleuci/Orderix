@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 
@@ -16,6 +16,7 @@ const Sidebar: React.FC = () => {
     { path: '/kitchen', icon: <ChefHat />, label: 'Cocina' },
     { path: '/tables', icon: <UtensilsCrossed />, label: 'Mesas' },
     { path: '/catalog', icon: <BookOpen />, label: 'Catálogo' },
+    { path: '/stock', icon: <Package />, label: 'Stock' },
     { path: '/dashboard', icon: <LayoutDashboard />, label: 'Panel' },
     { path: '/financial', icon: <DollarSign />, label: 'Financiero' },
   ];

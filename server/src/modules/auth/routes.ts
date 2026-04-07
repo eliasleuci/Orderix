@@ -13,6 +13,13 @@ const loginSchema = z.object({
   })
 });
 
+const exchangeTokenSchema = z.object({
+  body: z.object({
+    supabaseToken: z.string()
+  })
+});
+
 router.post('/login', validate(loginSchema), authController.login);
+router.post('/exchange-token', validate(exchangeTokenSchema), authController.exchangeToken);
 
 export default router;

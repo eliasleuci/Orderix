@@ -28,3 +28,7 @@ server/logs/
 Thumbs.db
 .vscode/
 .idea/
+
+# Electron build outputs
+client/dist-electron/
+client/release/

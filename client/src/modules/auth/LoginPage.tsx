@@ -65,11 +65,11 @@ const LoginPage: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               className="w-32 h-32 mx-auto mb-8 relative rounded-[1.5rem] overflow-hidden shadow-2xl shadow-primary/20"
             >
-              <img src="/prime-logo.jpg" alt="Prime Burgers Logo" className="w-full h-full object-cover" />
+              <img src="icono.ico" alt="Orderix Logo" className="w-full h-full object-cover" />
             </motion.div>
             
             <h1 className="text-4xl font-black tracking-tighter text-text-primary uppercase leading-none">
-              Prime Burgers
+              Orderix
             </h1>
             <p className="text-text-muted font-bold mt-2 uppercase tracking-[0.3em] text-xs">
               Staff Access
@@ -151,7 +151,7 @@ const LoginPage: React.FC = () => {
         </Card>
 
         <div className="text-center text-text-muted text-[10px] font-black uppercase tracking-widest opacity-50 relative z-20">
-          Prime Burgers POS
+          Orderix POS
         </div>
       </motion.div>
 

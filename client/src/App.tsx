@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
@@ -13,6 +13,7 @@ const DashboardPage = lazy(() => import('./modules/dashboard/DashboardPage'));
 const FinancialPage = lazy(() => import('./modules/financial/FinancialPage'));
 const CatalogPage = lazy(() => import('./modules/catalog/CatalogPage'));
 const TablesPage = lazy(() => import('./modules/tables/TablesPage'));
+const StockPage = lazy(() => import('./modules/stock/StockPage'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-surface-base flex items-center justify-center">
@@ -79,6 +80,7 @@ const AppContent = () => {
               <Route path="/financial" element={<FinancialPage />} />
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/tables" element={<TablesPage />} />
+              <Route path="/stock" element={<StockPage />} />
               <Route path="*" element={<Navigate to="/pos" replace />} />
             </Routes>
           )}
@@ -90,9 +92,9 @@ const AppContent = () => {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppContent />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

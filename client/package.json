@@ -1,14 +1,21 @@
 {
-  "name": "client",
+  "name": "orderix",
+  "productName": "Orderix",
+  "version": "1.0.0",
+  "description": "Sistema de Punto de Venta para Restaurantes",
+  "author": "Orderix",
   "private": true,
-  "version": "0.0.0",
+  "main": "dist-electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "test:validation": "ts-node-esm scripts/validation.ts"
+    "test:validation": "ts-node-esm scripts/validation.ts",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder --win nsis",
+    "preelectron:build": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs');fs.renameSync('dist-electron/main.js','dist-electron/main.cjs');fs.renameSync('dist-electron/preload.js','dist-electron/preload.cjs');\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -19,6 +26,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.3.0",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^3.0.2",
     "zustand": "^5.0.3"
   },
@@ -30,10 +38,36 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "dotenv": "^17.3.1",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.0.12",
     "ts-node": "^11.0.0-beta.1",
     "typescript": "^5.8.2",
     "vite": "^6.2.0"
+  },
+  "build": {
+    "appId": "com.orderix.app",
+    "productName": "Orderix",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/icono.ico",
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Orderix-Setup-${version}.exe",
+      "shortcutName": "Orderix"
+    }
   }
 }
