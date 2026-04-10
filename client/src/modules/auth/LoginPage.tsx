@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { authService } from '../../services/authService';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
-import { LogIn, Store, ShieldCheck, Mail, Lock, ChefHat } from 'lucide-react';
+import { LogIn, Store, ShieldCheck, Mail, Lock, ChefHat, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Button from '../../components/ui/Button';
@@ -15,8 +15,30 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [view, setView] = useState<'LOGIN' | 'BRANCH_SELECTION'>('LOGIN');
+  const [branches, setBranches] = useState<any[]>([]);
   
-  const { setUser, setBranchId, setTenantId } = useAuthStore();
+  const { user, setUser, setBranchId, setTenantId, branchId } = useAuthStore();
+
+  const loadBranches = async (tid: string) => {
+    setLoading(true);
+    const { data } = await authService.getTenantBranches(tid);
+    setBranches(data || []);
+    setLoading(false);
+    setView('BRANCH_SELECTION');
+  };
+
+  // If already logged in but no branch, go straight to selection
+  useEffect(() => {
+    if (user && !branchId) {
+      authService.getProfile(user.id).then(({ data: profile }) => {
+        if (profile?.tenant_id) {
+          loadBranches(profile.tenant_id);
+          setTenantId(profile.tenant_id);
+        }
+      });
+    }
+  }, [user, branchId]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,26 +54,19 @@ const LoginPage: React.FC = () => {
     }
 
     if (data?.user) {
-      // Obtenemos el perfil extendido (rol, sucursal y tenant)
       const { data: profile } = await authService.getProfile(data.user.id);
       
       const userRole = profile?.role || 'CASHIER';
-      const myBranchId = profile?.branch_id || 'b1111111-1111-1111-1111-111111111111';
-      
-      // Si tenant_id es null, obtenerlo desde la branch
-      let myTenantId = profile?.tenant_id;
-      if (!myTenantId) {
-        const { data: branchData } = await supabase
-          .from('branches')
-          .select('tenant_id')
-          .eq('id', myBranchId)
-          .single();
-        myTenantId = branchData?.tenant_id || '11111111-1111-1111-1111-111111111111';
-      }
+      const myTenantId = profile?.tenant_id;
       
       setUser(data.user, data.session, userRole);
-      setBranchId(myBranchId);
-      setTenantId(myTenantId);
+
+      if (myTenantId) {
+        setTenantId(myTenantId);
+        await loadBranches(myTenantId);
+      } else {
+        setError('No se pudo encontrar el Tenant asociado a este usuario.');
+      }
     }
     setLoading(false);
   };
@@ -89,53 +104,96 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-8">
-            <div className="space-y-5">
-              <Input
-                label="Correo Electrónico"
-                type="email"
-                placeholder="staff@hamburguer.com"
-                icon={<Mail size={20} />}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+          {view === 'LOGIN' ? (
+            <form onSubmit={handleLogin} className="space-y-8">
+              <div className="space-y-5">
+                <Input
+                  label="Correo Electrónico"
+                  type="email"
+                  placeholder="staff@hamburguer.com"
+                  icon={<Mail size={20} />}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
 
-              <Input
-                label="Contraseña"
-                type="password"
-                placeholder="••••••••"
-                icon={<Lock size={20} />}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-
-              <div className="space-y-2">
-                <label className="block text-xs font-black text-text-muted uppercase tracking-widest pl-2">
-                  Ubicación de Sucursal
-                </label>
-                <div className="relative group">
-                  <Store className="absolute left-6 top-1/2 -translate-y-1/2 text-primary" size={20} />
-                  <div className="w-full bg-surface-elevated/50 border border-primary/30 rounded-2xl py-0 pl-14 pr-6 text-text-primary font-bold h-14 flex items-center shadow-inner cursor-default">
-                    La Calera, Córdoba, Argentina 🇦🇷
-                  </div>
-                </div>
+                <Input
+                  label="Contraseña"
+                  type="password"
+                  placeholder="••••••••"
+                  icon={<Lock size={20} />}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              isLoading={loading}
-              fullWidth
-              size="lg"
-              className="mt-4"
-              leftIcon={<LogIn size={20} />}
-            >
-              Entrar al Sistema
-            </Button>
-            
-          </form>
+              <Button
+                type="submit"
+                isLoading={loading}
+                fullWidth
+                size="lg"
+                className="mt-4"
+                leftIcon={<LogIn size={20} />}
+              >
+                Entrar al Sistema
+              </Button>
+            </form>
+          ) : (
+            <motion.div {...ANIMATIONS.fadeIn} className="space-y-6">
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 mx-auto mb-3">
+                  <Store size={24} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-black uppercase tracking-tight">Seleccionar Sucursal</h3>
+                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-1">
+                  Estás autenticado como {user?.email}
+                </p>
+              </div>
+
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {branches.length === 0 && !loading ? (
+                  <div className="text-center py-8 opacity-40">
+                    <p className="text-xs font-bold uppercase tracking-widest">No hay sucursales disponibles</p>
+                  </div>
+                ) : loading ? (
+                  Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="h-20 bg-surface-elevated/50 rounded-2xl border border-white/5 animate-pulse" />
+                  ))
+                ) : (
+                  branches.map((branch) => (
+                    <button
+                      key={branch.id}
+                      onClick={() => setBranchId(branch.id)}
+                      className="w-full text-left p-5 rounded-2xl bg-surface-elevated/50 border border-white/5 hover:border-primary/50 hover:bg-primary/5 transition-all group flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-black text-sm uppercase tracking-tight group-hover:text-primary transition-colors">
+                          {branch.name}
+                        </p>
+                        <p className="text-[10px] text-text-muted font-bold mt-1">
+                          {branch.location || 'Sin ubicación registrada'}
+                        </p>
+                      </div>
+                      <ChevronRight size={18} className="text-white/10 group-hover:text-primary transition-colors" />
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <Button
+                variant="ghost"
+                fullWidth
+                onClick={() => {
+                  useAuthStore.getState().signOut();
+                  setView('LOGIN');
+                }}
+                className="text-xs uppercase tracking-[0.2em] font-black opacity-60 hover:opacity-100"
+              >
+                Cerrar Sesión / Cambiar Usuario
+              </Button>
+            </motion.div>
+          )}
 
           <footer className="mt-12 pt-8 border-t border-border-subtle flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">

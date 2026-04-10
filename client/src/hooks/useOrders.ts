@@ -21,6 +21,7 @@ interface UseOrdersReturn {
 const FULL_ORDER_SELECT = '*, tables(*), order_items(*, products(*))';
 const MAX_CACHE_SIZE = 200;
 const BATCH_DELAY_MS = 0;
+const POLLING_INTERVAL_MS = 15000; // Fallback polling every 15s if realtime fails
 
 export const useOrders = (
   branchId: string | null,
@@ -83,13 +84,18 @@ export const useOrders = (
     updateTimeoutRef.current = setTimeout(applyPendingUpdates, BATCH_DELAY_MS);
   }, [applyPendingUpdates]);
 
-  const fetchFullOrder = useCallback(async (orderId: string): Promise<Order | null> => {
-    if (pendingFetches.current.has(orderId)) {
-      return null;
+  const fetchFullOrder = useCallback(async (orderId: string, forceRefresh = false): Promise<Order | null> => {
+    // Only use cache for non-forced fetches (updates), never for new inserts
+    if (!forceRefresh && fullOrdersCache.current.has(orderId)) {
+      return fullOrdersCache.current.get(orderId)!;
     }
 
-    if (fullOrdersCache.current.has(orderId)) {
-      return fullOrdersCache.current.get(orderId)!;
+    // If a fetch is already in flight for this order, wait briefly and retry once
+    if (pendingFetches.current.has(orderId)) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (fullOrdersCache.current.has(orderId) && !forceRefresh) {
+        return fullOrdersCache.current.get(orderId)!;
+      }
     }
 
     pendingFetches.current.add(orderId);
@@ -101,7 +107,12 @@ export const useOrders = (
         .eq('id', orderId)
         .single();
 
-      if (error || !data) {
+      if (error) {
+        console.warn('[useOrders] fetchFullOrder error (posible bloqueo RLS):', orderId, error.message);
+        return null;
+      }
+      if (!data) {
+        console.warn('[useOrders] fetchFullOrder sin datos para:', orderId);
         return null;
       }
 
@@ -161,6 +172,7 @@ export const useOrders = (
 
     loadOrders();
 
+    // ─── 1. REALTIME SUBSCRIPTION ────────────────────────────────────────────
     const channel = supabase
       .channel(`branch-orders-${branchId}`)
       .on(
@@ -178,7 +190,8 @@ export const useOrders = (
           if (!orderId) return;
 
           if (payload.eventType === 'INSERT') {
-            const fullOrder = await fetchFullOrder(orderId);
+            // forceRefresh=true: don't use cache for brand-new orders
+            const fullOrder = await fetchFullOrder(orderId, true);
             if (fullOrder) {
               setOrders((prev) => {
                 const exists = prev.some((o) => o.id === orderId);
@@ -187,6 +200,10 @@ export const useOrders = (
               });
               if (onNewOrder) onNewOrder(fullOrder);
               setLastUpdate(new Date());
+            } else {
+              // If realtime fetch fails (e.g. RLS), trigger a full reload
+              console.warn('[useOrders] INSERT fetch falló, recargando pedidos completos...');
+              loadOrders();
             }
           } else if (payload.eventType === 'UPDATE') {
             const cachedOrder = fullOrdersCache.current.get(orderId);
@@ -194,6 +211,10 @@ export const useOrders = (
               const updatedOrder = { ...cachedOrder, ...payload.new } as Order;
               fullOrdersCache.current.set(orderId, updatedOrder);
               queueUpdate(orderId, updatedOrder);
+            } else {
+              // Order not in cache yet, fetch it fresh
+              const freshOrder = await fetchFullOrder(orderId, true);
+              if (freshOrder) queueUpdate(orderId, freshOrder);
             }
           } else if (payload.eventType === 'DELETE') {
             setOrders((prev) => prev.filter((o) => o.id !== orderId));
@@ -204,14 +225,26 @@ export const useOrders = (
       )
       .subscribe((status) => {
         setIsConnected(status === 'SUBSCRIBED');
+        if (status === 'SUBSCRIBED') {
+          console.log('[useOrders] Realtime conectado para branch:', branchId);
+        }
       });
 
     channelRef.current = channel;
+
+    // ─── 2. POLLING FALLBACK (cada 15s por si falla el realtime o RLS) ────────
+    const pollingInterval = setInterval(() => {
+      // Solo recarga en silencio si el canal no está conectado
+      if (channelRef.current) {
+        loadOrders();
+      }
+    }, POLLING_INTERVAL_MS);
 
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
+      clearInterval(pollingInterval);
       supabase.removeChannel(channel);
     };
   }, [branchId, onNewOrder, fetchFullOrder, loadOrders, queueUpdate]);

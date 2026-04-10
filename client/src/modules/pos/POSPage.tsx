@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
@@ -21,6 +22,7 @@ import ModifierModal from './components/ModifierModal';
 const POSPage: React.FC = () => {
   const { items, addItem, updateQuantity, removeItem, updateItemModifiers, clearCart, getTotal } = useCartStore();
   const { branchId, tenantId, user, signOut } = useAuthStore();
+  const navigate = useNavigate();
   
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -33,8 +35,19 @@ const POSPage: React.FC = () => {
   const [selectedTableId, setSelectedTableId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [activeBill, setActiveBill] = useState<{ orders: any[], total: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
+  const [searchParams] = useSearchParams();
+
+  // Parse Table from URL
+  useEffect(() => {
+    const tableId = searchParams.get('table');
+    if (tableId) {
+      setOrderType('MESA');
+      setSelectedTableId(tableId);
+    }
+  }, [searchParams]);
 
   // Print State
   const [lastOrder, setLastOrder] = useState<any>(null);
@@ -76,6 +89,24 @@ const POSPage: React.FC = () => {
 
     fetchData();
   }, [branchId]);
+  
+  // 1.1 TABLE BILL FETCHING
+  const loadTableBill = useCallback(async (tableId: string) => {
+    if (!tableId) {
+      setActiveBill(null);
+      return;
+    }
+    const { data } = await tableService.getTableBill(tableId);
+    setActiveBill(data);
+  }, []);
+
+  useEffect(() => {
+    if (orderType === 'MESA' && selectedTableId) {
+      loadTableBill(selectedTableId);
+    } else {
+      setActiveBill(null);
+    }
+  }, [orderType, selectedTableId, loadTableBill]);
 
   // Check printer status
   useEffect(() => {
@@ -199,7 +230,7 @@ const POSPage: React.FC = () => {
         notes: item.notes
       })),
       total: getTotal(),
-      paymentMethod: paymentMethod
+      paymentMethod: orderType === 'MESA' ? 'UNPAID' : paymentMethod
     });
 
     if (error) {
@@ -233,7 +264,7 @@ const POSPage: React.FC = () => {
         modifiers: item.modifiers,
         notes: item.notes
       })),
-      paymentMethod,
+      paymentMethod: orderType === 'MESA' ? 'UNPAID' : paymentMethod,
       total: getTotal(),
       time: new Date().toISOString()
     });
@@ -248,7 +279,11 @@ const POSPage: React.FC = () => {
     
     setTimeout(() => {
       setCheckoutStatus('idle');
-      searchInputRef.current?.focus();
+      if (orderType === 'MESA') {
+        navigate('/tables');
+      } else {
+        searchInputRef.current?.focus();
+      }
     }, 2000);
   }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables]);
 
@@ -356,7 +391,33 @@ const POSPage: React.FC = () => {
             ))}
           </AnimatePresence>
 
-          {items.length === 0 && (
+          {/* PREVIOUS CONSUMPTION (DINE-IN) */}
+          {orderType === 'MESA' && activeBill && activeBill.orders.length > 0 && (
+            <motion.div {...ANIMATIONS.fadeIn} className="mt-8 space-y-4 pt-6 border-t border-white/10">
+              <div className="flex items-center gap-2 mb-2">
+                <Utensils size={14} className="text-warning" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-warning">Consumo en Mesa</h3>
+              </div>
+              
+              {activeBill.orders.map(order => (
+                <div key={order.id} className="bg-surface-base/50 p-3 rounded-xl border border-white/5 opacity-70">
+                  {order.order_items.map((item: any) => (
+                    <div key={item.id} className="flex justify-between text-[10px] font-bold mb-1">
+                      <span className="text-text-muted">{item.quantity} x {item.products?.name}</span>
+                      <span className="text-text-primary/60">${(item.quantity * item.price).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              
+              <div className="flex justify-between items-center py-2 px-1 border-t border-white/5">
+                <span className="text-[10px] font-black uppercase tracking-tighter text-text-muted">Subtotal Previo</span>
+                <span className="text-sm font-black text-text-primary/80">${activeBill.total.toLocaleString()}</span>
+              </div>
+            </motion.div>
+          )}
+
+          {items.length === 0 && (!activeBill || activeBill.orders.length === 0) && (
             <motion.div 
               {...ANIMATIONS.fadeIn}
               className="h-[60%] flex flex-col items-center justify-center text-text-muted opacity-20 pointer-events-none"
@@ -422,11 +483,14 @@ const POSPage: React.FC = () => {
                     className="w-full bg-surface-elevated border border-primary/30 rounded-2xl h-12 px-4 text-text-primary uppercase tracking-widest text-[10px] font-black focus:outline-none focus:border-primary appearance-none"
                   >
                     <option value="">Seleccionar Mesa...</option>
-                    {tables.map(t => (
-                      <option key={t.id} value={t.id} disabled={t.status === 'OCCUPIED'}>
-                        {t.label || `Mesa ${t.number}`} {t.status === 'OCCUPIED' ? '(OCUPADA)' : ''}
-                      </option>
-                    ))}
+                    {tables.map(t => {
+                      const isOccupied = t.status === 'OCCUPIED' || t.parent_table_id;
+                      return (
+                        <option key={t.id} value={t.id}>
+                          {t.label || `Mesa ${t.number}`} {isOccupied ? '(Abierta/Ocupada)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </motion.div>
               )}
@@ -434,43 +498,61 @@ const POSPage: React.FC = () => {
           </div>
 
           <div className="flex justify-between items-end mb-4">
-            <span className="text-text-muted font-black uppercase tracking-widest text-[10px] mb-1">Total a Pagar</span>
+            <span className="text-text-muted font-black uppercase tracking-widest text-[10px] mb-1">
+              {orderType === 'MESA' ? 'Total (Nuevos + Previos)' : 'Total a Pagar'}
+            </span>
             <span className="text-4xl font-black text-primary tracking-tighter leading-none">
-              ${getTotal()}
+              ${(getTotal() + (activeBill?.total || 0)).toLocaleString()}
             </span>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            <Button
-              size="lg"
-              fullWidth
-              disabled={items.length === 0 || checkoutStatus === 'loading'}
-              isLoading={checkoutStatus === 'loading'}
-              onClick={handleCheckout}
-              className="h-14 text-base font-black uppercase tracking-widest"
-            >
-              {checkoutStatus === 'loading' ? 'Procesando...' : 'Confirmar Pedido'}
-            </Button>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant={paymentMethod === 'CASH' ? 'primary' : 'secondary'} 
-                fullWidth 
-                disabled={checkoutStatus === 'loading'}
-                onClick={() => setPaymentMethod('CASH')}
+            {orderType === 'MESA' ? (
+              <Button
+                size="lg"
+                fullWidth
+                variant="primary"
+                disabled={items.length === 0 || checkoutStatus === 'loading'}
+                isLoading={checkoutStatus === 'loading'}
+                onClick={handleCheckout}
+                className="h-14 text-base font-black uppercase tracking-widest bg-warning hover:bg-warning/80 border-warning text-white"
               >
-                Efectivo
+                {checkoutStatus === 'loading' ? 'Procesando...' : 'Enviar a Cocina'}
               </Button>
-              <Button 
-                variant={paymentMethod === 'CARD' ? 'primary' : 'secondary'} 
-                fullWidth 
-                disabled={checkoutStatus === 'loading'}
-                onClick={() => setPaymentMethod('CARD')}
-                className="text-xs"
-              >
-                Tarjeta / QR / Transferencia
-              </Button>
-            </div>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  fullWidth
+                  disabled={items.length === 0 || checkoutStatus === 'loading'}
+                  isLoading={checkoutStatus === 'loading'}
+                  onClick={handleCheckout}
+                  className="h-14 text-base font-black uppercase tracking-widest"
+                >
+                  {checkoutStatus === 'loading' ? 'Procesando...' : 'Confirmar Pedido'}
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant={paymentMethod === 'CASH' ? 'primary' : 'secondary'} 
+                    fullWidth 
+                    disabled={checkoutStatus === 'loading'}
+                    onClick={() => setPaymentMethod('CASH')}
+                  >
+                    Efectivo
+                  </Button>
+                  <Button 
+                    variant={paymentMethod === 'CARD' ? 'primary' : 'secondary'} 
+                    fullWidth 
+                    disabled={checkoutStatus === 'loading'}
+                    onClick={() => setPaymentMethod('CARD')}
+                    className="text-xs"
+                  >
+                    Tarjeta / QR / Transferencia
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </footer>
       </aside>

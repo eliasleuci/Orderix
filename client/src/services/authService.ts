@@ -18,6 +18,15 @@ class AuthService implements IAuthService {
     return { data, error: error?.message || null };
   }
 
+  async getTenantBranches(tenantId: string): Promise<ServiceResponse<Branch[]>> {
+    const { data, error } = await supabase
+      .from('branches')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('name', { ascending: true });
+    return { data, error: error?.message || null };
+  }
+
   async getProfile(userId: string): Promise<ServiceResponse<any>> {
     const { data, error } = await supabase
       .from('profiles')

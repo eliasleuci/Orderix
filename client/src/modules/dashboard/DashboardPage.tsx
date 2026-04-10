@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { orderService } from '../../services/orderService';
 import { useAuthStore } from '../../store/authStore';
 import { 
@@ -11,7 +11,8 @@ import {
   Timer,
   PackageCheck,
   CheckCircle,
-  ArrowUpRight
+  ArrowUpRight,
+  RefreshCw
 } from 'lucide-react';
 import { Order } from '../../types/domain';
 import { cn } from '../../lib/utils';
@@ -145,17 +146,20 @@ const DashboardSkeleton = () => (
 const DashboardPage: React.FC = () => {
   const { branchId } = useAuthStore();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [dateFilter, setDateFilter] = useState<'hoy' | 'ayer' | 'personalizado'>('hoy');
   const [customDate, setCustomDate] = useState<string>('');
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [stats, setStats] = useState<any>({
     orders: 0,
     activeOrders: 0,
     recentOrders: [],
   });
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (silent = false) => {
     if (!branchId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     
     let startDate = new Date();
     startDate.setHours(0, 0, 0, 0);
@@ -194,11 +198,18 @@ const DashboardPage: React.FC = () => {
           .slice(0, 8),
       });
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
+    else setRefreshing(false);
   }, [branchId, dateFilter, customDate]);
 
   useEffect(() => {
     fetchStats();
+
+    // Auto-refresh every 20 seconds so new orders always appear
+    pollingRef.current = setInterval(() => fetchStats(true), 20000);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, [fetchStats]);
 
   const handleResetOrders = useCallback(async () => {
@@ -232,6 +243,15 @@ const DashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="md" 
+            onClick={() => fetchStats(true)}
+            leftIcon={<RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />}
+            className="text-text-muted hover:text-text-primary border border-white/10"
+          >
+            Actualizar
+          </Button>
           <Button 
             variant="ghost" 
             size="md" 

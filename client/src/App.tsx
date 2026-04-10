@@ -14,6 +14,7 @@ const FinancialPage = lazy(() => import('./modules/financial/FinancialPage'));
 const CatalogPage = lazy(() => import('./modules/catalog/CatalogPage'));
 const TablesPage = lazy(() => import('./modules/tables/TablesPage'));
 const StockPage = lazy(() => import('./modules/stock/StockPage'));
+const DebugPage = lazy(() => import('./modules/debug/DebugPage'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-surface-base flex items-center justify-center">
@@ -23,7 +24,7 @@ const PageLoader = () => (
 
 // Componente para manejar el Layout condicional
 const AppContent = () => {
-  const { user, loading, setUser, role } = useAuthStore();
+  const { user, branchId, loading, setUser, role } = useAuthStore();
   const { theme } = useThemeStore();
   const location = useLocation();
 
@@ -63,13 +64,14 @@ const AppContent = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-base text-text-primary transition-colors duration-300">
-      {user && !shouldHideSidebar && <Sidebar />}
-      <main className={cn("flex-1 overflow-auto bg-surface-base relative", shouldHideSidebar && "w-full")}>
+      {user && branchId && !shouldHideSidebar && <Sidebar />}
+      <main className={cn("flex-1 overflow-auto bg-surface-base relative", (shouldHideSidebar || !branchId) && "w-full")}>
         <Suspense fallback={<PageLoader />}>
-          {!user ? (
+          {(!user || !branchId) ? (
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/kitchen" element={<KitchenPage />} />
+              <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           ) : (
@@ -81,6 +83,7 @@ const AppContent = () => {
               <Route path="/catalog" element={<CatalogPage />} />
               <Route path="/tables" element={<TablesPage />} />
               <Route path="/stock" element={<StockPage />} />
+              <Route path="/debug" element={<DebugPage />} />
               <Route path="*" element={<Navigate to="/pos" replace />} />
             </Routes>
           )}
