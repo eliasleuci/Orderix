@@ -12,7 +12,7 @@ import Badge from '../../components/ui/Badge';
 import Toast from '../../components/Toast';
 
 const CatalogPage: React.FC = () => {
-  const { branchId } = useAuthStore();
+  const { branchId, tenantId } = useAuthStore();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -73,7 +73,12 @@ const CatalogPage: React.FC = () => {
     if (product) {
       setEditingProduct({ ...product });
     } else {
-      setEditingProduct({ branch_id: branchId || '', is_active: true, price: 0 });
+      setEditingProduct({ 
+        tenant_id: tenantId || '',
+        branch_id: branchId || '', 
+        is_active: true, 
+        price: 0 
+      });
     }
     setShowNewCategory(false);
     setNewCategoryName('');
@@ -82,7 +87,7 @@ const CatalogPage: React.FC = () => {
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
-    const { data, error } = await productService.createCategory(newCategoryName);
+    const { data, error } = await productService.createCategory(newCategoryName, tenantId || '');
     if (error) {
       showToast(`Error al crear categoría: ${error}`, 'error');
       return;

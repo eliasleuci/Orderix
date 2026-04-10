@@ -41,10 +41,13 @@ class ProductService implements IProductService {
     return { data: !error, error: error?.message || null };
   }
 
-  async createCategory(name: string): Promise<ServiceResponse<Category>> {
+  async createCategory(name: string, tenantId?: string): Promise<ServiceResponse<Category>> {
     const { data, error } = await supabase
       .from('categories')
-      .insert([{ name: name.trim().toUpperCase() }])
+      .insert([{ 
+        name: name.trim().toUpperCase(),
+        tenant_id: tenantId 
+      }])
       .select()
       .single();
     return { data, error: error?.message || null };
