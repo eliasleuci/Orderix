@@ -1,10 +1,17 @@
 /* ORDERIX LANDING PAGE - ISOLATED STYLES */
 
+html, body, #root {
+  overflow-x: hidden !important;
+  width: 100% !important;
+  position: relative;
+}
+
 .landing-body {
   font-family: 'Inter', sans-serif;
   background: #1c1c20;
   color: #ffffff;
   overflow-x: hidden;
+  width: 100%;
 }
 
 .font-display {

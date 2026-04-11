@@ -175,11 +175,11 @@ const LandingPage: React.FC = () => {
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#FF6B00]/10 rounded-full blur-[150px] animate-pulse-glow"></div>
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#FF6B00]/5 rounded-full blur-[150px]"></div>
         
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 lg:pt-32 relative w-full">
-          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 lg:pt-40 relative w-full">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
             
             <div className="space-y-8 animate-fadeUp flex flex-col items-center lg:items-start text-center lg:text-left">
-              <div className="inline-flex items-center gap-3 px-4 py-2 glass rounded-full text-[12px] sm:text-sm">
+              <div className="inline-flex items-center gap-3 px-4 py-2 glass rounded-full text-[12px] sm:text-sm mt-8 lg:mt-0">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -187,12 +187,12 @@ const LandingPage: React.FC = () => {
                 <span className="text-gray-400">+200 locales activos</span>
               </div>
               
-              <h1 className="font-display font-black text-4xl sm:text-7xl lg:text-8xl leading-[0.9] tracking-tighter uppercase">
+              <h1 className="font-display font-black text-4xl sm:text-7xl lg:text-8xl leading-[1.1] lg:leading-[0.9] tracking-tighter">
                 Tu cocina,<br />
-                <span className="gradient-text leading-tight">sin caos.</span>
+                <span className="gradient-text">sin caos.</span>
               </h1>
               
-              <p className="text-lg lg:text-xl text-gray-400 max-w-lg leading-relaxed font-medium">
+              <p className="text-base lg:text-xl text-gray-400 max-w-lg leading-relaxed font-medium px-2 lg:px-0">
                 Gestioná pedidos, stock y mesas desde un solo lugar. Sin papelitos, sin confusiones, sin tiempo perdido.
               </p>
               
@@ -209,30 +209,30 @@ const LandingPage: React.FC = () => {
               
               <div className="flex items-center justify-center lg:justify-start gap-10 pt-6 border-t border-white/10 w-full lg:w-auto">
                 <div>
-                  <div className="font-display font-bold text-3xl text-[#FF6B00]">+40%</div>
-                  <div className="text-sm text-gray-500 mt-1">Más ventas</div>
+                  <div className="font-display font-bold text-2xl lg:text-3xl text-[#FF6B00]">+40%</div>
+                  <div className="text-[10px] text-gray-500 mt-1 uppercase font-black">Más ventas</div>
                 </div>
                 <div className="w-px h-12 bg-white/10"></div>
                 <div>
-                  <div className="font-display font-bold text-3xl text-green-400">-85%</div>
-                  <div className="text-sm text-gray-500 mt-1">Menos errores</div>
+                  <div className="font-display font-bold text-2xl lg:text-3xl text-green-400">-85%</div>
+                  <div className="text-[10px] text-gray-500 mt-1 uppercase font-black">Menos errores</div>
                 </div>
                 <div className="w-px h-12 bg-white/10"></div>
                 <div>
-                  <div className="font-display font-bold text-3xl text-white">3h</div>
-                  <div className="text-sm text-gray-500 mt-1">Ahorradas/día</div>
+                  <div className="font-display font-bold text-2xl lg:text-3xl text-white">3h</div>
+                  <div className="text-[10px] text-gray-500 mt-1 uppercase font-black">Ahorradas</div>
                 </div>
               </div>
             </div>
             
-            <div className="relative animate-fadeUp delay-300 perspective-3d hidden lg:block">
+            <div className="relative animate-fadeUp delay-300 perspective-3d block mt-12 lg:mt-0">
               <div className="absolute -inset-10 bg-gradient-to-r from-[#FF6B00]/30 via-transparent to-[#FF6B00]/30 rounded-3xl blur-2xl animate-pulse-glow"></div>
               
               <div className="hero-image-container relative rounded-2xl overflow-hidden shadow-2xl shadow-[#FF6B00]/10 border border-white/10">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c20] via-transparent to-transparent z-10"></div>
                 <img src="/landing/img/dashboard.jpg" alt="ORDERIX Dashboard" className="w-full h-auto relative z-0" />
                 
-                <div className="absolute top-6 left-6 z-20 animate-float glass rounded-xl p-4">
+                <div className="absolute top-6 left-6 z-20 animate-float glass rounded-xl p-4 scale-75 lg:scale-100 origin-top-left">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
                       <TrendingUp size={20} className="text-green-400" />
@@ -244,17 +244,10 @@ const LandingPage: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="absolute bottom-6 right-6 z-20 animate-float-delayed glass rounded-xl px-4 py-2.5">
+                <div className="absolute bottom-6 right-6 z-20 animate-float-delayed glass rounded-xl px-4 py-2.5 scale-75 lg:scale-100 origin-bottom-right">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                     <span className="font-mono text-[10px] font-bold text-gray-300 uppercase">+1 pedido #849</span>
-                  </div>
-                </div>
-                
-                <div className="absolute top-6 right-6 z-20 glass rounded-lg px-3 py-1.5">
-                  <div className="flex items-center gap-2">
-                    <Wifi size={14} className="text-green-400" />
-                    <span className="text-[10px] uppercase font-black text-gray-400">Online</span>
                   </div>
                 </div>
               </div>
