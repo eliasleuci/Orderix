@@ -175,11 +175,11 @@ const LandingPage: React.FC = () => {
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#FF6B00]/10 rounded-full blur-[150px] animate-pulse-glow"></div>
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#FF6B00]/5 rounded-full blur-[150px]"></div>
         
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-32 lg:pt-40 relative w-full">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-20 lg:pt-40 relative w-full">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
             
             <div className="space-y-8 animate-fadeUp flex flex-col items-center lg:items-start text-center lg:text-left">
-              <div className="inline-flex items-center gap-3 px-4 py-2 glass rounded-full text-[12px] sm:text-sm mt-8 lg:mt-0">
+              <div className="inline-flex items-center gap-3 px-4 py-2 glass rounded-full text-[12px] sm:text-sm mt-4 lg:mt-0">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
