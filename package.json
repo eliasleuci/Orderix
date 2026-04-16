@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "client"
+    "client",
+    "server"
   ],
   "scripts": {
-    "build": "npm run build --prefix client",
-    "install": "npm install --prefix client"
+    "build:prod": "cd server && npm install && npx prisma generate && cd ../client && npm install && npm run build",
+    "install:all": "npm install --workspaces",
+    "postinstall": "cd server && npx prisma generate"
   }
 }
