@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package } from 'lucide-react';
@@ -9,7 +9,13 @@ import { cn } from '../lib/utils';
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const { signOut } = useAuthStore();
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeStore();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   const menuItems = [
     { path: '/pos', icon: <Utensils />, label: 'Ventas' },
@@ -82,7 +88,7 @@ const Sidebar: React.FC = () => {
 
         {/* SIGN OUT */}
         <button 
-          onClick={signOut}
+          onClick={handleSignOut}
           className="w-14 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:bg-danger/10 hover:text-danger transition-all border border-transparent hover:border-danger/20 group"
           title="Cerrar sesión"
         >

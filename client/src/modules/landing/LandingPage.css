@@ -49,28 +49,28 @@ html, body, #root {
 .animate-float-delayed { animation: float 5s ease-in-out infinite 2.5s; }
 .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 
-.glass {
+.landing-body .glass {
   background: rgba(10, 10, 11, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.glass-card {
+.landing-body .glass-card {
   background: rgba(26, 26, 29, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.gradient-text {
+.landing-body .gradient-text {
   background: linear-gradient(135deg, #FF6B00, #FF8C33, #FFB366);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.bento-card {
+.landing-body .bento-card {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .bento-card:hover {
@@ -78,7 +78,7 @@ html, body, #root {
   box-shadow: 0 0 60px rgba(255, 107, 0, 0.2);
 }
 
-.hero-image-container {
+.landing-body .hero-image-container {
   transform: perspective(1500px) rotateY(-5deg) rotateX(5deg);
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }

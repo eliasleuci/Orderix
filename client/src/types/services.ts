@@ -45,9 +45,12 @@ export interface IProductService {
 }
 
 export interface IOrderService {
-  createOrder(params: CreateOrderParams): Promise<ServiceResponse<{ order_id: string; status: string; message: string }>>;
-  getBranchOrders(branchId: string): Promise<ServiceResponse<Order[]>>;
+  createOrder(params: CreateOrderParams): Promise<ServiceResponse<any>>;
+  getBranchOrders(branchId: string, limit?: number, startDate?: string): Promise<ServiceResponse<Order[]>>;
   updateOrderStatus(orderId: string, status: OrderStatus): Promise<ServiceResponse<Order>>;
+  deleteOrder(orderId: string): Promise<ServiceResponse<boolean>>;
+  deleteOrdersByDateRange(branchId: string, startDate: string, endDate: string): Promise<ServiceResponse<boolean>>;
+  deleteAllBranchOrders(branchId: string): Promise<ServiceResponse<boolean>>;
 }
 
 export interface IIngredientService {

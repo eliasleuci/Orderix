@@ -8,8 +8,21 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Outfit:wght@900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
     <title>Orderix</title>
+    <script>
+      (function() {
+        try {
+          var themeData = localStorage.getItem('prime-burgers-theme');
+          if (themeData) {
+            var state = JSON.parse(themeData).state;
+            if (state && state.theme === 'light') {
+              document.documentElement.classList.add('light');
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-slate-950 text-slate-50">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

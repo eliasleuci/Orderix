@@ -19,6 +19,7 @@ import { cn } from '../../lib/utils';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -156,6 +157,11 @@ const DashboardPage: React.FC = () => {
     recentOrders: [],
   });
 
+  // MODAL STATES
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
+  const [isConfirmDeleteSingleOpen, setIsConfirmDeleteSingleOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+
   const fetchStats = useCallback(async (silent = false) => {
     if (!branchId) return;
     if (!silent) setLoading(true);
@@ -212,20 +218,51 @@ const DashboardPage: React.FC = () => {
     };
   }, [fetchStats]);
 
-  const handleResetOrders = useCallback(async () => {
-    if (!branchId) return;
-    if (!confirm('¿Estás seguro de eliminar TODOS los pedidos de esta sucursal? Esta acción no se puede deshacer.')) return;
+  const handleResetOrders = () => {
+    setIsConfirmResetOpen(true);
+  };
 
+  const executeReset = async () => {
+    if (!branchId) return;
+
+    let startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    if (dateFilter === 'ayer') {
+      startDate.setDate(startDate.getDate() - 1);
+    } else if (dateFilter === 'personalizado' && customDate) {
+      const [year, month, day] = customDate.split('-').map(Number);
+      startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+    }
+
+    let endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 999);
+    
     setLoading(true);
-    const { error } = await orderService.deleteAllBranchOrders(branchId);
+    const { error } = await orderService.deleteOrdersByDateRange(branchId, startDate.toISOString(), endDate.toISOString());
     
     if (error) {
       alert(`Error al limpiar pedidos: ${error}`);
     } else {
-      window.location.reload();
+      fetchStats(true);
     }
+    setIsConfirmResetOpen(false);
     setLoading(false);
-  }, [branchId]);
+  };
+
+  const executeDeleteSingle = async () => {
+    if (!orderToDelete) return;
+    setLoading(true);
+    const { error } = await orderService.deleteOrder(orderToDelete.id!);
+    if (error) {
+      alert(`Error: ${error}`);
+    } else {
+      fetchStats(true);
+    }
+    setIsConfirmDeleteSingleOpen(false);
+    setOrderToDelete(null);
+    setLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary p-10 font-sans relative overflow-hidden">
@@ -370,9 +407,21 @@ const DashboardPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xl font-black text-text-primary tracking-tighter">${order.total}</div>
-                        <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest mt-1">{order.payment_method || 'Efectivo'}</div>
+                      <div className="flex items-center gap-4 text-right">
+                        <div className="space-y-1">
+                          <div className="text-xl font-black text-text-primary tracking-tighter">${order.total}</div>
+                          <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest leading-none">{order.payment_method || 'Efectivo'}</div>
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOrderToDelete(order);
+                            setIsConfirmDeleteSingleOpen(true);
+                          }}
+                          className="p-3 rounded-xl bg-danger/5 text-danger/40 hover:text-danger hover:bg-danger/10 transition-all border border-transparent hover:border-danger/20"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
                     {/* MINI TIMELINE */}
@@ -389,6 +438,35 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+      {/* MODALS */}
+      <ConfirmModal
+        isOpen={isConfirmResetOpen}
+        onClose={() => setIsConfirmResetOpen(false)}
+        onConfirm={executeReset}
+        isLoading={loading}
+        title="Limpiar Pedidos"
+        message={`¿Estás seguro de eliminar TODOS los pedidos de ${
+          dateFilter === 'hoy' ? 'HOY' : 
+          dateFilter === 'ayer' ? 'AYER' : 
+          customDate || 'la fecha seleccionada'
+        }?`}
+        confirmText="Limpiar Ahora"
+        variant="danger"
+      />
+
+      <ConfirmModal
+        isOpen={isConfirmDeleteSingleOpen}
+        onClose={() => {
+          setIsConfirmDeleteSingleOpen(false);
+          setOrderToDelete(null);
+        }}
+        onConfirm={executeDeleteSingle}
+        isLoading={loading}
+        title="Eliminar Pedido"
+        message={`¿Estás seguro de eliminar el pedido #${orderToDelete?.id?.substring(0, 6).toUpperCase()} de ${orderToDelete?.customer_name || 'Consumidor Final'}?`}
+        confirmText="Eliminar Pedido"
+        variant="danger"
+      />
     </div>
   );
 };

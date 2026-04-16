@@ -115,7 +115,7 @@ const AppContent = () => {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/kitchen" element={<KitchenPage />} />
               <Route path="/debug" element={<DebugPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           ) : (
             <Routes>

@@ -287,6 +287,11 @@ const POSPage: React.FC = () => {
     }, 2000);
   }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables]);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   // 3. FILTERING LOGIC
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -316,7 +321,7 @@ const POSPage: React.FC = () => {
             <div>
               <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Ventas</h1>
             </div>
-            <Button variant="ghost" size="md" leftIcon={<LogOut size={18} />} onClick={signOut}>
+            <Button variant="ghost" size="md" leftIcon={<LogOut size={18} />} onClick={handleSignOut}>
               Cerrar Sesión
             </Button>
           </div>

@@ -112,7 +112,8 @@ CREATE TABLE orders (
   status TEXT CHECK (status IN ('PENDING', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED')) DEFAULT 'PENDING',
   total DECIMAL(10, 2) NOT NULL,
   payment_method TEXT,
-  customer_name TEXT, -- ¡Agregado recientemente para compatibilidad total!
+  customer_name TEXT,
+  customer_address TEXT,
   branch_id UUID REFERENCES branches(id) ON DELETE CASCADE,
   user_id UUID REFERENCES profiles(id) ON DELETE SET NULL, -- Cajero que lo tomó
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -139,9 +140,12 @@ CREATE OR REPLACE FUNCTION create_order_secure(
   p_branch_id UUID,
   p_user_id UUID,
   p_customer_name TEXT,
-  p_items JSONB, -- Formato: [{"product_id": "uuid", "quantity": 2, "price": 1500}]
+  p_customer_address TEXT,
+  p_items JSONB,
   p_total DECIMAL,
-  p_payment_method TEXT
+  p_payment_method TEXT,
+  p_order_type TEXT DEFAULT 'TAKEAWAY',
+  p_table_id UUID DEFAULT NULL
 ) RETURNS JSONB AS $$
 DECLARE
   v_order_id UUID;
@@ -150,37 +154,32 @@ DECLARE
   v_stock_actual DECIMAL;
 BEGIN
   -- 1. Crear el pedido
-  INSERT INTO orders (tenant_id, branch_id, user_id, customer_name, total, status, payment_method)
-  VALUES (p_tenant_id, p_branch_id, p_user_id, p_customer_name, p_total, 'PENDING', p_payment_method)
+  INSERT INTO orders (tenant_id, branch_id, user_id, customer_name, customer_address, total, status, payment_method, order_type, table_id)
+  VALUES (p_tenant_id, p_branch_id, p_user_id, p_customer_name, p_customer_address, p_total, 'PENDING', p_payment_method, p_order_type, p_table_id)
   RETURNING id INTO v_order_id;
 
   -- 2. Recorrer los ítems recibidos (JSONB a recordset)
-  FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(product_id UUID, quantity INT, price DECIMAL)
+  FOR v_item IN SELECT * FROM jsonb_to_recordset(p_items) AS x(product_id UUID, quantity INT, price DECIMAL, modifiers JSONB, notes TEXT)
   LOOP
     -- Insertar el ítem en la orden
-    INSERT INTO order_items (order_id, product_id, quantity, unit_price)
-    VALUES (v_order_id, v_item.product_id, v_item.quantity, v_item.price);
+    INSERT INTO order_items (tenant_id, order_id, product_id, quantity, unit_price, modifiers, notes)
+    VALUES (p_tenant_id, v_order_id, v_item.product_id, v_item.quantity, v_item.price, v_item.modifiers, v_item.notes);
 
     -- 3. Descontar Stock basado en la Receta
     FOR v_recipe IN SELECT ingredient_id, quantity FROM recipes WHERE product_id = v_item.product_id
     LOOP
-      -- Validar stock atómicamente seleccionando con FOR UPDATE (bloquea la fila momentáneamente)
       SELECT stock INTO v_stock_actual FROM ingredients WHERE id = v_recipe.ingredient_id FOR UPDATE;
 
-      IF v_stock_actual < (v_recipe.quantity * v_item.quantity) THEN
-        RAISE EXCEPTION 'Stock insuficiente para el producto % (Ingrediente %)', v_item.product_id, v_recipe.ingredient_id;
+      IF v_stock_actual IS NOT NULL THEN
+        UPDATE ingredients 
+        SET stock = stock - (v_recipe.quantity * v_item.quantity)
+        WHERE id = v_recipe.ingredient_id;
       END IF;
-
-      -- Ejecutar el descuento
-      UPDATE ingredients 
-      SET stock = stock - (v_recipe.quantity * v_item.quantity)
-      WHERE id = v_recipe.ingredient_id;
     END LOOP;
   END LOOP;
 
   RETURN jsonb_build_object('status', 'success', 'order_id', v_order_id);
 EXCEPTION WHEN OTHERS THEN
-  -- Si llegamos aquí, se revierte toda la transacción automáticamente
   RETURN jsonb_build_object('status', 'error', 'message', SQLERRM);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
