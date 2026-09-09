@@ -34,3 +34,8 @@ Thumbs.db
 # Electron build outputs
 client/dist-electron/
 client/release/
+
+# Credenciales y notas locales (NUNCA commitear)
+datos.txt
+*.credentials
+*.secrets

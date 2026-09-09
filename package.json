@@ -7,6 +7,9 @@
     "server"
   ],
   "scripts": {
+    "dev": "npm run dev --prefix client",
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
     "build:prod": "cd server && npm install && npx prisma generate && cd ../client && npm install && npm run build",
     "install:all": "npm install --workspaces",
     "postinstall": "cd server && npx prisma generate"
