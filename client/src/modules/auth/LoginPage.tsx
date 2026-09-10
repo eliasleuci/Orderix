@@ -15,7 +15,8 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [view, setView] = useState<'LOGIN' | 'BRANCH_SELECTION'>('LOGIN');
+  const [view, setView] = useState<'LOGIN' | 'BRANCH_SELECTION' | 'FORGOT'>('LOGIN');
+  const [resetSent, setResetSent] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
   
   const { user, setUser, setBranchId, setTenantId, branchId } = useAuthStore();
@@ -39,6 +40,23 @@ const LoginPage: React.FC = () => {
       });
     }
   }, [user, branchId]);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    const { error: err } = await authService.requestPasswordReset(email);
+    setLoading(false);
+
+    if (err) {
+      setError(err);
+      return;
+    }
+    // Siempre se confirma el envio, exista o no la cuenta: decir "ese mail no
+    // existe" le permitiria a cualquiera averiguar quien tiene usuario.
+    setResetSent(true);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +117,7 @@ const LoginPage: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               className="w-32 h-32 mx-auto mb-8 relative rounded-[1.5rem] overflow-hidden shadow-2xl shadow-primary/20"
             >
-              <img src="icono.ico" alt="Orderix Logo" className="w-full h-full object-cover" />
+              <img src="/icono.ico" alt="Orderix Logo" className="w-full h-full object-cover" />
             </motion.div>
             
             <h1 className="text-4xl font-black tracking-tighter text-text-primary uppercase leading-none">
@@ -144,7 +162,72 @@ const LoginPage: React.FC = () => {
               >
                 Entrar al Sistema
               </Button>
+
+              <button
+                type="button"
+                onClick={() => { setView('FORGOT'); setError(''); setResetSent(false); }}
+                className="w-full text-center text-xs font-bold uppercase tracking-widest text-text-muted hover:text-primary transition-colors"
+              >
+                Olvidé mi contraseña
+              </button>
             </form>
+          ) : view === 'FORGOT' ? (
+            <motion.div {...ANIMATIONS.fadeIn} className="space-y-6">
+              {resetSent ? (
+                <div className="text-center space-y-5 py-4">
+                  <div className="w-14 h-14 bg-success/10 rounded-2xl flex items-center justify-center border border-success/20 mx-auto">
+                    <Mail size={26} className="text-success" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight">Revisá tu correo</h3>
+                    <p className="text-text-secondary text-sm mt-2">
+                      Si <strong className="text-text-primary">{email}</strong> tiene una cuenta,
+                      te llega un link para definir una contraseña nueva. Puede tardar un par de
+                      minutos; si no lo ves, mirá en spam.
+                    </p>
+                  </div>
+                  <Button variant="secondary" fullWidth onClick={() => { setView('LOGIN'); setResetSent(false); }}>
+                    Volver al ingreso
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 mx-auto mb-3">
+                      <Lock size={24} className="text-primary" />
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-tight">Recuperar acceso</h3>
+                    <p className="text-text-secondary text-sm mt-2">
+                      Poné tu correo y te mandamos un link para definir una contraseña nueva.
+                    </p>
+                  </div>
+
+                  <Input
+                    label="Correo Electrónico"
+                    type="email"
+                    placeholder="staff@hamburguer.com"
+                    icon={<Mail size={20} />}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
+                  />
+
+                  <div className="space-y-3">
+                    <Button type="submit" isLoading={loading} fullWidth size="lg">
+                      Enviar link
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => { setView('LOGIN'); setError(''); }}
+                      className="w-full text-center text-xs font-bold uppercase tracking-widest text-text-muted hover:text-primary transition-colors"
+                    >
+                      Volver
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
           ) : (
             <motion.div {...ANIMATIONS.fadeIn} className="space-y-6">
               <div className="text-center mb-6">

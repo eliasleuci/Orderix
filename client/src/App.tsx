@@ -8,6 +8,7 @@ import Sidebar from './layouts/Sidebar';
 
 const LandingPage = lazy(() => import('./modules/landing/LandingPage'));
 const LoginPage = lazy(() => import('./modules/auth/LoginPage'));
+const ResetPasswordPage = lazy(() => import('./modules/auth/ResetPasswordPage'));
 const POSPage = lazy(() => import('./modules/pos/POSPage'));
 const KitchenPage = lazy(() => import('./modules/kitchen/KitchenPage'));
 const DashboardPage = lazy(() => import('./modules/dashboard/DashboardPage'));
@@ -84,6 +85,19 @@ const AppContent = () => {
   // Ocultamos el sidebar si es Kitchen (y rol cocina/sin usuario) o si es la Landing Page
   const shouldHideSidebar = (isKitchenRoute && (role === 'KITCHEN' || !user)) || isLandingRoute;
   
+  // /reset-password se resuelve ANTES de mirar el rol: el link del mail deja una
+  // sesion iniciada, y si dejaramos que el ruteo por rol actue primero, mandaria
+  // al panel (o al login) en vez de dejar definir la contrasena nueva.
+  if (location.pathname === '/reset-password') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   const isSuperAdmin = role === 'SUPER_ADMIN';
 
   // Si es SuperAdmin usamos el layout propio de super admin y sus rutas

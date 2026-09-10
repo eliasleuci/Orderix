@@ -1,16 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package } from 'lucide-react';
+import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import ChangePasswordModal from '../modules/account/ChangePasswordModal';
+import Toast from '../components/Toast';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const { signOut } = useAuthStore();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeStore();
+  const [cambiarClave, setCambiarClave] = useState(false);
+  const [aviso, setAviso] = useState('');
 
   const handleSignOut = async () => {
     await signOut();
@@ -86,6 +90,15 @@ const Sidebar: React.FC = () => {
           )}
         </button>
 
+        {/* MI CONTRASEÑA */}
+        <button
+          onClick={() => setCambiarClave(true)}
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 group"
+          title="Cambiar mi contraseña"
+        >
+          <KeyRound size={24} className="transition-transform group-hover:rotate-12" />
+        </button>
+
         {/* SIGN OUT */}
         <button 
           onClick={handleSignOut}
@@ -95,6 +108,18 @@ const Sidebar: React.FC = () => {
           <LogOut size={24} className="transition-transform group-hover:-translate-x-1" />
         </button>
       </div>
+
+      <ChangePasswordModal
+        isOpen={cambiarClave}
+        onClose={() => setCambiarClave(false)}
+        onDone={setAviso}
+      />
+      <Toast
+        message={aviso}
+        type="success"
+        isVisible={Boolean(aviso)}
+        onClose={() => setAviso('')}
+      />
     </aside>
   );
 };
