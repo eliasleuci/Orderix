@@ -36,17 +36,39 @@ export default function ResetPasswordPage() {
       if (vivo && session) setEstado((e) => (e === 'hecho' ? e : 'listo'));
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    (async () => {
+      // Camino nuevo: el link del mail apunta a nuestro propio dominio y trae el
+      // token en la query. Asi el remitente (orderix.store) y el destino del link
+      // coinciden; cuando el link apuntaba a supabase.co, Gmail lo marcaba como
+      // posible phishing y desactivaba los links del mensaje.
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get('token_hash');
+
+      if (tokenHash) {
+        const { error: err } = await supabase.auth.verifyOtp({
+          type: 'recovery',
+          token_hash: tokenHash,
+        });
+        if (!vivo) return;
+        setEstado(err ? 'sin-sesion' : 'listo');
+        // Se limpia la URL para no dejar el token en el historial del navegador.
+        window.history.replaceState({}, '', '/reset-password');
+        return;
+      }
+
+      // Camino viejo: el token viene en el hash y supabase-js lo canjea solo.
+      const { data: { session } } = await supabase.auth.getSession();
       if (!vivo) return;
+
       if (session) {
         setEstado((e) => (e === 'hecho' ? e : 'listo'));
       } else {
-        // El canje del token puede tardar un instante; si no aparece, el link no sirve.
+        // El canje puede tardar un instante; si no aparece, el link no sirve.
         setTimeout(() => {
           if (vivo) setEstado((e) => (e === 'verificando' ? 'sin-sesion' : e));
         }, 2500);
       }
-    });
+    })();
 
     return () => {
       vivo = false;

@@ -1,0 +1,65 @@
+<!--
+  Supabase Dashboard -> Authentication -> Emails -> Reset Password
+  Pegar esto en el cuerpo del template.
+
+  Lo importante es el href: apunta a {{ .SiteURL }} (orderix.store) y NO a
+  <proyecto>.supabase.co como hace el {{ .ConfirmationURL }} por defecto.
+  Que el remitente y el destino del link sean el mismo dominio es lo que evita
+  que Gmail lo marque como phishing (y cuando lo marca, además desactiva los
+  links del mensaje).
+-->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;padding:40px;">
+        <tr>
+          <td>
+            <p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#f59e0b;">
+              Orderix
+            </p>
+
+            <h1 style="margin:0 0 20px;font-size:22px;color:#0f172a;">
+              Restablecer tu contraseña
+            </h1>
+
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#334155;">
+              Recibimos un pedido para restablecer la contraseña de
+              <strong>{{ .Email }}</strong>. Hacé clic en el botón para definir
+              una nueva.
+            </p>
+
+            <table cellpadding="0" cellspacing="0" style="margin:28px 0;">
+              <tr>
+                <td style="border-radius:10px;background:#f59e0b;">
+                  <a href="{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery"
+                     style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">
+                    Definir contraseña nueva
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 8px;font-size:13px;color:#64748b;">
+              Si el botón no funciona, copiá y pegá esta dirección en tu navegador:
+            </p>
+            <p style="margin:0 0 28px;font-size:12px;color:#f59e0b;word-break:break-all;">
+              {{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery
+            </p>
+
+            <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;">
+
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">
+              El link vence en una hora y se puede usar una sola vez.
+              Si no pediste este cambio, ignorá este mensaje: tu contraseña
+              actual sigue funcionando.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;">
+        Orderix &middot; Sistema de gestión para restaurantes
+      </p>
+    </td>
+  </tr>
+</table>
