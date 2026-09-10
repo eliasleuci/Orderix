@@ -7,14 +7,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = new Pool({ 
-  host: 'aws-0-us-west-2.pooler.supabase.com', 
-  port: 6543, 
-  user: 'postgres.gxfdzjhxhuaenavxpzkj', 
-  password: 'Orderix42854674',
-  database: 'postgres',
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    'DATABASE_URL no está definida. Configurala en server/.env (local) y en las ' +
+    'variables de entorno de Vercel (producción).'
+  );
+}
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
-  max: 10, 
+  max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });

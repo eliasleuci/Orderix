@@ -2,12 +2,13 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { motion } from 'framer-motion';
-import { Users, Settings, LogOut, Code, AppWindow, Activity } from 'lucide-react';
+import { AppWindow, Building2, CreditCard, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
 import Button from '../components/ui/Button';
 
 const superAdminNav = [
-  { id: 'tenants', label: 'Restaurantes', icon: Users, path: '/superadmin/tenants' }
+  { id: 'clientes', label: 'Clientes', icon: Building2, path: '/superadmin/clientes' },
+  { id: 'facturacion', label: 'Facturación', icon: CreditCard, path: '/superadmin/facturacion' },
 ];
 
 const SuperAdminLayout: React.FC = () => {

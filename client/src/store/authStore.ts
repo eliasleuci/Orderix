@@ -37,7 +37,9 @@ export const useAuthStore = create<AuthState>()(
         try {
           await supabase.auth.signOut();
         } catch (e) { /* ignore in mock */ }
-        set({ user: null, session: null, branchId: null, tenantId: null, loading: false });
+        // role incluido: zustand persiste el store en localStorage, así que si no
+        // se limpia, el SUPER_ADMIN sobrevive al logout en ese navegador.
+        set({ user: null, session: null, role: null, branchId: null, tenantId: null, loading: false });
       },
     }),
     {

@@ -1,355 +1,244 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Building2, Key, ShieldAlert, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { baseApi } from '../../services/api';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Building2, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
-import Toast from '../../components/Toast';
+import Toast, { ToastType } from '../../components/Toast';
+import DataState from './components/DataState';
+import SubscriptionBadge from './components/SubscriptionBadge';
+import TenantFormModal from './components/TenantFormModal';
+import { superadminService } from '../../services/superadminService';
+import type { SuperAdminTenant, BillingState } from '../../types/superadmin';
+
+type Filtro = 'todos' | 'activos' | 'suspendidos' | 'vencidos';
 
 export default function TenantsPage() {
-  const [tenants, setTenants] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  const [tenants, setTenants] = useState<SuperAdminTenant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Modal states
+  const [filtro, setFiltro] = useState<Filtro>('todos');
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<any>(null);
-
-  // Form states
-  const [newTenantData, setNewTenantData] = useState({ name: '', slug: '', adminEmail: '', adminPassword: '' });
-  const [passwordData, setPasswordData] = useState({ newPassword: '' });
-  
-  // UI states
   const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
-  const fetchTenants = async () => {
-    try {
-      setLoading(true);
-      const res = await baseApi.get('/tenants');
-      setTenants(res.data?.data || []);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al obtener restaurantes');
-    } finally {
-      setLoading(false);
+  const showToast = (message: string, type: ToastType) => setToast({ message, type });
+
+  const fetchTenants = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await superadminService.getTenants();
+    if (error) {
+      setLoadError(error);
+      setTenants([]);
+    } else {
+      setLoadError(null);
+      setTenants(data ?? []);
     }
-  };
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     fetchTenants();
-  }, []);
+  }, [fetchTenants]);
 
-  const handleCreateTenant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setActionLoading(true);
-    try {
-      await baseApi.post('/tenants', newTenantData);
-      setSuccess('Restaurante creado exitosamente');
-      setIsCreateOpen(false);
-      setNewTenantData({ name: '', slug: '', adminEmail: '', adminPassword: '' });
-      fetchTenants();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al crear restaurante');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleToggleStatus = async (tenantId: string, currentStatus: boolean) => {
-    try {
-      await baseApi.patch(`/tenants/${tenantId}/status`, { isActive: !currentStatus });
-      setSuccess(`Restaurante ${!currentStatus ? 'activado' : 'desactivado'}`);
-      fetchTenants();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al actualizar el estado');
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTenant) return;
-    
-    setActionLoading(true);
-    try {
-      await baseApi.post(`/tenants/${selectedTenant.id}/reset-password`, passwordData);
-      setSuccess('Contraseña actualizada exitosamente');
-      setIsPasswordOpen(false);
-      setPasswordData({ newPassword: '' });
-      setSelectedTenant(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al restablecer contraseña');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const filteredTenants = tenants.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.slug.toLowerCase().includes(searchTerm.toLowerCase())
+  const resumen = useMemo(
+    () => ({
+      total: tenants.length,
+      activos: tenants.filter((t) => t.isActive !== false).length,
+      suspendidos: tenants.filter((t) => t.isActive === false).length,
+      vencidos: tenants.filter((t) => t.billingState === 'VENCIDO').length,
+      porVencer: tenants.filter((t) => t.billingState === 'POR_VENCER').length,
+    }),
+    [tenants]
   );
 
+  const filtrados = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return tenants.filter((t) => {
+      if (q && !`${t.name} ${t.slug} ${t.email ?? ''}`.toLowerCase().includes(q)) return false;
+      if (filtro === 'activos') return t.isActive !== false;
+      if (filtro === 'suspendidos') return t.isActive === false;
+      if (filtro === 'vencidos') return t.billingState === 'VENCIDO';
+      return true;
+    });
+  }, [tenants, searchTerm, filtro]);
+
+  const handleCreate = async (payload: any) => {
+    setActionLoading(true);
+    const { data, error } = await superadminService.createTenant(payload);
+    setActionLoading(false);
+
+    if (error) {
+      showToast(error, 'error');
+      return;
+    }
+    showToast(`Cliente "${data?.name}" creado`, 'success');
+    setIsCreateOpen(false);
+    fetchTenants();
+  };
+
+  const tarjetas: Array<{ label: string; valor: number; icon: any; color: string; filtro: Filtro }> = [
+    { label: 'Clientes', valor: resumen.total, icon: Building2, color: 'text-indigo-400', filtro: 'todos' },
+    { label: 'Activos', valor: resumen.activos, icon: CheckCircle2, color: 'text-emerald-400', filtro: 'activos' },
+    { label: 'Suspendidos', valor: resumen.suspendidos, icon: XCircle, color: 'text-rose-400', filtro: 'suspendidos' },
+    { label: 'Vencidos', valor: resumen.vencidos, icon: Clock, color: 'text-orange-400', filtro: 'vencidos' },
+  ];
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex items-end justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-white">Registro de Restaurantes</h1>
-          <p className="text-white/50 font-medium mt-2">Gestiona todas las instancias del sistema</p>
+          <h1 className="text-4xl font-black tracking-tighter text-white">Clientes</h1>
+          <p className="text-white/50 font-medium mt-2">
+            Todos los negocios que usan Orderix
+          </p>
         </div>
-        <Button 
-          onClick={() => setIsCreateOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/20"
-          leftIcon={<Plus size={18} />}
-        >
-          Nuevo Restaurante
+        <Button onClick={() => setIsCreateOpen(true)} leftIcon={<Plus size={18} />}>
+          Nuevo cliente
         </Button>
       </div>
 
-      {/* Analytics / Stats summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/20">
-              <Building2 className="text-indigo-400" size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white/50 uppercase tracking-widest">Registrados</p>
-              <p className="text-3xl font-black text-white">{tenants.length}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="bg-emerald-500/5 border-emerald-500/10 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
-              <CheckCircle2 className="text-emerald-400" size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white/50 uppercase tracking-widest">Activos</p>
-              <p className="text-3xl font-black text-emerald-400">
-                {tenants.filter(t => t.isActive).length}
-              </p>
-            </div>
-          </div>
-        </Card>
-        <Card className="bg-red-500/5 border-red-500/10 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center border border-red-500/20">
-              <XCircle className="text-red-400" size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white/50 uppercase tracking-widest">Inactivos</p>
-              <p className="text-3xl font-black text-red-400">
-                {tenants.filter(t => !t.isActive).length}
-              </p>
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {tarjetas.map((t) => {
+          const activa = filtro === t.filtro;
+          return (
+            <button
+              key={t.label}
+              onClick={() => setFiltro(t.filtro)}
+              className={`text-left rounded-3xl border p-5 transition-colors ${
+                activa
+                  ? 'bg-indigo-500/10 border-indigo-500/40'
+                  : 'bg-white/[0.02] border-white/10 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <t.icon className={t.color} size={20} />
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/50">
+                  {t.label}
+                </span>
+              </div>
+              <p className="text-3xl font-black text-white mt-2">{t.valor}</p>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Main Table Area */}
-      <Card className="bg-white/5 border-white/10 p-0 overflow-hidden backdrop-blur-xl">
-        <div className="p-6 border-b border-white/10 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">Registered Instances</h2>
-          <div className="w-72 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar restaurantes..." 
+      {resumen.porVencer > 0 && (
+        <div className="rounded-2xl border border-orange-500/30 bg-orange-500/10 px-5 py-3 text-sm text-orange-200">
+          {resumen.porVencer === 1
+            ? '1 cliente vence en los próximos 15 días.'
+            : `${resumen.porVencer} clientes vencen en los próximos 15 días.`}{' '}
+          <button onClick={() => navigate('/superadmin/facturacion')} className="underline font-bold">
+            Ver facturación
+          </button>
+        </div>
+      )}
+
+      <Card variant="solid" padding="none">
+        <div className="p-5 border-b border-white/5">
+          <div className="relative max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+            <input
+              className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-3
+                         text-white placeholder:text-white/25 outline-none focus:border-indigo-500/60"
+              placeholder="Buscar por nombre, identificador o email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all"
             />
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/5 text-xs uppercase tracking-widest font-bold text-white/50">
-                <th className="p-4 pl-6">Restaurante</th>
-                <th className="p-4">Identificador (Slug)</th>
-                <th className="p-4">Creado en</th>
+                <th className="p-4 pl-6">Cliente</th>
+                <th className="p-4">Sucursales</th>
+                <th className="p-4">Usuarios</th>
+                <th className="p-4">Suscripción</th>
                 <th className="p-4 text-center">Estado</th>
-                <th className="p-4 pr-6 text-right">Acciones</th>
+                <th className="p-4 pr-6" />
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="p-12 text-center">
-                    <Loader2 className="animate-spin text-indigo-500 mx-auto" size={32} />
-                  </td>
-                </tr>
-              ) : filteredTenants.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-12 text-center text-white/40 font-medium">
-                    No hay restaurantes registrados
-                  </td>
-                </tr>
-              ) : (
-                filteredTenants.map((t) => (
-                  <tr key={t.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="p-4 pl-6 font-black text-white">{t.name}</td>
-                    <td className="p-4 text-white/70 font-mono text-sm">{t.slug}</td>
-                    <td className="p-4 text-white/50 text-sm">
-                      {new Date(t.createdAt).toLocaleDateString()}
+              <DataState
+                loading={loading}
+                error={loadError}
+                empty={filtrados.length === 0}
+                emptyMessage={
+                  searchTerm || filtro !== 'todos'
+                    ? 'Ningún cliente coincide con el filtro'
+                    : 'Todavía no hay clientes registrados'
+                }
+                onRetry={fetchTenants}
+                colSpan={6}
+              />
+
+              {!loading &&
+                !loadError &&
+                filtrados.map((t) => (
+                  <tr
+                    key={t.id}
+                    onClick={() => navigate(`/superadmin/clientes/${t.id}`)}
+                    className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    <td className="p-4 pl-6">
+                      <p className="font-black text-white">{t.name}</p>
+                      <p className="text-white/40 font-mono text-xs mt-0.5">{t.slug}</p>
+                    </td>
+                    <td className="p-4 text-white/70">{t._count?.branches ?? 0}</td>
+                    <td className="p-4 text-white/70">{t._count?.users ?? 0}</td>
+                    <td className="p-4">
+                      <SubscriptionBadge state={t.billingState as BillingState} dias={t.diasRestantes} />
+                      {t.subscriptionExpiresAt && (
+                        <p className="text-white/40 text-xs mt-1">
+                          hasta {new Date(t.subscriptionExpiresAt).toLocaleDateString()}
+                        </p>
+                      )}
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                        t.isActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${t.isActive ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                        {t.isActive ? 'Activo' : 'Suspendido'}
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                          t.isActive !== false
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            t.isActive !== false ? 'bg-emerald-400' : 'bg-red-400'
+                          }`}
+                        />
+                        {t.isActive !== false ? 'Activo' : 'Suspendido'}
                       </span>
                     </td>
-                    <td className="p-4 pr-6 flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        className="text-white/60 hover:text-white"
-                        onClick={() => handleToggleStatus(t.id, t.isActive)}
-                      >
-                        <ShieldAlert size={16} className={t.isActive ? 'text-red-400' : 'text-emerald-400'} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="text-white/60 hover:text-indigo-400"
-                        onClick={() => {
-                          setSelectedTenant(t);
-                          setIsPasswordOpen(true);
-                        }}
-                      >
-                        <Key size={16} />
-                      </Button>
+                    <td className="p-4 pr-6 text-right">
+                      <ChevronRight className="inline text-white/30" size={18} />
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>
       </Card>
 
-      {/* Creación Modal (Simplified CSS based) */}
-      <AnimatePresence>
-        {isCreateOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsCreateOpen(false)}
-            />
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-[#121214] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
-            >
-              <div className="p-6 border-b border-white/10 bg-white/5">
-                <h3 className="text-xl font-black text-white">Registrar Nuevo Restaurante</h3>
-                <p className="text-xs text-white/50 uppercase tracking-widest font-bold mt-1">Aprovisionar instancia</p>
-              </div>
-              <form onSubmit={handleCreateTenant} className="p-6 space-y-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Nombre del Restaurante</label>
-                  <input
-                    type="text"
-                    required
-                    value={newTenantData.name}
-                    onChange={(e) => setNewTenantData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500/50"
-                    placeholder="Ej. McDonald's Centro"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Identificador Único</label>
-                  <input
-                    type="text"
-                    required
-                    value={newTenantData.slug}
-                    onChange={(e) => setNewTenantData(prev => ({ ...prev, slug: e.target.value.toLowerCase() }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500/50 font-mono"
-                    placeholder="mcdonalds-dt"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Email de Administrador</label>
-                  <input
-                    type="email"
-                    required
-                    value={newTenantData.adminEmail}
-                    onChange={(e) => setNewTenantData(prev => ({ ...prev, adminEmail: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500/50"
-                    placeholder="admin@restaurant.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Contraseña de Administrador</label>
-                  <input
-                    type="password"
-                    required
-                    value={newTenantData.adminPassword}
-                    onChange={(e) => setNewTenantData(prev => ({ ...prev, adminPassword: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500/50"
-                    placeholder="Mín. 6 caracteres"
-                  />
-                </div>
-                <div className="pt-4 flex justify-end gap-3">
-                  <Button type="button" variant="ghost" className="text-white/60" onClick={() => setIsCreateOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" isLoading={actionLoading} className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                    Crear Restaurante
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
+      <TenantFormModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSubmit={handleCreate}
+        isLoading={actionLoading}
+      />
 
-        {isPasswordOpen && selectedTenant && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsPasswordOpen(false)}
-            />
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-[#121214] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
-            >
-              <div className="p-6 border-b border-white/10 bg-white/5">
-                <h3 className="text-xl font-black text-white">Restablecer Contraseña</h3>
-                <p className="text-xs text-white/50 uppercase tracking-widest font-bold mt-1">Restaurante: {selectedTenant.name}</p>
-              </div>
-              <form onSubmit={handleResetPassword} className="p-6 space-y-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-white/70 uppercase tracking-wider">Nueva Contraseña</label>
-                  <input
-                    type="password"
-                    required
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-indigo-500/50"
-                    placeholder="Mín. 6 caracteres"
-                  />
-                </div>
-                <div className="pt-4 flex justify-end gap-3">
-                  <Button type="button" variant="ghost" className="text-white/60" onClick={() => setIsPasswordOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" isLoading={actionLoading} className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                    Guardar Cambios
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <Toast message={error} type="error" isVisible={!!error} onClose={() => setError('')} />
-      <Toast message={success} type="success" isVisible={!!success} onClose={() => setSuccess('')} />
+      <Toast
+        message={toast?.message ?? ''}
+        type={toast?.type ?? 'success'}
+        isVisible={Boolean(toast)}
+        onClose={() => setToast(null)}
+      />
     </div>
   );
 }

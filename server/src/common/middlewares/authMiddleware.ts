@@ -14,8 +14,12 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     let decoded: any = null;
 
     try {
-      // First try local JWT from exchangeToken
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+      // First try local JWT from exchangeToken.
+      // Sin fallback a 'secret': un secreto adivinable permitiría forjar un token
+      // con role SUPER_ADMIN. Si no está configurado, se valida contra Supabase.
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) throw new Error('JWT_SECRET no configurado');
+      decoded = jwt.verify(token, jwtSecret) as any;
     } catch {
       // If it fails, fallback to Supabase JWT verification
       const supabaseUrl = process.env.SUPABASE_URL || '';

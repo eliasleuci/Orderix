@@ -1,3 +1,6 @@
+// Primero que nada: si falta una variable de entorno, que falle acá y no
+// a mitad de una request.
+import './config/env';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -10,7 +13,7 @@ import orderRoutes from './modules/orders/routes';
 import stockRoutes from './modules/stock/routes';
 import reportRoutes from './modules/reports/routes';
 import healthRoutes from './modules/health/routes';
-import tenantsRoutes from './modules/tenants/routes';
+import superadminRoutes from './modules/superadmin';
 
 const app = express();
 
@@ -33,7 +36,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/health', healthRoutes);
-app.use('/api/tenants', tenantsRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
 // Health Check
 app.get('/health', (req, res) => {

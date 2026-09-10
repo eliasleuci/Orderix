@@ -5,6 +5,16 @@ import { AppError } from '../../common/exceptions/AppError';
 
 const authRepository = new AuthRepository();
 
+// Sin fallback a 'secret': firmar con un secreto adivinable permitiría que
+// cualquiera se emita un token con role SUPER_ADMIN.
+const requireJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new AppError('JWT_SECRET no está configurada en el servidor', 500);
+  }
+  return secret;
+};
+
 export class AuthService {
   async login(email: string, pass: string) {
   const user = await authRepository.findByEmail(email);
@@ -13,13 +23,7 @@ export class AuthService {
     throw new AppError('Incorrect email or password', 401);
   }
 
-  // LOGS DE DEBUG
-  console.log('--- DEBUG LOGIN ---');
-  console.log('Password enviada (Postman):', `"${pass}"`);
-  console.log('Hash en DB:', `"${user.password}"`);
-  
   const isMatch = await bcrypt.compare(pass, user.password);
-  console.log('¿Resultado bcrypt?:', isMatch);
 
   if (!isMatch) {
     throw new AppError('Incorrect email or password', 401);
@@ -32,7 +36,7 @@ export class AuthService {
         branchId: user.branchId,
         tenantId: user.tenantId
       },
-      process.env.JWT_SECRET || 'secret',
+      requireJwtSecret(),
       { expiresIn: '1d' }
     );
 
@@ -70,7 +74,7 @@ export class AuthService {
         branchId: profile?.branchId || null,
         tenantId: profile?.tenantId || null
       },
-      process.env.JWT_SECRET || 'secret',
+      requireJwtSecret(),
       { expiresIn: '1d' }
     );
 

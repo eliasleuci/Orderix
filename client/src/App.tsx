@@ -20,6 +20,8 @@ const DebugPage = lazy(() => import('./modules/debug/DebugPage'));
 // Superadmin
 const SuperAdminLayout = lazy(() => import('./layouts/SuperAdminLayout'));
 const TenantsPage = lazy(() => import('./modules/superadmin/TenantsPage'));
+const TenantDetailPage = lazy(() => import('./modules/superadmin/TenantDetailPage'));
+const BillingPage = lazy(() => import('./modules/superadmin/BillingPage'));
 
 const PageLoader = () => (
   <div className="min-h-screen bg-surface-base flex items-center justify-center">
@@ -93,10 +95,14 @@ const AppContent = () => {
           <Routes>
             <Route path="/superadmin/*" element={<SuperAdminLayout />}>
               <Route index element={<TenantsPage />} />
-              <Route path="tenants" element={<TenantsPage />} />
-              <Route path="*" element={<Navigate to="/superadmin/tenants" replace />} />
+              <Route path="clientes" element={<TenantsPage />} />
+              <Route path="clientes/:tenantId" element={<TenantDetailPage />} />
+              <Route path="facturacion" element={<BillingPage />} />
+              {/* Redirect de la ruta vieja */}
+              <Route path="tenants" element={<Navigate to="/superadmin/clientes" replace />} />
+              <Route path="*" element={<Navigate to="/superadmin/clientes" replace />} />
             </Route>
-            <Route path="*" element={<Navigate to="/superadmin/tenants" replace />} />
+            <Route path="*" element={<Navigate to="/superadmin/clientes" replace />} />
           </Routes>
         </Suspense>
       </div>
