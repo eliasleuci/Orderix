@@ -89,7 +89,7 @@ const AppContent = () => {
   // Si es SuperAdmin usamos el layout propio de super admin y sus rutas
   if (isSuperAdmin && user) {
     return (
-      <div className="flex h-screen overflow-hidden bg-[#0A0A0B] text-white transition-colors duration-300">
+      <div className="superadmin-scope flex h-screen overflow-hidden bg-[#0A0A0B] text-white transition-colors duration-300">
         <HashRedirectHandler />
         <Suspense fallback={<PageLoader />}>
           <Routes>
