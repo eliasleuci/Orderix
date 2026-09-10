@@ -28,6 +28,8 @@ export default function ResetPasswordPage() {
   const [repetir, setRepetir] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Motivo que devuelve Supabase, para no esconder el fallo detrás de un texto genérico.
+  const [motivo, setMotivo] = useState('');
 
   useEffect(() => {
     let vivo = true;
@@ -50,8 +52,17 @@ export default function ResetPasswordPage() {
           token_hash: tokenHash,
         });
         if (!vivo) return;
-        setEstado(err ? 'sin-sesion' : 'listo');
-        // Se limpia la URL para no dejar el token en el historial del navegador.
+
+        if (err) {
+          setMotivo(err.message);
+          setEstado('sin-sesion');
+          // La URL se deja intacta a propósito: si el fallo fue de red, recargar
+          // vuelve a intentar con el mismo token en lugar de perderlo.
+          return;
+        }
+
+        setEstado('listo');
+        // Ya canjeado: se saca el token de la URL para que no quede en el historial.
         window.history.replaceState({}, '', '/reset-password');
         return;
       }
@@ -133,6 +144,11 @@ export default function ResetPasswordPage() {
                   Los links de recuperación vencen y se pueden usar una sola vez.
                   Pedí uno nuevo desde la pantalla de ingreso.
                 </p>
+                {motivo && (
+                  <p className="text-text-muted text-xs mt-3 font-mono break-words">
+                    {motivo}
+                  </p>
+                )}
               </div>
               <Button onClick={() => navigate('/login')}>Volver al ingreso</Button>
             </div>
