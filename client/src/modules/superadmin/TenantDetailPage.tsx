@@ -15,7 +15,7 @@ import TenantFormModal from './components/TenantFormModal';
 import BranchFormModal from './components/BranchFormModal';
 import UserFormModal from './components/UserFormModal';
 import PaymentModal from './components/PaymentModal';
-import { inputClass } from './components/Field';
+import DeleteTenantModal from './components/DeleteTenantModal';
 import { superadminService } from '../../services/superadminService';
 import { ROLE_LABELS } from '../../types/superadmin';
 import type {
@@ -57,7 +57,7 @@ export default function TenantDetailPage() {
   const [userModal, setUserModal] = useState<{ open: boolean; user: SuperAdminUser | null }>({ open: false, user: null });
   const [payModal, setPayModal] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; message: string; onOk: () => Promise<void> } | null>(null);
-  const [confirmSlug, setConfirmSlug] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const showToast = (message: string, type: ToastType) => setToast({ message, type });
 
@@ -510,46 +510,21 @@ export default function TenantDetailPage() {
                 Para bajas normales usá <strong className="text-white/70">Suspender</strong>, que es reversible.
               </p>
 
-              {!suspendido ? (
+              {!suspendido && (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-white/50">
                   Primero tenés que suspender el cliente. Es un paso deliberado para evitar borrados por error.
                 </div>
-              ) : (
-                <div className="mt-4 space-y-3 max-w-md">
-                  <p className="text-sm text-white/60">
-                    Escribí <strong className="text-white font-mono">{tenant.slug}</strong> para confirmar:
-                  </p>
-                  <input
-                    className={inputClass}
-                    value={confirmSlug}
-                    onChange={(e) => setConfirmSlug(e.target.value)}
-                    placeholder={tenant.slug}
-                  />
-                  <Button
-                    variant="danger"
-                    leftIcon={<Trash2 size={16} />}
-                    disabled={confirmSlug !== tenant.slug}
-                    isLoading={busy}
-                    onClick={async () => {
-                      const { data, error } = await superadminService.deleteTenant(tenant.id, confirmSlug);
-                      if (error) {
-                        showToast(error, 'error');
-                        return;
-                      }
-                      const fallidos = data?.authFallidos?.length ?? 0;
-                      showToast(
-                        fallidos > 0
-                          ? `Cliente borrado, pero ${fallidos} cuentas quedaron sin eliminar`
-                          : 'Cliente borrado definitivamente',
-                        fallidos > 0 ? 'error' : 'success'
-                      );
-                      navigate('/superadmin/clientes');
-                    }}
-                  >
-                    Borrar {tenant.name}
-                  </Button>
-                </div>
               )}
+
+              <Button
+                variant="danger"
+                leftIcon={<Trash2 size={16} />}
+                disabled={!suspendido}
+                className="mt-4"
+                onClick={() => setDeleteOpen(true)}
+              >
+                Borrar {tenant.name}
+              </Button>
             </div>
           </div>
         </Card>
@@ -602,6 +577,31 @@ export default function TenantDetailPage() {
         onSubmit={async (d) => {
           const ok = await accion(() => superadminService.registerPayment(tenant.id, d), 'Pago registrado');
           if (ok) setPayModal(false);
+        }}
+      />
+
+      <DeleteTenantModal
+        isOpen={deleteOpen}
+        tenant={tenant}
+        isLoading={busy}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={async (confirmSlug) => {
+          setBusy(true);
+          const { data, error } = await superadminService.deleteTenant(tenant.id, confirmSlug);
+          setBusy(false);
+
+          if (error) {
+            showToast(error, 'error');
+            return;
+          }
+          const fallidos = data?.authFallidos?.length ?? 0;
+          showToast(
+            fallidos > 0
+              ? `Cliente borrado, pero ${fallidos} cuentas quedaron sin eliminar`
+              : 'Cliente borrado definitivamente',
+            fallidos > 0 ? 'error' : 'success'
+          );
+          navigate('/superadmin/clientes');
         }}
       />
 

@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Building2, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Plus, Search, Building2, ChevronRight, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Toast, { ToastType } from '../../components/Toast';
 import DataState from './components/DataState';
 import SubscriptionBadge from './components/SubscriptionBadge';
 import TenantFormModal from './components/TenantFormModal';
+import DeleteTenantModal from './components/DeleteTenantModal';
 import { superadminService } from '../../services/superadminService';
 import type { SuperAdminTenant, BillingState } from '../../types/superadmin';
 
@@ -23,6 +24,7 @@ export default function TenantsPage() {
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SuperAdminTenant | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
@@ -78,6 +80,27 @@ export default function TenantsPage() {
     }
     showToast(`Cliente "${data?.name}" creado`, 'success');
     setIsCreateOpen(false);
+    fetchTenants();
+  };
+
+  const handleDelete = async (confirmSlug: string) => {
+    if (!deleteTarget) return;
+    setActionLoading(true);
+    const { data, error } = await superadminService.deleteTenant(deleteTarget.id, confirmSlug);
+    setActionLoading(false);
+
+    if (error) {
+      showToast(error, 'error');
+      return;
+    }
+    const fallidos = data?.authFallidos?.length ?? 0;
+    showToast(
+      fallidos > 0
+        ? `Cliente borrado, pero ${fallidos} cuentas quedaron sin eliminar`
+        : `"${data?.cliente}" borrado definitivamente`,
+      fallidos > 0 ? 'error' : 'success'
+    );
+    setDeleteTarget(null);
     fetchTenants();
   };
 
@@ -216,8 +239,22 @@ export default function TenantsPage() {
                         {t.isActive !== false ? 'Activo' : 'Suspendido'}
                       </span>
                     </td>
-                    <td className="p-4 pr-6 text-right">
-                      <ChevronRight className="inline text-white/30" size={18} />
+                    <td className="p-4 pr-6">
+                      <div className="flex items-center justify-end gap-1">
+                        {t.isActive === false && (
+                          <button
+                            title="Borrar definitivamente"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(t);
+                            }}
+                            className="p-2 rounded-xl text-white/30 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        <ChevronRight className="text-white/30" size={18} />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -230,6 +267,14 @@ export default function TenantsPage() {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreate}
+        isLoading={actionLoading}
+      />
+
+      <DeleteTenantModal
+        isOpen={Boolean(deleteTarget)}
+        tenant={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
         isLoading={actionLoading}
       />
 
