@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-const uuid = z.string().uuid('Identificador inválido');
+// z.string().uuid() exige los bits de versión/variante de RFC 4122 y rechaza
+// ids "de mentira" puestos a mano en seeds viejos (ej. '11111111-1111-1111-
+// 1111-111111111111' del Demo Tenant) aunque Postgres los acepta sin problema
+// como ::uuid. Sin este cambio, esos clientes de prueba quedaban imposibles
+// de borrar desde el panel -justo lo que el botón existe para resolver-.
+// Se valida el formato 8-4-4-4-12 hex, sin exigir esos bits.
+const uuid = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Identificador inválido');
 const email = z.string().email('Email inválido');
 const password = z.string().min(8, 'La contraseña debe tener al menos 8 caracteres');
 
