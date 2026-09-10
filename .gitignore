@@ -39,3 +39,11 @@ client/release/
 datos.txt
 *.credentials
 *.secrets
+
+# Lockfile de la raíz: NO commitear. El build en Vercel instala cada app por
+# separado (cd server/client && npm install) usando sus propios lockfiles.
+# Un package-lock.json en la raíz activa la instalación automática de
+# workspaces de Vercel ANTES del buildCommand, y si se generó en Windows
+# (como esta máquina) no resuelve el binario nativo de Linux para rollup
+# ("Cannot find module @rollup/rollup-linux-x64-gnu") y rompe el deploy.
+/package-lock.json
