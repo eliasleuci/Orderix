@@ -57,7 +57,7 @@ const UserFormModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, branches, u
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editando) {
-      await onSubmit({ role: form.role, branchId: form.branchId || null, name: form.name });
+      await onSubmit({ email: form.email, role: form.role, branchId: form.branchId || null, name: form.name });
     } else {
       await onSubmit({
         email: form.email,
@@ -77,19 +77,27 @@ const UserFormModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, branches, u
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {!editando && (
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Email" hint="Con este email inicia sesión">
-              <input
-                type="email"
-                className={inputClass}
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="cajero@negocio.com"
-                required
-                autoFocus
-              />
-            </Field>
+        <div className={editando ? '' : 'grid sm:grid-cols-2 gap-4'}>
+          <Field
+            label="Email de acceso"
+            hint={
+              editando
+                ? 'Cambiarlo cambia el email con el que inicia sesión, desde el próximo ingreso'
+                : 'Con este email inicia sesión'
+            }
+          >
+            <input
+              type="email"
+              className={inputClass}
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="cajero@negocio.com"
+              required
+              autoFocus
+            />
+          </Field>
+
+          {!editando && (
             <Field label="Contraseña" hint="Mínimo 8 caracteres">
               <input
                 type="text"
@@ -100,8 +108,8 @@ const UserFormModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, branches, u
                 required
               />
             </Field>
-          </div>
-        )}
+          )}
+        </div>
 
         <Field label="Nombre">
           <input

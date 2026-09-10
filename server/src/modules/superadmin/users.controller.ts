@@ -125,10 +125,10 @@ export class UsersController {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = String(req.params.id);
-      const { role, branchId, name } = req.body;
+      const { email, role, branchId, name } = req.body;
 
       if (id === req.user?.id) {
-        throw new AppError('No podés cambiar tu propio rol desde el panel', 400);
+        throw new AppError('No podés editar tu propio usuario desde el panel', 400);
       }
 
       const actual = await basePrisma.user.findUnique({ where: { id } });
@@ -145,9 +145,22 @@ export class UsersController {
         }
       }
 
+      // El email de acceso vive en Supabase Auth, no en profiles: cambiarlo solo
+      // en la tabla dejaria a la persona iniciando sesion con el email viejo.
+      if (email !== undefined) {
+        const { error } = await getSupabaseAdmin().auth.admin.updateUserById(id, {
+          email,
+          email_confirm: true,
+        });
+        if (error) throw mapAuthError(error.message);
+      }
+
       const user = await basePrisma.user.update({
         where: { id },
         data: {
+          // profiles.email se mantiene al dia solo para que las consultas
+          // directas a la tabla no muestren un dato viejo; el que manda es Auth.
+          ...(email !== undefined && { email }),
           ...(role !== undefined && { role }),
           ...(branchId !== undefined && { branchId }),
           ...(name !== undefined && { name: name || null }),

@@ -111,7 +111,7 @@ class SuperAdminService {
     );
   }
 
-  updateUser(id: string, payload: { role?: string; branchId?: string | null; name?: string }) {
+  updateUser(id: string, payload: { email?: string; role?: string; branchId?: string | null; name?: string }) {
     return this.run<SuperAdminUser>(() => baseApi.patch(`/superadmin/users/${id}`, payload));
   }
 

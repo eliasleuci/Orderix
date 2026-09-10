@@ -104,6 +104,9 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   params: z.object({ id: uuid }),
   body: z.object({
+    // Cambia la credencial de acceso en Supabase Auth, no solo el dato guardado
+    // en profiles: es el email con el que la persona inicia sesión.
+    email: email.optional(),
     role: role.optional(),
     branchId: uuid.optional().nullable(),
     name: z.string().optional(),

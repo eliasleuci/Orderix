@@ -98,7 +98,7 @@ const TenantFormModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, tenant, i
               required
             />
           </Field>
-          <Field label="Email de contacto">
+          <Field label="Email de contacto" hint="Para facturación. No es el email con el que inician sesión">
             <input
               type="email"
               className={inputClass}
