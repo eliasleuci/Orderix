@@ -47,3 +47,8 @@ datos.txt
 # (como esta máquina) no resuelve el binario nativo de Linux para rollup
 # ("Cannot find module @rollup/rollup-linux-x64-gnu") y rompe el deploy.
 /package-lock.json
+
+# Artefactos de tsc (los genera `tsc -b`, no van al repo)
+*.tsbuildinfo
+client/vite.config.js
+client/vite.config.d.ts
