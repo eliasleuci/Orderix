@@ -3,14 +3,17 @@ import { useOrders } from '../../hooks/useOrders';
 import { useAuthStore } from '../../store/authStore';
 import { orderService } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types/domain';
-import { ChefHat, Loader2, Signal, LogOut } from 'lucide-react';
+import { ChefHat, Loader2, Signal, LogOut, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
 import OrderCard from './components/OrderCard';
+import { useNavigate } from 'react-router-dom';
+import { puedeVer } from '../../lib/permisos';
 
 const KitchenPage: React.FC = () => {
-  const { branchId, setBranchId } = useAuthStore();
+  const { branchId, setBranchId, user: usuarioActual, role: rolActual, signOut } = useAuthStore();
+  const navigate = useNavigate();
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -125,8 +128,35 @@ const KitchenPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {!useAuthStore.getState().user && (
+        <div className="flex items-center gap-3 lg:gap-4 flex-wrap">
+          {/* En /kitchen se oculta la navegación para que quede como pantalla de
+              cocina a pantalla completa. Eso dejaba al rol COCINA sin forma de
+              salir ni de llegar a Stock, que es la otra pantalla que tiene
+              habilitada: por eso van acá. */}
+          {usuarioActual && (
+            <div className="flex items-center gap-2">
+              {puedeVer(rolActual, '/stock') && (
+                <button
+                  onClick={() => navigate('/stock')}
+                  className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-surface-elevated/50 border border-white/5 text-text-secondary hover:text-primary hover:border-primary/20 transition-colors"
+                  title="Ir a Stock"
+                >
+                  <Package size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Stock</span>
+                </button>
+              )}
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-surface-elevated/50 border border-white/5 text-text-secondary hover:text-danger hover:border-danger/20 transition-colors"
+                title="Cerrar sesión"
+              >
+                <LogOut size={16} />
+                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Salir</span>
+              </button>
+            </div>
+          )}
+
+          {!usuarioActual && (
             <div className="flex items-center gap-2 bg-warning/10 border border-warning/20 px-4 py-2 rounded-2xl mr-4">
               <Signal className="w-4 h-4 text-warning" />
               <span className="text-[10px] font-black text-warning uppercase tracking-widest">Modo Invitado</span>
