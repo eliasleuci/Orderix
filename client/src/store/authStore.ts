@@ -40,6 +40,15 @@ export const useAuthStore = create<AuthState>()(
         // role incluido: zustand persiste el store en localStorage, así que si no
         // se limpia, el SUPER_ADMIN sobrevive al logout en ese navegador.
         set({ user: null, session: null, role: null, branchId: null, tenantId: null, loading: false });
+
+        // Salida dura al login, en vez de dejarlo librado a que cada pantalla
+        // navegue por su cuenta: al limpiar el usuario, React Router desmonta la
+        // pantalla que disparó el logout y su navigate() puede quedar en el aire,
+        // dejando al cliente en la landing. Además recargar descarta todo el
+        // estado en memoria y evita que el botón "atrás" muestre la app.
+        if (typeof window !== 'undefined') {
+          window.location.replace('/login');
+        }
       },
     }),
     {

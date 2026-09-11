@@ -124,7 +124,7 @@ const LandingPage: React.FC = () => {
       <nav id="navbar" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-2xl h-16' : 'h-20'}`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-full">
           <div className="flex items-center justify-between h-full">
-            <a href="#" className="flex items-center gap-3 group">
+            <a href="/" className="flex items-center gap-3 group">
               <div className="relative w-11 h-11">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B00] to-[#CC5500] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity blur-lg"></div>
                 <img src="/landing/img/icono.webp" alt="ORDERIX" className="relative w-11 h-11 rounded-xl object-cover shadow-lg shadow-[#FF6B00]/30" />
