@@ -58,6 +58,9 @@ const POSPage: React.FC = () => {
   // Print State
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [printerReady, setPrinterReady] = useState(false);
+  // Encabezado del ticket del cliente.
+  const [nombreNegocio, setNombreNegocio] = useState('Orderix');
+  const [nombreSucursal, setNombreSucursal] = useState('');
   const [printerError, setPrinterError] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
 
@@ -113,6 +116,22 @@ const POSPage: React.FC = () => {
       setActiveBill(null);
     }
   }, [orderType, selectedTableId, loadTableBill]);
+
+  // Nombre del negocio y de la sucursal, para el encabezado del ticket.
+  useEffect(() => {
+    if (!branchId) return;
+    supabase
+      .from('branches')
+      .select('name, tenants(name)')
+      .eq('id', branchId)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        const t: any = (data as any).tenants;
+        setNombreSucursal((data as any).name ?? '');
+        setNombreNegocio((Array.isArray(t) ? t[0]?.name : t?.name) ?? 'Orderix');
+      });
+  }, [branchId]);
 
   // Check printer status
   useEffect(() => {
@@ -267,8 +286,10 @@ const POSPage: React.FC = () => {
 
     // Save order for printing
     const tableLabel = orderType === 'MESA' ? tables.find(t => t.id === selectedTableId)?.label || `Mesa ${tables.find(t => t.id === selectedTableId)?.number}` : '';
-    setLastOrder({
+    const pedidoImpreso = {
       ticketNumber: data?.ticket_number,
+      negocio: nombreNegocio,
+      sucursal: nombreSucursal,
       customerName: customerName.trim() || undefined,
       customerAddress: customerAddress.trim() || undefined,
       orderType,
@@ -283,6 +304,14 @@ const POSPage: React.FC = () => {
       paymentMethod: orderType === 'MESA' ? 'UNPAID' : paymentMethod,
       total: getTotal(),
       time: new Date().toISOString()
+    };
+    setLastOrder(pedidoImpreso);
+
+    // Impresión automática: se dispara sin esperarla. La venta ya está
+    // registrada, así que un problema con la impresora no puede demorar ni
+    // trabar la caja; si falla, se avisa aparte y quedan los botones manuales.
+    printService.printAuto(pedidoImpreso).then((r) => {
+      if (r?.error) setPrinterError(r.error);
     });
 
     setCheckoutStatus('success');

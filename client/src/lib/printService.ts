@@ -1,4 +1,9 @@
-const PRINT_SERVER_URL = 'http://localhost:3001';
+// El servidor de impresión corre en la misma máquina que la caja. Aunque la
+// app se sirva por HTTPS, los navegadores tratan localhost como origen seguro,
+// así que la llamada no queda bloqueada por contenido mixto.
+// Se puede apuntar a otra máquina de la red con VITE_PRINT_SERVER_URL.
+const PRINT_SERVER_URL =
+  import.meta.env.VITE_PRINT_SERVER_URL || 'http://localhost:3001';
 
 interface PrintResponse {
   success?: boolean;
@@ -10,6 +15,9 @@ interface PrintResponse {
 
 interface OrderData {
   ticketNumber: number;
+  /** Para el encabezado del ticket del cliente. */
+  negocio?: string;
+  sucursal?: string;
   customerName?: string;
   customerAddress?: string;
   orderType: string;
@@ -86,6 +94,27 @@ class PrintService {
       time: order.time || new Date().toISOString()
     };
     return this.request('/print/both', data);
+  }
+
+  /**
+   * Impresión automática al confirmar un pedido.
+   *
+   * Qué tickets salen lo decide el servidor de impresión según su configuración,
+   * no la app: así se cambia en el local sin tener que publicar una versión
+   * nueva.
+   *
+   * Nunca lanza: la venta ya está registrada cuando se llama acá, y un problema
+   * con la impresora no puede hacerle creer al cajero que el pedido no se tomó.
+   */
+  async printAuto(order: OrderData): Promise<PrintResponse> {
+    try {
+      return await this.request('/print/auto', {
+        ...order,
+        time: order.time || new Date().toISOString(),
+      });
+    } catch {
+      return { error: 'No se pudo conectar al servidor de impresión' };
+    }
   }
 
   async testPrint(): Promise<PrintResponse> {
