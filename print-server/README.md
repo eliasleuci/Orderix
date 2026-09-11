@@ -91,10 +91,75 @@ curl http://localhost:3001/status
 - `"status":"ready"` — lista para imprimir
 - `"status":"disconnected"` — el campo `detalle` dice por qué
 
+## Que arranque solo con Windows
+
+Sin esto, hay que abrir una ventana y ejecutar `npm start` cada vez que se
+prende la computadora. Si nadie se acuerda, la venta se registra igual pero no
+sale el ticket.
+
+Hay dos formas. **Probá primero la primera.**
+
+### Opción 1 — Servicio de Windows (recomendada)
+
+Arranca al prender la máquina, antes incluso de que alguien inicie sesión, y
+Windows lo vuelve a levantar solo si se cae.
+
+1. Buscar **PowerShell** en el menú de inicio
+2. Clic derecho → **Ejecutar como administrador**
+3. Ir a la carpeta y ejecutar:
+
+```powershell
+cd C:\Orderix\print-server
+npm run servicio:instalar
+```
+
+Queda listo. Para comprobarlo, abrir `http://localhost:3001/status` en el
+navegador: tiene que responder.
+
+Se administra desde Windows como cualquier servicio: tecla `Windows + R`,
+escribir `services.msc`, y buscar **Orderix Print Server**. Desde ahí se puede
+detener, reiniciar o ver si está corriendo.
+
+Para sacarlo, también como administrador:
+
+```powershell
+npm run servicio:desinstalar
+```
+
+### Opción 2 — Carpeta de Inicio (sin permisos de administrador)
+
+Si en esa computadora no se puede usar la cuenta de administrador:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File instalar-inicio-simple.ps1
+```
+
+Deja un acceso directo en la carpeta de Inicio, y el servidor se levanta sin
+ventana visible cada vez que el usuario inicia sesión.
+
+Es más simple, pero tiene dos límites: arranca recién al iniciar sesión (no al
+prender la máquina), y si el proceso se cae no se vuelve a levantar solo.
+
+Para sacarlo: `Windows + R`, escribir `shell:startup`, y borrar el acceso
+directo *"Orderix - Servidor de impresion"*.
+
+### Comprobar que quedó andando
+
+Reiniciar la computadora y, sin abrir nada, entrar a:
+
+```
+http://localhost:3001/status
+```
+
+Si responde, está funcionando. Si no, revisar en `services.msc` que el servicio
+esté iniciado.
+
 ## Si algo no imprime
 
-**No sale nada y el POS no avisa.** Revisar que la ventana del servidor siga
-abierta. Se cierra al apagar la computadora: hay que volver a levantarlo.
+**No sale nada y el POS no avisa.** Entrar a `http://localhost:3001/status`. Si
+no responde, el servidor no está corriendo: si lo dejaste como servicio,
+revisalo en `services.msc`; si lo levantás a mano, la ventana se cierra al
+apagar la computadora y hay que volver a abrirla.
 
 **"No responde. Revisá que esté encendida y en red."** La impresora está apagada,
 sin papel, o cambió de IP. Probar `ping 192.168.0.100` con la IP configurada.
