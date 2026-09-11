@@ -5,12 +5,13 @@ import { useThemeStore } from '../store/themeStore';
 import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package, KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { puedeVer } from '../lib/permisos';
 import ChangePasswordModal from '../modules/account/ChangePasswordModal';
 import Toast from '../components/Toast';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
-  const { signOut } = useAuthStore();
+  const { signOut, role } = useAuthStore();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeStore();
   const [cambiarClave, setCambiarClave] = useState(false);
@@ -21,6 +22,8 @@ const Sidebar: React.FC = () => {
     navigate('/login');
   };
 
+  // Sólo los accesos que el rol tiene permitidos. El ruteo vuelve a chequearlo:
+  // esconder el ícono no impide entrar escribiendo la dirección.
   const menuItems = [
     { path: '/pos', icon: <Utensils />, label: 'Ventas' },
     { path: '/kitchen', icon: <ChefHat />, label: 'Cocina' },
@@ -29,7 +32,7 @@ const Sidebar: React.FC = () => {
     { path: '/stock', icon: <Package />, label: 'Stock' },
     { path: '/dashboard', icon: <LayoutDashboard />, label: 'Panel' },
     { path: '/financial', icon: <DollarSign />, label: 'Financiero' },
-  ];
+  ].filter((item) => puedeVer(role, item.path));
 
   return (
     <aside className="hidden lg:flex w-24 bg-surface-base border-r border-border-subtle flex-col items-center py-8 justify-between relative z-50 transition-colors duration-300">

@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { cn } from '../lib/utils';
+import { puedeVer } from '../lib/permisos';
 import ChangePasswordModal from '../modules/account/ChangePasswordModal';
 import Toast from '../components/Toast';
 
@@ -35,14 +36,18 @@ const SECUNDARIOS = [
 const MobileNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuthStore();
+  const { signOut, role } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
 
   const [panelAbierto, setPanelAbierto] = useState(false);
   const [cambiarClave, setCambiarClave] = useState(false);
   const [aviso, setAviso] = useState('');
 
-  const enSecundarios = SECUNDARIOS.some((i) => location.pathname === i.path);
+  // Cada rol ve sólo sus accesos; el resto ni aparece.
+  const principales = PRINCIPALES.filter((i) => puedeVer(role, i.path));
+  const secundarios = SECUNDARIOS.filter((i) => puedeVer(role, i.path));
+
+  const enSecundarios = secundarios.some((i) => location.pathname === i.path);
 
   const cerrarYNavegar = (path: string) => {
     setPanelAbierto(false);
@@ -57,7 +62,7 @@ const MobileNav: React.FC = () => {
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className="flex items-stretch">
-          {PRINCIPALES.map((item) => {
+          {principales.map((item) => {
             const activo = location.pathname === item.path;
             const Icono = item.icon;
             return (
@@ -137,7 +142,7 @@ const MobileNav: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-5">
-                {SECUNDARIOS.map((item) => {
+                {secundarios.map((item) => {
                   const activo = location.pathname === item.path;
                   const Icono = item.icon;
                   return (

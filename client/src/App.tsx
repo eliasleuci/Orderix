@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { cn } from './lib/utils';
+import { puedeVer, rutaInicial } from './lib/permisos';
 import Sidebar from './layouts/Sidebar';
 import MobileNav from './layouts/MobileNav';
 
@@ -149,17 +150,22 @@ const AppContent = () => {
             </Routes>
           ) : (
             <Routes>
+              {/* Cada pantalla sólo se monta si el rol la tiene habilitada.
+                  Ocultarla del menú no alcanza: sin esto, un cajero entraba al
+                  Financiero escribiendo la dirección a mano. */}
               <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Navigate to="/pos" replace />} />
-              <Route path="/pos" element={<POSPage />} />
-              <Route path="/kitchen" element={<KitchenPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/financial" element={<FinancialPage />} />
-              <Route path="/catalog" element={<CatalogPage />} />
-              <Route path="/tables" element={<TablesPage />} />
-              <Route path="/stock" element={<StockPage />} />
+              <Route path="/login" element={<Navigate to={rutaInicial(role)} replace />} />
+              {puedeVer(role, '/pos') && <Route path="/pos" element={<POSPage />} />}
+              {puedeVer(role, '/kitchen') && <Route path="/kitchen" element={<KitchenPage />} />}
+              {puedeVer(role, '/dashboard') && <Route path="/dashboard" element={<DashboardPage />} />}
+              {puedeVer(role, '/financial') && <Route path="/financial" element={<FinancialPage />} />}
+              {puedeVer(role, '/catalog') && <Route path="/catalog" element={<CatalogPage />} />}
+              {puedeVer(role, '/tables') && <Route path="/tables" element={<TablesPage />} />}
+              {puedeVer(role, '/stock') && <Route path="/stock" element={<StockPage />} />}
               <Route path="/debug" element={<DebugPage />} />
-              <Route path="*" element={<Navigate to="/pos" replace />} />
+              {/* Cualquier otra cosa -incluida una pantalla sin permiso- cae en
+                  la pantalla de inicio del rol. */}
+              <Route path="*" element={<Navigate to={rutaInicial(role)} replace />} />
             </Routes>
           )}
         </Suspense>

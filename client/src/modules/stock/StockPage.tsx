@@ -10,6 +10,7 @@ import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
+import { puedeAjustarStock, puedeGestionarCatalogo } from '../../lib/permisos';
 import Toast from '../../components/Toast';
 
 type ViewMode = 'table' | 'report';
@@ -25,7 +26,11 @@ const COMMON_UNITS = ['unidad', 'gr', 'kg', 'ml', 'litro', 'cm', 'mts'];
 
 const StockPage: React.FC = () => {
   const { branchId, role } = useAuthStore();
-  const isAdmin = true;
+  // Antes estaba fijo en true, así que cualquiera podía crear y borrar insumos.
+  // Ahora se separan dos permisos: cocina ajusta cantidades (mermas, consumos)
+  // pero el alta y la baja de ingredientes quedan para el dueño del negocio.
+  const puedeAjustar = puedeAjustarStock(role);
+  const isAdmin = puedeGestionarCatalogo(role);
   
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [categories, setCategories] = useState<IngredientCategory[]>([]);
@@ -148,7 +153,7 @@ const StockPage: React.FC = () => {
   };
 
   const handleOpenEdit = (ingredient: Ingredient) => {
-    if (!isAdmin) return;
+    if (!puedeAjustar) return;
     setEditingIngredient(ingredient);
     setNewStockValue(ingredient.stock.toString());
     setEditReason('');
@@ -467,21 +472,25 @@ const StockPage: React.FC = () => {
                           </div>
                           <div className="col-span-4 lg:col-span-2 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             {getStockBadge(status)}
+                            {/* Ajustar cantidad: administrador y cocina. */}
+                            {puedeAjustar && (
+                              <button
+                                className="w-8 h-8 bg-primary/10 hover:bg-primary/20 rounded-lg flex items-center justify-center text-primary transition-colors"
+                                onClick={() => handleOpenEdit(ing)}
+                                title="Ajustar stock"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                            )}
+                            {/* Eliminar el insumo: sólo el dueño del negocio. */}
                             {isAdmin && (
-                              <>
-                                <button 
-                                  className="w-8 h-8 bg-primary/10 hover:bg-primary/20 rounded-lg flex items-center justify-center text-primary transition-colors"
-                                  onClick={() => handleOpenEdit(ing)}
-                                >
-                                  <Edit3 size={14} />
-                                </button>
-                                <button 
-                                  className="w-8 h-8 bg-danger/10 hover:bg-danger/20 rounded-lg flex items-center justify-center text-danger transition-colors"
-                                  onClick={() => handleDeleteIngredient(ing.id, ing.name)}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
+                              <button
+                                className="w-8 h-8 bg-danger/10 hover:bg-danger/20 rounded-lg flex items-center justify-center text-danger transition-colors"
+                                onClick={() => handleDeleteIngredient(ing.id, ing.name)}
+                                title="Eliminar ingrediente"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             )}
                           </div>
                         </div>
