@@ -15,6 +15,16 @@ const PORT = Number(process.env.PORT || 3001);
 // El navegador entra por https://www.orderix.store y llama a este servidor en
 // localhost. Los navegadores tratan localhost como origen seguro, así que la
 // llamada no queda bloqueada por contenido mixto.
+//
+// Pero además Chrome aplica "Private Network Access": cuando una página pública
+// pide algo a una dirección local, manda antes un preflight y exige que la
+// respuesta incluya esta cabecera. Sin ella la bloquea, y el ticket no sale.
+// Va ANTES de cors() porque ese middleware corta el preflight y responde.
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Private-Network', 'true');
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
 

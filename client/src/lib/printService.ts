@@ -11,6 +11,10 @@ interface PrintResponse {
   message?: string;
   tip?: string;
   status?: 'ready' | 'disconnected';
+  /** 'red' | 'windows' | 'simulacion' */
+  modo?: string;
+  /** Explica en criollo por qué no está lista, para poder diagnosticar. */
+  detalle?: string;
 }
 
 interface OrderData {

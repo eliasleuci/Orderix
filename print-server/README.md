@@ -6,6 +6,30 @@ automáticamente al confirmar un pedido en el POS.
 Corre **en la computadora de la caja**, no en el servidor de Orderix: la
 impresora está conectada ahí. El navegador le habla por `http://localhost:3001`.
 
+## Instalar en la computadora del cliente
+
+Esto se hace una sola vez, en la máquina donde va a estar la impresora.
+
+1. **Instalar Node.js.** Bajarlo de [nodejs.org](https://nodejs.org) (la versión
+   LTS) e instalarlo con las opciones por defecto.
+
+2. **Copiar la carpeta `print-server`** a esa computadora, por ejemplo a
+   `C:\Orderix\print-server`. Se puede llevar en un pendrive: no hace falta
+   copiar todo el sistema, sólo esta carpeta.
+
+3. **Instalar las dependencias.** Abrir la carpeta, clic derecho en un espacio
+   vacío → *Abrir en Terminal*, y ejecutar:
+
+   ```
+   npm install
+   ```
+
+4. **Configurar la impresora** (ver la sección más abajo) y dejarlo arrancando
+   solo con Windows.
+
+Después de eso, el POS en `https://www.orderix.store` va a encontrar la
+impresora sin ninguna configuración extra del lado del sistema.
+
 ## Poner en marcha
 
 ```bash
@@ -169,6 +193,19 @@ sin papel, o cambió de IP. Probar `ping 192.168.0.100` con la IP configurada.
 
 **Imprime pero no corta el papel.** Hay modelos sin guillotina automática. No se
 puede resolver por software.
+
+## Si Chrome pide permiso para acceder a la red local
+
+Cuando el POS (que corre en `https://www.orderix.store`) llama a la impresora
+en `localhost`, Chrome lo detecta como un acceso a la red local y en algunas
+versiones muestra un cartel pidiendo permiso.
+
+**Hay que aceptarlo**, y conviene marcar que lo recuerde. Si se rechaza por
+error, se vuelve a habilitar desde el candado de la barra de direcciones →
+*Configuración de sitios*.
+
+Este servidor ya manda la cabecera que Chrome exige para permitir ese acceso
+(`Access-Control-Allow-Private-Network`), así que con aceptar el cartel alcanza.
 
 ## Una aclaración sobre seguridad
 

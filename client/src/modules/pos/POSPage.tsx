@@ -58,6 +58,9 @@ const POSPage: React.FC = () => {
   // Print State
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [printerReady, setPrinterReady] = useState(false);
+  // Modo y motivo que informa el servidor de impresión: sin esto, cuando algo
+  // falla en el local del cliente no hay forma de saber por qué.
+  const [printerInfo, setPrinterInfo] = useState<{ modo?: string; detalle?: string }>({});
   // Encabezado del ticket del cliente.
   const [nombreNegocio, setNombreNegocio] = useState('Orderix');
   const [nombreSucursal, setNombreSucursal] = useState('');
@@ -138,14 +141,21 @@ const POSPage: React.FC = () => {
     const checkPrinter = async () => {
       const result = await printService.checkStatus();
       setPrinterReady(result.status === 'ready');
-      if (result.error) {
-        setPrinterError(result.error);
-      }
+      setPrinterInfo({ modo: result.modo, detalle: result.detalle });
+      setPrinterError(result.error ?? null);
     };
     checkPrinter();
     const interval = setInterval(checkPrinter, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleProbarImpresora = async () => {
+    setPrinting(true);
+    const r = await printService.testPrint();
+    setPrinting(false);
+    setPrinterError(r.error ?? null);
+    if (!r.error) setAvisoStock('');
+  };
 
   // Print handlers
   const handlePrintKitchen = async () => {
@@ -363,8 +373,34 @@ const POSPage: React.FC = () => {
         {/* HEADER & NAV */}
         <header className="mb-4 lg:mb-8 space-y-4 lg:space-y-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none">Ventas</h1>
+
+              {/* Estado de la impresora, siempre visible. Antes sólo se veía en el
+                  panel que aparece DESPUES de vender, así que no había forma de
+                  comprobar la impresora antes de la primera venta. */}
+              <button
+                onClick={handleProbarImpresora}
+                disabled={printing}
+                title={printerInfo.detalle || printerError || 'Tocá para imprimir una prueba'}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-50',
+                  printerReady
+                    ? 'bg-success/10 border-success/20 text-success hover:bg-success/20'
+                    : 'bg-danger/10 border-danger/20 text-danger hover:bg-danger/20'
+                )}
+              >
+                <Printer size={14} />
+                <span className="hidden sm:inline">
+                  {printing
+                    ? 'Imprimiendo...'
+                    : printerReady
+                      ? printerInfo.modo === 'simulacion'
+                        ? 'Impresora en prueba'
+                        : 'Impresora lista'
+                      : 'Sin impresora'}
+                </span>
+              </button>
             </div>
             {/* En celular cerrar sesión vive en la barra inferior: acá sólo ocuparía lugar. */}
             <Button
@@ -377,6 +413,17 @@ const POSPage: React.FC = () => {
               Cerrar Sesión
             </Button>
           </div>
+
+          {!printerReady && (printerInfo.detalle || printerError) && (
+            <div className="rounded-2xl border border-danger/20 bg-danger/10 px-4 py-2.5">
+              <p className="text-xs text-danger font-bold">
+                {printerError || printerInfo.detalle}
+              </p>
+              <p className="text-[10px] text-text-muted mt-0.5">
+                Se puede seguir vendiendo: el pedido se registra igual, sólo no sale el ticket.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-6 items-center">
             <div className="flex-1">
