@@ -100,3 +100,64 @@ html, body, #root {
   opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
+
+/* ============================================================
+   MÓVIL — se apagan los efectos caros
+   ============================================================
+   En una notebook pasan desapercibidos, pero en un teléfono son lo que
+   hacía que la landing tardara una eternidad y se viera rota: cada uno
+   obliga al navegador a recalcular capas grandes en cada repintado.
+   Se desactivan por debajo de 1024px; en desktop quedan intactos.
+   ============================================================ */
+@media (max-width: 1023px) {
+  /* Ruido a pantalla completa generado con un filtro SVG (feTurbulence).
+     Es el más caro de todos: se recalcula constantemente y está fijo
+     encima de todo el contenido. */
+  .noise-overlay {
+    display: none;
+  }
+
+  /* Halos de 600-800px con blur de 150px, algunos animados en bucle.
+     Desenfocar una superficie de ese tamaño es de lo más pesado que se
+     le puede pedir a una GPU de celular. */
+  .landing-body .hero-glow {
+    display: none;
+  }
+
+  /* backdrop-filter obliga a componer de nuevo todo lo que hay detrás.
+     Se reemplaza por un fondo sólido equivalente. */
+  .landing-body .glass {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(10, 10, 11, 0.95);
+  }
+  .landing-body .glass-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(26, 26, 29, 0.95);
+  }
+
+  /* La perspectiva 3D del mockup sólo se aprecia con el hover del mouse,
+     que en pantalla táctil no existe. */
+  .landing-body .hero-image-container {
+    transform: none;
+  }
+
+  /* Animaciones en bucle: mantienen al navegador repintando sin parar. */
+  .landing-body .animate-pulse-glow,
+  .landing-body .animate-float,
+  .landing-body .animate-float-delayed {
+    animation: none;
+  }
+}
+
+/* Respeta a quien pidió menos movimiento en su sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .landing-body *,
+  .landing-body *::before,
+  .landing-body *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

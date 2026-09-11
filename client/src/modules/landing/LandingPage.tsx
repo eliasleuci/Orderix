@@ -171,11 +171,11 @@ const LandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="min-h-screen pt-32 lg:pt-20 relative overflow-hidden flex items-center">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#FF6B00]/10 rounded-full blur-[150px] animate-pulse-glow"></div>
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#FF6B00]/5 rounded-full blur-[150px]"></div>
+      <section className="pt-28 pb-16 lg:pt-20 lg:min-h-screen relative overflow-hidden flex items-center">
+        <div className="hero-glow absolute top-0 right-0 w-[800px] h-[800px] bg-[#FF6B00]/10 rounded-full blur-[150px] animate-pulse-glow"></div>
+        <div className="hero-glow absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#FF6B00]/5 rounded-full blur-[150px]"></div>
         
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-20 lg:pt-40 relative w-full">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-4 lg:pt-40 relative w-full">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
             
             <div className="space-y-8 animate-fadeUp flex flex-col items-center lg:items-start text-center lg:text-left">
@@ -226,11 +226,11 @@ const LandingPage: React.FC = () => {
             </div>
             
             <div className="relative animate-fadeUp delay-300 perspective-3d block mt-12 lg:mt-0">
-              <div className="absolute -inset-10 bg-gradient-to-r from-[#FF6B00]/30 via-transparent to-[#FF6B00]/30 rounded-3xl blur-2xl animate-pulse-glow"></div>
+              <div className="hero-glow absolute -inset-10 bg-gradient-to-r from-[#FF6B00]/30 via-transparent to-[#FF6B00]/30 rounded-3xl blur-2xl animate-pulse-glow"></div>
               
               <div className="hero-image-container relative rounded-2xl overflow-hidden shadow-2xl shadow-[#FF6B00]/10 border border-white/10">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c20] via-transparent to-transparent z-10"></div>
-                <img src="/landing/img/dashboard.jpg" alt="ORDERIX Dashboard" className="w-full h-auto relative z-0" />
+                <img src="/landing/img/dashboard.jpg" alt="ORDERIX Dashboard" decoding="async" fetchPriority="high" className="w-full h-auto relative z-0" />
                 
                 <div className="absolute top-6 left-6 z-20 animate-float glass rounded-xl p-4 scale-75 lg:scale-100 origin-top-left">
                   <div className="flex items-center gap-3">
@@ -365,7 +365,7 @@ const LandingPage: React.FC = () => {
                 className="group relative rounded-2xl overflow-hidden cursor-pointer aspect-video bg-[#242428] border border-white/5"
                 onClick={() => openLightbox(index)}
               >
-                <img src={src} alt={`ORDERIX - ${index + 1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                <img src={src} alt={`ORDERIX - ${index + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Maximize2 size={24} className="text-white" />
                 </div>
@@ -416,7 +416,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left">
             <div className="flex items-center gap-4">
-              <img src="/landing/img/icono.webp" alt="ORDERIX" className="w-14 h-14 rounded-2xl shadow-xl" />
+              <img src="/landing/img/icono.webp" alt="ORDERIX" loading="lazy" decoding="async" className="w-14 h-14 rounded-2xl shadow-xl" />
               <span className="font-display font-black text-3xl tracking-tighter">ORDERIX</span>
             </div>
             
