@@ -8,7 +8,11 @@ import {
   CreditCard,
   DollarSign,
   TrendingUp,
-  ShoppingBag
+  ShoppingBag,
+  UtensilsCrossed,
+  Store,
+  Bike,
+  Clock
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -27,6 +31,13 @@ const FinancialPage: React.FC = () => {
     cardTotal: 0,
     orderCount: 0,
     avgTicket: 0,
+    // Desglose por tipo de venta: salón, mostrador y delivery.
+    salon: { total: 0, cantidad: 0 },
+    mostrador: { total: 0, cantidad: 0 },
+    delivery: { total: 0, cantidad: 0 },
+    // Mesas abiertas: el pedido existe y suma al total, pero todavía no se
+    // cobró (queda en UNPAID hasta que se cierra la cuenta).
+    pendiente: { total: 0, cantidad: 0 },
   });
 
   const fetchStats = useCallback(async () => {
@@ -81,12 +92,31 @@ const FinancialPage: React.FC = () => {
         .filter((o: any) => o.payment_method === 'CARD' || o.payment_method === 'DIGITAL')
         .reduce((acc: number, o: any) => acc + Number(o.total ?? 0), 0);
 
+      // El POS guarda el tipo como MESA (salón), TAKEAWAY (mostrador y retiro)
+      // y DELIVERY (envío).
+      const porTipo = (tipo: string) => {
+        const del = filteredOrders.filter((o: any) => o.order_type === tipo);
+        return {
+          total: del.reduce((a: number, o: any) => a + Number(o.total ?? 0), 0),
+          cantidad: del.length,
+        };
+      };
+
+      const sinCobrar = filteredOrders.filter((o: any) => o.payment_method === 'UNPAID');
+
       setStats({
         totalSales,
         cashTotal,
         cardTotal,
         orderCount: filteredOrders.length,
         avgTicket: filteredOrders.length > 0 ? totalSales / filteredOrders.length : 0,
+        salon: porTipo('MESA'),
+        mostrador: porTipo('TAKEAWAY'),
+        delivery: porTipo('DELIVERY'),
+        pendiente: {
+          total: sinCobrar.reduce((a: number, o: any) => a + Number(o.total ?? 0), 0),
+          cantidad: sinCobrar.length,
+        },
       });
     }
     setLoading(false);
@@ -304,6 +334,77 @@ const FinancialPage: React.FC = () => {
                 {stats.totalSales > 0 ? ((stats.cardTotal / stats.totalSales) * 100).toFixed(1) : 0}% del total
               </p>
             </Card>
+          </div>
+
+          {/* ---------- VENTAS POR TIPO ---------- */}
+          <div>
+            <div className="flex items-center gap-3 mb-5">
+              <h2 className="text-xl font-black uppercase tracking-tighter">Ventas por tipo</h2>
+              <span className="text-text-muted text-xs font-bold">
+                Salón, mostrador y delivery
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { id: 'salon', label: 'Salón', detalle: 'Comieron en el local', icon: UtensilsCrossed, color: 'text-primary', bg: 'bg-primary/10', borde: 'border-primary/20', barra: 'bg-primary', datos: stats.salon },
+                { id: 'mostrador', label: 'Mostrador', detalle: 'Pasaron a retirar', icon: Store, color: 'text-success', bg: 'bg-success/10', borde: 'border-success/20', barra: 'bg-success', datos: stats.mostrador },
+                { id: 'delivery', label: 'Delivery', detalle: 'Envío a domicilio', icon: Bike, color: 'text-warning', bg: 'bg-warning/10', borde: 'border-warning/20', barra: 'bg-warning', datos: stats.delivery },
+              ].map((t) => {
+                const porcentaje = stats.totalSales > 0 ? (t.datos.total / stats.totalSales) * 100 : 0;
+                const Icono = t.icon;
+                return (
+                  <Card key={t.id} variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40">
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className={`w-14 h-14 ${t.bg} rounded-3xl flex items-center justify-center border ${t.borde} shrink-0`}>
+                        <Icono size={26} className={t.color} />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">
+                          {t.label}
+                        </h3>
+                        <span className={`text-3xl font-black ${t.color} tracking-tighter leading-none block`}>
+                          ${t.datos.total.toLocaleString()}
+                        </span>
+                        <p className="text-[10px] font-bold text-text-muted mt-1">{t.detalle}</p>
+                      </div>
+                    </div>
+
+                    <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${t.barra} rounded-full transition-all duration-500`}
+                        style={{ width: `${porcentaje}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[10px] font-bold text-text-muted">
+                        {t.datos.cantidad} {t.datos.cantidad === 1 ? 'pedido' : 'pedidos'}
+                      </span>
+                      <span className="text-[10px] font-bold text-text-muted">
+                        {porcentaje.toFixed(1)}% del total
+                      </span>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Las mesas abiertas ya suman al total facturado pero todavía no se
+                cobraron: se avisa para que no se confunda con plata en caja. */}
+            {stats.pendiente.cantidad > 0 && (
+              <div className="mt-5 flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning/10 px-5 py-4">
+                <Clock size={20} className="text-warning shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-black text-warning">
+                    ${stats.pendiente.total.toLocaleString()} sin cobrar
+                  </p>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    {stats.pendiente.cantidad} {stats.pendiente.cantidad === 1 ? 'pedido de mesa abierta' : 'pedidos de mesas abiertas'}.
+                    Ya están sumados en el total facturado, pero el dinero se cobra al cerrar la cuenta.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

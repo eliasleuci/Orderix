@@ -35,6 +35,11 @@ export const rangoDe = (periodo: Periodo): Rango => {
   return { desde, hasta, etiqueta };
 };
 
+export interface Total {
+  total: number;
+  cantidad: number;
+}
+
 export interface ProductoVendido {
   nombre: string;
   cantidad: number;
@@ -52,6 +57,8 @@ export interface DatosReporte {
   ticketPromedio: number;
   efectivo: number;
   tarjeta: number;
+  porTipo: { salon: Total; mostrador: Total; delivery: Total };
+  sinCobrar: Total;
   porDia: Array<{ fecha: string; ordenes: number; importe: number }>;
   productos: ProductoVendido[];
   ordenes: Order[];
@@ -125,6 +132,19 @@ export const obtenerDatos = async (
     }
   }
 
+  // El POS guarda el tipo como MESA (salón), TAKEAWAY (mostrador y retiro) y
+  // DELIVERY (envío).
+  const porTipoDe = (tipo: string) => {
+    const del = ordenes.filter((o) => o.order_type === tipo);
+    return {
+      total: del.reduce((a, o) => a + Number(o.total ?? 0), 0),
+      cantidad: del.length,
+    };
+  };
+
+  // Mesas abiertas: suman al total pero todavía no se cobraron.
+  const pendientes = ordenes.filter((o) => o.payment_method === 'UNPAID');
+
   const { negocio, sucursal } = await obtenerEncabezado(branchId);
 
   return {
@@ -138,6 +158,15 @@ export const obtenerDatos = async (
     ticketPromedio: ordenes.length > 0 ? totalVentas / ordenes.length : 0,
     efectivo,
     tarjeta,
+    porTipo: {
+      salon: porTipoDe('MESA'),
+      mostrador: porTipoDe('TAKEAWAY'),
+      delivery: porTipoDe('DELIVERY'),
+    },
+    sinCobrar: {
+      total: pendientes.reduce((a, o) => a + Number(o.total ?? 0), 0),
+      cantidad: pendientes.length,
+    },
     porDia: [...mapaDias.entries()]
       .map(([fecha, v]) => ({ fecha, ...v }))
       .sort((a, b) => a.fecha.localeCompare(b.fecha)),

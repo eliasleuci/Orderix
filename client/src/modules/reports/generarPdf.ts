@@ -18,9 +18,11 @@ const METODO: Record<string, string> = {
   DIGITAL: 'Digital',
 };
 
+// El POS guarda 'MESA', no 'DINE_IN': con la clave vieja el detalle mostraba
+// el valor crudo en lugar de "Salón".
 const TIPO: Record<string, string> = {
   TAKEAWAY: 'Mostrador',
-  DINE_IN: 'Salón',
+  MESA: 'Salón',
   DELIVERY: 'Delivery',
 };
 
@@ -99,6 +101,43 @@ export const descargarReportePdf = async (d: DatosReporte) => {
   });
 
   y = (doc as any).lastAutoTable.finalY + 28;
+
+  // ---------- Ventas por tipo ----------
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Ventas por tipo', margen, y);
+  y += 12;
+
+  const pct = (v: number) => (d.totalVentas > 0 ? ((v / d.totalVentas) * 100).toFixed(1) : '0.0');
+
+  autoTable(doc, {
+    startY: y,
+    theme: 'striped',
+    head: [['Tipo', 'Pedidos', 'Importe', '% del total']],
+    body: [
+      ['Salón (comieron en el local)', String(d.porTipo.salon.cantidad), MONEDA.format(d.porTipo.salon.total), `${pct(d.porTipo.salon.total)}%`],
+      ['Mostrador (pasaron a retirar)', String(d.porTipo.mostrador.cantidad), MONEDA.format(d.porTipo.mostrador.total), `${pct(d.porTipo.mostrador.total)}%`],
+      ['Delivery (envío a domicilio)', String(d.porTipo.delivery.cantidad), MONEDA.format(d.porTipo.delivery.total), `${pct(d.porTipo.delivery.total)}%`],
+    ],
+    headStyles: { fillColor: AMBAR, textColor: PIZARRA, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+    margin: { left: margen, right: margen },
+  });
+  y = (doc as any).lastAutoTable.finalY;
+
+  if (d.sinCobrar.cantidad > 0) {
+    y += 14;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(180, 83, 9);
+    doc.text(
+      `Incluye ${MONEDA.format(d.sinCobrar.total)} sin cobrar en ${d.sinCobrar.cantidad} pedido(s) de mesas abiertas.`,
+      margen, y
+    );
+    doc.setTextColor(...PIZARRA);
+  }
+  y += 28;
 
   // ---------- Ventas por día (sólo aporta si el rango abarca varios) ----------
   if (d.periodo !== 'dia' && d.porDia.length > 0) {
