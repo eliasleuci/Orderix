@@ -183,7 +183,9 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, onClose, on
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Por encima del panel del carrito (z-70) y de la barra inferior (z-50):
+          con z-50 quedaba tapado y el botón parecía no funcionar. */}
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
         {/* BACKDROP */}
         <motion.div
           initial={{ opacity: 0 }}

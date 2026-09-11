@@ -128,7 +128,7 @@ const FinancialPage: React.FC = () => {
 
         <BotonReporte />
 
-        <div className="flex items-center gap-3 bg-surface-elevated/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5">
+        <div className="flex items-center gap-3 bg-surface-elevated/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5 overflow-x-auto scrollbar-none max-w-full">
           <Button 
             variant="ghost" 
             size="md" 

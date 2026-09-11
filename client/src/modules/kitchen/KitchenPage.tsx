@@ -108,17 +108,17 @@ const KitchenPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-surface-base text-text-primary p-8 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-surface-base text-text-primary p-4 lg:p-8 relative overflow-hidden font-sans">
       {/* BACKGROUND DECORATION */}
       <div className="absolute top-0 right-0 hidden lg:block w-[800px] h-[800px] bg-primary/5 rounded-full blur-[160px] pointer-events-none" />
       
-      <header className="flex items-center justify-between mb-12 relative z-10">
-        <div className="flex items-center gap-8">
-          <div className="w-20 h-20 bg-primary/10 rounded-[2.5rem] flex items-center justify-center shadow-2xl border border-primary/20">
-            <ChefHat className="w-12 h-12 text-primary" />
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 lg:mb-12 relative z-10">
+        <div className="flex items-center gap-4 lg:gap-8">
+          <div className="w-14 h-14 lg:w-20 lg:h-20 bg-primary/10 rounded-3xl lg:rounded-[2.5rem] flex items-center justify-center shadow-2xl border border-primary/20 shrink-0">
+            <ChefHat className="w-8 h-8 lg:w-12 lg:h-12 text-primary" />
           </div>
           <div>
-            <h1 className="text-5xl font-black uppercase tracking-tighter leading-none">Cocina</h1>
+            <h1 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-none">Cocina</h1>
             <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.4em] mt-2 leading-none">
               Producción en Tiempo Real
             </p>
@@ -193,7 +193,8 @@ const KitchenPage: React.FC = () => {
       )}
 
       {/* FOOTER STATS SLIDE-IN (OPCIONAL) */}
-      <footer className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+      {/* En celular se levanta para no quedar debajo de la barra de navegación. */}
+      <footer className="fixed bottom-[88px] lg:bottom-8 left-1/2 -translate-x-1/2 z-40">
         <div className="bg-surface-elevated shadow-2xl px-6 py-3 rounded-full border border-white/5 backdrop-blur-md flex items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest leading-none">Activos:</span>

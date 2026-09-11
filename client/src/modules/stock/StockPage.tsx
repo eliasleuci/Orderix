@@ -423,11 +423,11 @@ const StockPage: React.FC = () => {
               ) : (
                 <div className="bg-surface-elevated rounded-2xl border border-white/5 overflow-hidden h-full flex flex-col">
                   <div className="grid grid-cols-12 gap-3 p-4 border-b border-white/5 bg-white/[0.02] shrink-0">
-                    <div className="col-span-4 text-[10px] font-black text-text-muted uppercase tracking-widest">Ingrediente</div>
-                    <div className="col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest">Categoría</div>
+                    <div className="col-span-6 lg:col-span-4 text-[10px] font-black text-text-muted uppercase tracking-widest">Ingrediente</div>
+                    <div className="hidden lg:block col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest">Categoría</div>
                     <div className="col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest">Stock</div>
-                    <div className="col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest">Mín.</div>
-                    <div className="col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest text-right">Acciones</div>
+                    <div className="hidden lg:block col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest">Mín.</div>
+                    <div className="col-span-4 lg:col-span-2 text-[10px] font-black text-text-muted uppercase tracking-widest text-right">Acciones</div>
                   </div>
                   
                   <div className="flex-1 overflow-y-auto">
@@ -441,7 +441,7 @@ const StockPage: React.FC = () => {
                           }`}
                           onClick={() => handleOpenEdit(ing)}
                         >
-                          <div className="col-span-4 flex items-center gap-2">
+                          <div className="col-span-6 lg:col-span-4 flex items-center gap-2">
                             <span className={`w-2 h-2 rounded-full shrink-0 ${
                               status === 'out' ? 'bg-danger' : status === 'low' ? 'bg-warning' : 'bg-success'
                             }`} />
@@ -450,7 +450,7 @@ const StockPage: React.FC = () => {
                               <span className="text-text-muted text-[10px] uppercase">{ing.unit}</span>
                             </div>
                           </div>
-                          <div className="col-span-2 flex items-center">
+                          <div className="hidden lg:flex col-span-2 items-center">
                             <Badge variant="neutral" className="text-[10px]">
                               {ing.category?.name || 'Sin categoría'}
                             </Badge>
@@ -462,10 +462,10 @@ const StockPage: React.FC = () => {
                               {ing.stock.toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                             </span>
                           </div>
-                          <div className="col-span-2 flex items-center">
+                          <div className="hidden lg:flex col-span-2 items-center">
                             <span className="text-text-muted font-bold text-sm">{ing.min_stock.toLocaleString('es-AR')}</span>
                           </div>
-                          <div className="col-span-2 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="col-span-4 lg:col-span-2 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             {getStockBadge(status)}
                             {isAdmin && (
                               <>

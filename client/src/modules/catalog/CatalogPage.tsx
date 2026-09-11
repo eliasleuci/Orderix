@@ -284,7 +284,7 @@ const CatalogPage: React.FC = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
             
             <motion.div {...ANIMATIONS.scaleIn} className="bg-surface-elevated w-full max-w-2xl rounded-[2.5rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
-              <header className="p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+              <header className="p-5 lg:p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-black uppercase tracking-tighter">{editingProduct.id ? 'Editar Producto' : 'Crear Producto'}</h2>
                   <p className="text-text-muted text-xs font-bold uppercase tracking-widest mt-1">Configuración del catálogo</p>
@@ -294,10 +294,10 @@ const CatalogPage: React.FC = () => {
                 </button>
               </header>
 
-              <div className="p-8 overflow-y-auto flex-1">
+              <div className="p-5 lg:p-8 overflow-y-auto flex-1">
                 <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
                   
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Nombre del Producto *</label>
                       <Input value={editingProduct.name || ''} onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })} placeholder="Ej: Burger Doble" required />
@@ -308,7 +308,7 @@ const CatalogPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Categoría *</label>
                       
