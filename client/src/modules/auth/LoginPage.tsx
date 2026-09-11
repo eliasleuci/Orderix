@@ -72,11 +72,23 @@ const LoginPage: React.FC = () => {
     }
 
     if (data?.user) {
-      const { data: profile } = await authService.getProfile(data.user.id);
-      
-      const userRole = profile?.role || 'CASHIER';
-      const myTenantId = profile?.tenant_id;
-      
+      const { data: profile, error: errorPerfil } = await authService.getProfile(data.user.id);
+
+      // Antes, si esta lectura fallaba se asumía 'CASHIER' en silencio. Con los
+      // roles ya aplicados eso degrada al administrador a cajero y lo deja sin
+      // acceso a su propio negocio, sin explicación. Ante la duda, no se entra.
+      if (errorPerfil || !profile?.role) {
+        await supabase.auth.signOut();
+        setError(
+          'No pudimos cargar tus permisos. Revisá tu conexión e intentá de nuevo.'
+        );
+        setLoading(false);
+        return;
+      }
+
+      const userRole = profile.role;
+      const myTenantId = profile.tenant_id;
+
       setUser(data.user, data.session, userRole);
 
       if (userRole === 'SUPER_ADMIN') {
