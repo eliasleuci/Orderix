@@ -40,6 +40,9 @@ const POSPage: React.FC = () => {
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [activeBill, setActiveBill] = useState<{ orders: any[], total: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  // Ingredientes que quedaron en negativo por esta venta. No la frena:
+  // sólo avisa, para que la caja lo sepa en el momento.
+  const [avisoStock, setAvisoStock] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
   const [searchParams] = useSearchParams();
 
@@ -246,6 +249,16 @@ const POSPage: React.FC = () => {
       setCheckoutStatus('error');
       setErrorMessage(data.message);
       return;
+    }
+
+    const faltantes = data?.advertencias ?? [];
+    if (faltantes.length > 0) {
+      setAvisoStock(
+        'Sin stock: ' +
+          faltantes
+            .map((a: any) => `${a.ingrediente} (faltan ${a.faltante})`)
+            .join(', ')
+      );
     }
 
     if (orderType === 'MESA' && selectedTableId) {
@@ -633,6 +646,14 @@ const POSPage: React.FC = () => {
         type="error"
         isVisible={checkoutStatus === 'error'}
         onClose={() => setCheckoutStatus('idle')}
+      />
+      {/* El pedido se registró igual; esto avisa qué insumo quedó descuadrado. */}
+      <Toast
+        message={avisoStock}
+        type="error"
+        isVisible={Boolean(avisoStock)}
+        duration={9000}
+        onClose={() => setAvisoStock('')}
       />
 
       {/* PRINT PANEL */}

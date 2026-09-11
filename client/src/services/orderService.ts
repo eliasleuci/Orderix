@@ -17,9 +17,18 @@ class OrderService implements IOrderService {
       p_table_id: params.tableId || null,
     });
 
-    return { 
-      data: data ? { order_id: data.order_id, status: data.status, message: data.message } : null, 
-      error: error?.message || null 
+    return {
+      data: data
+        ? {
+            order_id: data.order_id,
+            status: data.status,
+            message: data.message,
+            // Ingredientes que quedaron en negativo. La venta se registra igual;
+            // esto es para que la caja lo vea en el momento.
+            advertencias: data.advertencias ?? [],
+          }
+        : null,
+      error: error?.message || null
     };
   }
 
