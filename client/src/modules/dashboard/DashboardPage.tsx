@@ -124,7 +124,7 @@ const DashboardStat = React.memo(({ title, value, subValue, icon, trend, color, 
     <div className="space-y-1">
       <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">{title}</h3>
       <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
+        <span className="text-3xl lg:text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
           {value}
         </span>
         {trend && (
@@ -266,9 +266,9 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface-base text-text-primary p-10 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-surface-base text-text-primary p-4 lg:p-10 font-sans relative overflow-hidden">
       {/* BACKGROUND DECORATION */}
-      <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[180px] pointer-events-none" />
+      <div className="absolute top-0 right-0 hidden lg:block w-[1000px] h-[1000px] bg-primary/5 rounded-full blur-[180px] pointer-events-none" />
 
       <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 relative z-10 gap-6">
         <div>
@@ -276,7 +276,7 @@ const DashboardPage: React.FC = () => {
             <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
               <LayoutDashboard size={24} className="text-primary" />
             </div>
-            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Panel de Control</h1>
+            <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none">Panel de Control</h1>
           </div>
         </div>
 

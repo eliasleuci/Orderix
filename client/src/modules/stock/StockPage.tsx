@@ -234,7 +234,7 @@ const StockPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-surface-base text-text-primary overflow-hidden relative font-sans">
-      <div className="flex-1 flex flex-col p-6 overflow-hidden z-10">
+      <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-hidden z-10">
         
         {/* HEADER */}
         <header className="mb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -282,7 +282,7 @@ const StockPage: React.FC = () => {
           <>
             {/* FILTERS */}
             <div className="flex gap-4 mb-4 flex-wrap">
-              <div className="w-72">
+              <div className="w-full sm:w-72">
                 <Input
                   placeholder="Buscar ingrediente..."
                   icon={<Search size={16} />}
@@ -320,7 +320,7 @@ const StockPage: React.FC = () => {
             </div>
 
             {/* STATS */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <Card variant="solid" padding="normal" className="border border-white/5">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">

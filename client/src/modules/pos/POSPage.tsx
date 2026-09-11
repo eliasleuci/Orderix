@@ -7,7 +7,8 @@ import { productService } from '../../services/productService';
 import { orderService } from '../../services/orderService';
 import { tableService, Table } from '../../services/tableService';
 import { printService } from '../../lib/printService';
-import { ShoppingCart, Search, LogOut, Utensils, Truck, User, Printer, Check } from 'lucide-react';
+import { ShoppingCart, Search, LogOut, Utensils, Truck, User, Printer, Check, ChevronDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
@@ -21,6 +22,8 @@ import ModifierModal from './components/ModifierModal';
 
 const POSPage: React.FC = () => {
   const { items, addItem, updateQuantity, removeItem, updateItemModifiers, clearCart, getTotal } = useCartStore();
+  // En celular el carrito no entra al lado de los productos: se abre desde abajo.
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
   const { branchId, tenantId, user, signOut } = useAuthStore();
   const navigate = useNavigate();
   
@@ -314,14 +317,21 @@ const POSPage: React.FC = () => {
   return (
     <div className="flex h-screen bg-surface-base text-text-primary overflow-hidden relative font-sans">
       {/* 1. PRODUCT ZONE (LEFT) */}
-      <div className="flex-1 flex flex-col p-6 overflow-hidden z-10">
+      <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-hidden z-10">
         {/* HEADER & NAV */}
-        <header className="mb-8 space-y-6">
+        <header className="mb-4 lg:mb-8 space-y-4 lg:space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Ventas</h1>
+              <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none">Ventas</h1>
             </div>
-            <Button variant="ghost" size="md" leftIcon={<LogOut size={18} />} onClick={handleSignOut}>
+            {/* En celular cerrar sesión vive en la barra inferior: acá sólo ocuparía lugar. */}
+            <Button
+              variant="ghost"
+              size="md"
+              leftIcon={<LogOut size={18} />}
+              onClick={handleSignOut}
+              className="hidden lg:inline-flex"
+            >
               Cerrar Sesión
             </Button>
           </div>
@@ -330,11 +340,11 @@ const POSPage: React.FC = () => {
             <div className="flex-1">
               <Input
                 ref={searchInputRef}
-                placeholder="Buscar hamburguesa, bebida, promo..."
+                placeholder="Buscar producto..."
                 icon={<Search size={22} />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-16 text-lg"
+                className="h-12 lg:h-16 text-base lg:text-lg"
               />
             </div>
           </div>
@@ -347,7 +357,7 @@ const POSPage: React.FC = () => {
         </header>
 
         {/* PRODUCT GRID */}
-        <div className="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pr-2 scroll-smooth pb-12 items-start">
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 lg:gap-6 pr-0 lg:pr-2 scroll-smooth pb-28 lg:pb-12 items-start">
           <AnimatePresence mode="popLayout">
             {filteredProducts.map((p) => (
               <ProductCard 
@@ -360,9 +370,34 @@ const POSPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Fondo oscuro del carrito en celular */}
+      {carritoAbierto && (
+        <div
+          onClick={() => setCarritoAbierto(false)}
+          className="lg:hidden fixed inset-0 bg-black/60 z-[65]"
+        />
+      )}
+
       {/* 2. PERSISTENT CART (RIGHT) */}
-      <aside className="w-[380px] bg-surface-elevated shadow-[-20px_0_100px_rgba(0,0,0,0.5)] z-20 flex flex-col border-l border-white/5">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-surface-elevated/50 backdrop-blur-md sticky top-0 z-30">
+      <aside
+        className={cn(
+          // Escritorio: columna fija de siempre.
+          "lg:static lg:w-[380px] lg:translate-y-0 lg:rounded-none lg:h-auto",
+          // Celular: panel que sube desde abajo, porque 380px fijos no entran
+          // en una pantalla de 390px.
+          "fixed inset-x-0 bottom-0 h-[88vh] rounded-t-3xl transition-transform duration-300 ease-out",
+          carritoAbierto ? "translate-y-0" : "translate-y-full",
+          "bg-surface-elevated shadow-[-20px_0_100px_rgba(0,0,0,0.5)] z-[70] flex flex-col border-l border-white/5"
+        )}
+      >
+        <div className="relative p-6 pt-8 lg:pt-6 border-b border-white/5 flex items-center justify-between bg-surface-elevated/50 backdrop-blur-md sticky top-0 z-30">
+          <button
+            onClick={() => setCarritoAbierto(false)}
+            className="lg:hidden absolute top-2 left-1/2 -translate-x-1/2 p-1.5 text-text-muted"
+            aria-label="Cerrar carrito"
+          >
+            <ChevronDown size={22} />
+          </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shrink-0">
               <ShoppingCart className="text-primary w-5 h-5" />
@@ -561,6 +596,30 @@ const POSPage: React.FC = () => {
           </div>
         </footer>
       </aside>
+
+      {/* Acceso al carrito en celular: muestra cuántos ítems hay y el total,
+          para no tener que abrirlo sólo para chequear. Se esconde mientras el
+          panel está abierto. */}
+      {!carritoAbierto && (
+        <button
+          onClick={() => setCarritoAbierto(true)}
+          className="lg:hidden fixed bottom-[84px] right-4 z-[55] flex items-center gap-3 pl-4 pr-5 py-3.5
+                     rounded-2xl bg-primary text-white shadow-2xl shadow-primary/30 active:scale-95 transition-transform"
+        >
+          <span className="relative">
+            <ShoppingCart size={22} />
+            {items.length > 0 && (
+              <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-surface-base text-primary
+                               text-[10px] font-black flex items-center justify-center border border-primary">
+                {items.length}
+              </span>
+            )}
+          </span>
+          <span className="font-black text-sm">
+            ${(getTotal() + (activeBill?.total || 0)).toLocaleString()}
+          </span>
+        </button>
+      )}
 
       {/* TOAST SYSTEM */}
       <Toast 

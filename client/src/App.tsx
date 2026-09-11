@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { cn } from './lib/utils';
 import Sidebar from './layouts/Sidebar';
+import MobileNav from './layouts/MobileNav';
 
 const LandingPage = lazy(() => import('./modules/landing/LandingPage'));
 const LoginPage = lazy(() => import('./modules/auth/LoginPage'));
@@ -127,7 +128,16 @@ const AppContent = () => {
     <div className="flex h-screen overflow-hidden bg-surface-base text-text-primary transition-colors duration-300">
       <HashRedirectHandler />
       {user && branchId && !shouldHideSidebar && <Sidebar />}
-      <main className={cn("flex-1 overflow-auto bg-surface-base relative", (shouldHideSidebar || !branchId) && "w-full")}>
+      {user && branchId && !shouldHideSidebar && <MobileNav />}
+      <main
+        className={cn(
+          "flex-1 overflow-auto bg-surface-base relative",
+          (shouldHideSidebar || !branchId) && "w-full",
+          // Espacio para la barra inferior de navegación, que va fija encima
+          // del contenido. Sin esto tapa lo último de cada pantalla.
+          user && branchId && !shouldHideSidebar && "pb-[68px] lg:pb-0"
+        )}
+      >
         <Suspense fallback={<PageLoader />}>
           {(!user || !branchId) ? (
             <Routes>

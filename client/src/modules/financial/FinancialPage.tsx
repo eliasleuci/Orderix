@@ -112,8 +112,8 @@ const FinancialPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface-base text-text-primary p-10 font-sans relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-success/5 rounded-full blur-[180px] pointer-events-none" />
+    <div className="min-h-screen bg-surface-base text-text-primary p-4 lg:p-10 font-sans relative overflow-hidden">
+      <div className="absolute top-0 right-0 hidden lg:block w-[1000px] h-[1000px] bg-success/5 rounded-full blur-[180px] pointer-events-none" />
 
       <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 relative z-10 gap-6">
         <div>
@@ -121,7 +121,7 @@ const FinancialPage: React.FC = () => {
             <div className="w-12 h-12 bg-success/10 rounded-2xl flex items-center justify-center border border-success/20">
               <DollarSign size={24} className="text-success" />
             </div>
-            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Panel Financiero</h1>
+            <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none">Panel Financiero</h1>
           </div>
           <p className="text-text-muted text-sm font-medium ml-1">Resumen de facturación y métodos de pago</p>
         </div>
@@ -212,7 +212,7 @@ const FinancialPage: React.FC = () => {
               <div className="space-y-1">
                 <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">Total Facturado</h3>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
+                  <span className="text-3xl lg:text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
                     ${stats.totalSales.toLocaleString()}
                   </span>
                 </div>
@@ -228,7 +228,7 @@ const FinancialPage: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">Pedidos</h3>
-                <span className="text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
+                <span className="text-3xl lg:text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
                   {stats.orderCount}
                 </span>
               </div>
@@ -242,7 +242,7 @@ const FinancialPage: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em]">Ticket Promedio</h3>
-                <span className="text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
+                <span className="text-3xl lg:text-4xl font-black text-text-primary tracking-tighter font-display leading-none">
                   ${stats.avgTicket.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>

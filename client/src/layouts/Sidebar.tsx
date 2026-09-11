@@ -32,7 +32,7 @@ const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-24 bg-surface-base border-r border-border-subtle flex flex-col items-center py-8 justify-between relative z-50 transition-colors duration-300">
+    <aside className="hidden lg:flex w-24 bg-surface-base border-r border-border-subtle flex-col items-center py-8 justify-between relative z-50 transition-colors duration-300">
       <div className="space-y-10 flex flex-col items-center w-full">
         {/* LOGO AREA */}
         <div className="w-14 h-14 bg-primary/10 rounded-[1.2rem] flex items-center justify-center shadow-2xl border border-primary/20 mb-4 transition-transform hover:scale-110">

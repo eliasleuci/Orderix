@@ -157,7 +157,7 @@ const CatalogPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-surface-base text-text-primary overflow-hidden relative font-sans">
-      <div className="flex-1 flex flex-col p-8 overflow-hidden z-10">
+      <div className="flex-1 flex flex-col p-4 lg:p-8 overflow-hidden z-10">
         
         {/* HEADER */}
         <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -166,7 +166,7 @@ const CatalogPage: React.FC = () => {
               <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
                 <BookOpen size={24} className="text-primary" />
               </div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">Catálogo Menú</h1>
+              <h1 className="text-2xl lg:text-4xl font-black uppercase tracking-tighter leading-none">Catálogo Menú</h1>
             </div>
           </div>
 

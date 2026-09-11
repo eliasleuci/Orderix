@@ -110,7 +110,7 @@ const KitchenPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface-base text-text-primary p-8 relative overflow-hidden font-sans">
       {/* BACKGROUND DECORATION */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute top-0 right-0 hidden lg:block w-[800px] h-[800px] bg-primary/5 rounded-full blur-[160px] pointer-events-none" />
       
       <header className="flex items-center justify-between mb-12 relative z-10">
         <div className="flex items-center gap-8">
