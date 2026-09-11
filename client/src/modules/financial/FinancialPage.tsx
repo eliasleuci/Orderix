@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
+import BotonReporte from '../reports/BotonReporte';
 
 type DateFilter = 'hoy' | 'ayer' | 'semana' | 'mes' | 'personalizado';
 
@@ -124,6 +125,8 @@ const FinancialPage: React.FC = () => {
           </div>
           <p className="text-text-muted text-sm font-medium ml-1">Resumen de facturación y métodos de pago</p>
         </div>
+
+        <BotonReporte />
 
         <div className="flex items-center gap-3 bg-surface-elevated/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5">
           <Button 

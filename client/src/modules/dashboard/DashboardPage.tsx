@@ -20,6 +20,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import BotonReporte from '../reports/BotonReporte';
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -280,6 +281,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
+          <BotonReporte />
           <Button 
             variant="ghost" 
             size="md" 
