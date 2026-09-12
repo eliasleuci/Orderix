@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { productService } from '../../services/productService';
 import { Product, Category } from '../../types/domain';
-import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle, Tag } from 'lucide-react';
+import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle, Tag, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Button from '../../components/ui/Button';
@@ -10,6 +10,7 @@ import Input from '../../components/ui/Input';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Toast from '../../components/Toast';
+import QRCartaModal from './components/QRCartaModal';
 
 const CatalogPage: React.FC = () => {
   const { branchId, tenantId } = useAuthStore();
@@ -22,6 +23,7 @@ const CatalogPage: React.FC = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
 
   // Feedback State
@@ -180,6 +182,15 @@ const CatalogPage: React.FC = () => {
                 className="h-14"
               />
             </div>
+            <Button
+              size="lg"
+              variant="secondary"
+              leftIcon={<QrCode size={20} />}
+              onClick={() => setIsQrModalOpen(true)}
+              className="h-14 px-8"
+            >
+              Carta QR
+            </Button>
             <Button size="lg" leftIcon={<Plus size={20} />} onClick={() => handleOpenModal()} className="h-14 px-8">
               Nuevo Producto
             </Button>
@@ -443,11 +454,13 @@ const CatalogPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <Toast 
-        message={toast.message} 
-        type={toast.type} 
-        isVisible={toast.visible} 
-        onClose={() => setToast(prev => ({ ...prev, visible: false }))} 
+      <QRCartaModal isOpen={isQrModalOpen} onClose={() => setIsQrModalOpen(false)} />
+
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast(prev => ({ ...prev, visible: false }))}
       />
     </div>
   );

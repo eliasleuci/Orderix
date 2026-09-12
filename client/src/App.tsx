@@ -16,6 +16,7 @@ const KitchenPage = lazy(() => import('./modules/kitchen/KitchenPage'));
 const DashboardPage = lazy(() => import('./modules/dashboard/DashboardPage'));
 const FinancialPage = lazy(() => import('./modules/financial/FinancialPage'));
 const CatalogPage = lazy(() => import('./modules/catalog/CatalogPage'));
+const PublicMenuPage = lazy(() => import('./modules/menu/PublicMenuPage'));
 const TablesPage = lazy(() => import('./modules/tables/TablesPage'));
 const StockPage = lazy(() => import('./modules/stock/StockPage'));
 const DebugPage = lazy(() => import('./modules/debug/DebugPage'));
@@ -95,6 +96,19 @@ const AppContent = () => {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  // La carta pública se resuelve antes que cualquier chequeo de sesión: la abre
+  // un comensal desde el QR, sin cuenta. Si cayera en el ruteo de abajo, sin
+  // usuario la mandaría al login y con usuario al panel de su rol.
+  if (location.pathname.startsWith('/carta/')) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/carta/:slug" element={<PublicMenuPage />} />
         </Routes>
       </Suspense>
     );
