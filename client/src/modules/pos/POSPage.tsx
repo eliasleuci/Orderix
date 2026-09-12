@@ -6,6 +6,12 @@ import { supabase } from '../../lib/supabase';
 import { productService } from '../../services/productService';
 import { orderService } from '../../services/orderService';
 import { tableService, Table } from '../../services/tableService';
+import {
+  deliveryService,
+  calcularPrecioPorKm,
+  ZonaEnvio,
+  ConfigEnvio,
+} from '../../services/deliveryService';
 import { printService } from '../../lib/printService';
 import { ShoppingCart, Search, LogOut, Utensils, Truck, User, Printer, Check, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -46,6 +52,17 @@ const POSPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
   const [searchParams] = useSearchParams();
 
+  // ----- Envío -----
+  const [zonas, setZonas] = useState<ZonaEnvio[]>([]);
+  const [configEnvio, setConfigEnvio] = useState<ConfigEnvio | null>(null);
+  const [modoEnvio, setModoEnvio] = useState<'zona' | 'km'>('zona');
+  const [zonaId, setZonaId] = useState('');
+  const [km, setKm] = useState('');
+  // Monto que realmente se cobra. Arranca con lo que propone la zona o el
+  // cálculo por km, pero se puede pisar: llueve, es lejos dentro de la misma
+  // zona, o el dueño decide no cobrar el envío.
+  const [costoEnvio, setCostoEnvio] = useState('');
+
   // Parse Table from URL
   useEffect(() => {
     const tableId = searchParams.get('table');
@@ -84,14 +101,18 @@ const POSPage: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, tableRes] = await Promise.all([
+        const [prodRes, catRes, tableRes, zonaRes, configRes] = await Promise.all([
           productService.getBranchProducts(branchId),
           productService.getCategories(),
-          tableService.getBranchTables(branchId)
+          tableService.getBranchTables(branchId),
+          deliveryService.getZonas(branchId),
+          deliveryService.getConfig(branchId)
         ]);
         setProducts(prodRes.data || []);
         setCategories(catRes.data || []);
         setTables(tableRes.data || []);
+        setZonas(zonaRes.data || []);
+        setConfigEnvio(configRes.data);
       } catch (err) {
         console.error('Error fetching POS data:', err);
       } finally {
@@ -119,6 +140,29 @@ const POSPage: React.FC = () => {
       setActiveBill(null);
     }
   }, [orderType, selectedTableId, loadTableBill]);
+
+  // Lo que propone la configuración del local: el precio de la zona elegida o
+  // el cálculo por distancia.
+  const envioSugerido = useMemo(() => {
+    if (orderType !== 'DELIVERY') return 0;
+    if (modoEnvio === 'km') {
+      const distancia = parseFloat(km);
+      return configEnvio && Number.isFinite(distancia) ? calcularPrecioPorKm(configEnvio, distancia) : 0;
+    }
+    return Number(zonas.find((z) => z.id === zonaId)?.price ?? 0);
+  }, [orderType, modoEnvio, km, zonaId, zonas, configEnvio]);
+
+  // Cambiar de zona o de km vuelve a proponer el monto. Si después lo editan a
+  // mano, queda como lo dejaron: no se pisa solo.
+  useEffect(() => {
+    setCostoEnvio(envioSugerido ? String(envioSugerido) : '');
+  }, [envioSugerido]);
+
+  const envio = useMemo(() => {
+    if (orderType !== 'DELIVERY') return 0;
+    const valor = parseFloat(costoEnvio);
+    return Number.isFinite(valor) && valor >= 0 ? valor : 0;
+  }, [orderType, costoEnvio]);
 
   // Nombre del negocio y de la sucursal, para el encabezado del ticket.
   useEffect(() => {
@@ -229,6 +273,14 @@ const POSPage: React.FC = () => {
       return;
     }
 
+    // Sin zona el envío saldría en cero sin que nadie lo note, y esa plata no
+    // se recupera. Si el local no cobra el envío, se pone 0 a mano.
+    if (orderType === 'DELIVERY' && modoEnvio === 'zona' && zonas.length > 0 && !zonaId) {
+      setErrorMessage('Elegí la zona de envío.');
+      setCheckoutStatus('error');
+      return;
+    }
+
     // Obtener tenant_id si no está en el store
     let finalTenantId = tenantId;
     if (!finalTenantId && branchId) {
@@ -265,7 +317,10 @@ const POSPage: React.FC = () => {
         notes: item.notes
       })),
       total: getTotal(),
-      paymentMethod: orderType === 'MESA' ? 'UNPAID' : paymentMethod
+      paymentMethod: orderType === 'MESA' ? 'UNPAID' : paymentMethod,
+      deliveryFee: envio,
+      deliveryZoneId: orderType === 'DELIVERY' && modoEnvio === 'zona' ? zonaId || null : null,
+      deliveryKm: orderType === 'DELIVERY' && modoEnvio === 'km' ? parseFloat(km) || null : null
     });
 
     if (error) {
@@ -312,7 +367,8 @@ const POSPage: React.FC = () => {
         notes: item.notes
       })),
       paymentMethod: orderType === 'MESA' ? 'UNPAID' : paymentMethod,
-      total: getTotal(),
+      deliveryFee: envio,
+      total: getTotal() + envio,
       time: new Date().toISOString()
     };
     setLastOrder(pedidoImpreso);
@@ -331,6 +387,9 @@ const POSPage: React.FC = () => {
     setCustomerAddress('');
     setOrderType('TAKEAWAY');
     setSelectedTableId('');
+    setZonaId('');
+    setKm('');
+    setCostoEnvio('');
     
     setTimeout(() => {
       setCheckoutStatus('idle');
@@ -340,7 +399,7 @@ const POSPage: React.FC = () => {
         searchInputRef.current?.focus();
       }
     }, 2000);
-  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables]);
+  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables, envio, modoEnvio, zonaId, km, zonas.length]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -593,7 +652,7 @@ const POSPage: React.FC = () => {
               />
               
               {orderType === 'DELIVERY' && (
-                <motion.div {...ANIMATIONS.fadeIn}>
+                <motion.div {...ANIMATIONS.fadeIn} className="space-y-2">
                   <Input
                     type="text"
                     placeholder="Dirección de Envío"
@@ -601,6 +660,75 @@ const POSPage: React.FC = () => {
                     onChange={(e) => setCustomerAddress(e.target.value)}
                     className="text-sm h-12 w-full px-4 border-primary/30"
                   />
+
+                  {/* El selector de modo aparece sólo si el local habilitó el
+                      cobro por km: con zonas nada más, no hay nada que elegir. */}
+                  {configEnvio?.km_enabled && (
+                    <div className="flex gap-1 bg-surface-elevated p-1 rounded-2xl border border-white/5">
+                      {([
+                        { id: 'zona', label: 'Por zona' },
+                        { id: 'km', label: 'Por km' },
+                      ] as const).map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => setModoEnvio(m.id)}
+                          className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            modoEnvio === m.id ? 'bg-primary text-white' : 'text-text-muted hover:bg-white/5'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {modoEnvio === 'zona' ? (
+                    zonas.length > 0 ? (
+                      <select
+                        value={zonaId}
+                        onChange={(e) => setZonaId(e.target.value)}
+                        className="w-full bg-surface-elevated border border-primary/30 rounded-2xl h-12 px-4 text-text-primary uppercase tracking-widest text-[10px] font-black focus:outline-none focus:border-primary appearance-none"
+                      >
+                        <option value="">Seleccionar zona...</option>
+                        {zonas.map((z) => (
+                          <option key={z.id} value={z.id}>
+                            {z.name} — ${Number(z.price).toLocaleString()}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-[10px] text-text-muted px-1 leading-snug">
+                        No hay zonas cargadas. Se pueden crear en Delivery, o escribir el costo a mano acá abajo.
+                      </p>
+                    )
+                  ) : (
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.1"
+                      placeholder="Distancia en km"
+                      value={km}
+                      onChange={(e) => setKm(e.target.value)}
+                      className="text-sm h-12 w-full px-4 border-primary/30"
+                    />
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-text-muted shrink-0 pl-1">
+                      Envío
+                    </span>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={costoEnvio}
+                      onChange={(e) => setCostoEnvio(e.target.value)}
+                      className="text-sm h-12 flex-1 px-4 border-primary/30"
+                    />
+                  </div>
                 </motion.div>
               )}
 
@@ -626,12 +754,25 @@ const POSPage: React.FC = () => {
             </div>
           </div>
 
+          {envio > 0 && (
+            <div className="flex justify-between items-center mb-2 text-xs">
+              <span className="text-text-muted font-bold">Productos</span>
+              <span className="text-text-secondary font-black">${getTotal().toLocaleString()}</span>
+            </div>
+          )}
+          {envio > 0 && (
+            <div className="flex justify-between items-center mb-3 text-xs">
+              <span className="text-text-muted font-bold">Envío</span>
+              <span className="text-text-secondary font-black">${envio.toLocaleString()}</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-end mb-4">
             <span className="text-text-muted font-black uppercase tracking-widest text-[10px] mb-1">
               {orderType === 'MESA' ? 'Total (Nuevos + Previos)' : 'Total a Pagar'}
             </span>
             <span className="text-4xl font-black text-primary tracking-tighter leading-none">
-              ${(getTotal() + (activeBill?.total || 0)).toLocaleString()}
+              ${(getTotal() + (activeBill?.total || 0) + envio).toLocaleString()}
             </span>
           </div>
 
@@ -705,7 +846,7 @@ const POSPage: React.FC = () => {
             )}
           </span>
           <span className="font-black text-sm">
-            ${(getTotal() + (activeBill?.total || 0)).toLocaleString()}
+            ${(getTotal() + (activeBill?.total || 0) + envio).toLocaleString()}
           </span>
         </button>
       )}

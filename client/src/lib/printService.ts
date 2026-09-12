@@ -34,6 +34,8 @@ interface OrderData {
     notes?: string;
   }>;
   paymentMethod: string;
+  /** Costo del envío, ya incluido en total. Se discrimina en el ticket. */
+  deliveryFee?: number;
   total: number;
   time?: string;
 }

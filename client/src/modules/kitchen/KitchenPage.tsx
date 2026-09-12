@@ -3,11 +3,14 @@ import { useOrders } from '../../hooks/useOrders';
 import { useAuthStore } from '../../store/authStore';
 import { orderService } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types/domain';
-import { ChefHat, Loader2, Signal, LogOut, Package } from 'lucide-react';
+import { ChefHat, Loader2, Signal, LogOut, Package, Bike } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
 import OrderCard from './components/OrderCard';
+import Modal from '../../components/ui/Modal';
+import Button from '../../components/ui/Button';
+import { deliveryService, Repartidor } from '../../services/deliveryService';
 import { useNavigate } from 'react-router-dom';
 import { puedeVer } from '../../lib/permisos';
 
@@ -16,6 +19,10 @@ const KitchenPage: React.FC = () => {
   const navigate = useNavigate();
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
+  // Pedido de delivery recién despachado, esperando que le asignen repartidor.
+  const [asignando, setAsignando] = useState<Order | null>(null);
   
   const playBell = useCallback(() => {
     if (!audioRef.current) {
@@ -59,6 +66,11 @@ const KitchenPage: React.FC = () => {
     }
   }, [branchId, setBranchId]);
 
+  useEffect(() => {
+    if (!branchId) return;
+    deliveryService.getRepartidores(branchId).then(({ data }) => setRepartidores(data ?? []));
+  }, [branchId]);
+
   // 1. MEMOIZED STATUS HANDLER (with Optimistic Update)
   const handleStatusChange = useCallback(async (orderId: string, currentStatus: string) => {
     const nextStatus: OrderStatus = currentStatus === 'PENDING' ? 'PREPARING' : 'READY';
@@ -85,10 +97,30 @@ const KitchenPage: React.FC = () => {
         return;
       }
       setSuccessToast(nextStatus === 'PREPARING' ? '¡Pedido en fuego!' : '¡Pedido despachado!');
+
+      // Recién acá, con el pedido ya despachado: preguntar antes trabaría la
+      // cocina detrás de un desplegable. Asignar repartidor es opcional.
+      if (nextStatus === 'READY' && repartidores.length > 0) {
+        const pedido = orders.find((o) => o.id === orderId);
+        if (pedido?.order_type === 'DELIVERY') setAsignando(pedido);
+      }
     } catch (err: any) {
       setErrorToast('Falla crítica de sistema');
     }
-  }, [setOrders]);
+  }, [setOrders, orders, repartidores.length]);
+
+  const asignarRepartidor = useCallback(async (driverId: string) => {
+    if (!asignando) return;
+    const pedido = asignando;
+    setAsignando(null);
+
+    const { error } = await deliveryService.asignarRepartidor(pedido.id, driverId);
+    if (error) {
+      setErrorToast('No se pudo asignar el repartidor');
+      return;
+    }
+    setSuccessToast(`Asignado a ${repartidores.find((r) => r.id === driverId)?.name ?? 'repartidor'}`);
+  }, [asignando, repartidores]);
 
   // 2. FIFO LOGIC & FILTERING
   const activeOrders = useMemo(() => {
@@ -237,6 +269,45 @@ const KitchenPage: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      <Modal
+        isOpen={Boolean(asignando)}
+        onClose={() => setAsignando(null)}
+        title="¿Quién lo lleva?"
+        maxWidth="sm"
+      >
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
+            <Bike size={20} className="text-warning shrink-0" />
+            <div className="min-w-0">
+              <p className="font-black tracking-tight truncate">
+                {asignando?.customer_name || 'Envío'}
+              </p>
+              {asignando?.customer_address && (
+                <p className="text-xs text-text-secondary truncate">{asignando.customer_address}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {repartidores.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => asignarRepartidor(r.id)}
+                className="w-full text-left p-4 rounded-2xl border border-border-subtle bg-surface-elevated/50 hover:border-primary/40 transition-all"
+              >
+                <span className="block font-black text-text-primary">{r.name}</span>
+                {r.phone && <span className="block text-xs text-text-muted mt-0.5">{r.phone}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* El pedido ya está despachado: esto sólo salta la asignación. */}
+          <Button variant="ghost" fullWidth onClick={() => setAsignando(null)}>
+            Después
+          </Button>
+        </div>
+      </Modal>
 
       {/* TOAST SYSTEM */}
       <Toast 

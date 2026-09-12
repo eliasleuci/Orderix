@@ -15,6 +15,9 @@ class OrderService implements IOrderService {
       p_payment_method: params.paymentMethod,
       p_order_type: params.orderType || 'TAKEAWAY',
       p_table_id: params.tableId || null,
+      p_delivery_fee: params.deliveryFee ?? 0,
+      p_delivery_zone_id: params.deliveryZoneId || null,
+      p_delivery_km: params.deliveryKm ?? null,
     });
 
     return {

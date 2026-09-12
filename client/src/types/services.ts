@@ -26,8 +26,12 @@ export interface CreateOrderParams {
   orderType?: string; // MESA | DELIVERY | TAKEAWAY
   tableId?: string | null;
   items: { product_id: string; quantity: number; price: number; modifiers?: OrderItemModifier[]; notes?: string }[];
+  /** Total de los productos. El envío lo suma el servidor, no viene incluido acá. */
   total: number;
   paymentMethod: string;
+  deliveryFee?: number;
+  deliveryZoneId?: string | null;
+  deliveryKm?: number | null;
 }
 
 export interface IAuthService {

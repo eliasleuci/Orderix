@@ -35,6 +35,8 @@ const FinancialPage: React.FC = () => {
     salon: { total: 0, cantidad: 0 },
     mostrador: { total: 0, cantidad: 0 },
     delivery: { total: 0, cantidad: 0 },
+    // Cuánto del total facturado fue costo de envío y no comida.
+    envios: 0,
     // Mesas abiertas: el pedido existe y suma al total, pero todavía no se
     // cobró (queda en UNPAID hasta que se cierra la cuenta).
     pendiente: { total: 0, cantidad: 0 },
@@ -113,6 +115,7 @@ const FinancialPage: React.FC = () => {
         salon: porTipo('MESA'),
         mostrador: porTipo('TAKEAWAY'),
         delivery: porTipo('DELIVERY'),
+        envios: filteredOrders.reduce((a: number, o: any) => a + Number(o.delivery_fee ?? 0), 0),
         pendiente: {
           total: sinCobrar.reduce((a: number, o: any) => a + Number(o.total ?? 0), 0),
           cantidad: sinCobrar.length,
@@ -384,6 +387,14 @@ const FinancialPage: React.FC = () => {
                         {porcentaje.toFixed(1)}% del total
                       </span>
                     </div>
+
+                    {/* El envío está sumado al total de arriba; se discrimina
+                        para no confundir plata de comida con plata de reparto. */}
+                    {t.id === 'delivery' && stats.envios > 0 && (
+                      <p className="text-[10px] font-bold text-text-muted mt-2 pt-2 border-t border-white/5">
+                        Incluye ${stats.envios.toLocaleString()} de costo de envío
+                      </p>
+                    )}
                   </Card>
                 );
               })}

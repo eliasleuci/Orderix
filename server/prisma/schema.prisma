@@ -31,6 +31,9 @@ model Tenant {
   stockMovements       StockMovement[]
   tables               tables[]
   cashSessions         CashSession[]
+  deliveryZones        DeliveryZone[]
+  deliverySettings     DeliverySettings[]
+  deliveryDrivers      DeliveryDriver[]
 
   @@map("tenants")
 }
@@ -54,6 +57,9 @@ model Branch {
   users       User[]
   tables      tables[]
   cashSessions CashSession[]
+  deliveryZones    DeliveryZone[]
+  deliverySettings DeliverySettings[]
+  deliveryDrivers  DeliveryDriver[]
 
   @@map("branches")
 }
@@ -213,6 +219,10 @@ model Order {
   userId           String?     @map("user_id") @db.Uuid
   started_at       DateTime?   @db.Timestamptz(6)
   ready_at         DateTime?   @db.Timestamptz(6)
+  deliveryFee      Decimal     @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+  deliveryKm       Decimal?    @map("delivery_km") @db.Decimal(10, 2)
+  deliveryZoneId   String?     @map("delivery_zone_id") @db.Uuid
+  deliveryDriverId String?     @map("delivery_driver_id") @db.Uuid
   createdAt        DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenantId         String      @map("tenant_id") @db.Uuid
@@ -221,6 +231,8 @@ model Order {
   branch           Branch?     @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tables           tables?     @relation(fields: [table_id], references: [id], onUpdate: NoAction)
   user             User?       @relation(fields: [userId], references: [id], onUpdate: NoAction)
+  deliveryZone     DeliveryZone?   @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  deliveryDriver   DeliveryDriver? @relation(fields: [deliveryDriverId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([branchId], map: "idx_orders_branch_id")
   @@index([status], map: "idx_orders_status")
@@ -289,6 +301,55 @@ model CashSession {
 
   @@index([branchId, openedAt(sort: Desc)], map: "idx_cash_sessions_historial")
   @@map("cash_sessions")
+}
+
+/// Área de reparto con precio fijo. Zona y barrio son lo mismo para el sistema:
+/// el local decide si la llama "Centro" o "Villa Crespo".
+model DeliveryZone {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  name      String
+  price     Decimal  @default(0) @db.Decimal(10, 2)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orders    Order[]
+
+  @@index([branchId, isActive], map: "idx_delivery_zones_branch")
+  @@map("delivery_zones")
+}
+
+/// Cobro por distancia: una fila por sucursal. Con kmEnabled en false el POS ni
+/// ofrece la opción y el local trabaja sólo con zonas.
+model DeliverySettings {
+  branchId    String   @id @map("branch_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  kmEnabled   Boolean  @default(false) @map("km_enabled")
+  kmBasePrice Decimal  @default(0) @map("km_base_price") @db.Decimal(10, 2)
+  kmPrice     Decimal  @default(0) @map("km_price") @db.Decimal(10, 2)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("delivery_settings")
+}
+
+model DeliveryDriver {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  name      String
+  phone     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orders    Order[]
+
+  @@index([branchId, isActive], map: "idx_delivery_drivers_branch")
+  @@map("delivery_drivers")
 }
 
 enum movement_type {

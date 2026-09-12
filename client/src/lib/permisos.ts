@@ -10,7 +10,7 @@ export type Rol = 'SUPER_ADMIN' | 'ADMIN' | 'CASHIER' | 'KITCHEN';
  * SUPER_ADMIN no figura acá: tiene su propio árbol de rutas en /superadmin.
  */
 export const RUTAS_POR_ROL: Record<'ADMIN' | 'CASHIER' | 'KITCHEN', string[]> = {
-  ADMIN: ['/pos', '/kitchen', '/tables', '/catalog', '/stock', '/dashboard', '/financial', '/cash'],
+  ADMIN: ['/pos', '/kitchen', '/tables', '/catalog', '/stock', '/dashboard', '/financial', '/cash', '/delivery'],
   CASHIER: ['/pos', '/tables', '/kitchen', '/cash'],
   KITCHEN: ['/kitchen', '/stock'],
 };

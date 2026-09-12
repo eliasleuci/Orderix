@@ -20,6 +20,7 @@ const PublicMenuPage = lazy(() => import('./modules/menu/PublicMenuPage'));
 const TablesPage = lazy(() => import('./modules/tables/TablesPage'));
 const StockPage = lazy(() => import('./modules/stock/StockPage'));
 const CashPage = lazy(() => import('./modules/cash/CashPage'));
+const DeliveryPage = lazy(() => import('./modules/delivery/DeliveryPage'));
 const DebugPage = lazy(() => import('./modules/debug/DebugPage'));
 
 // Superadmin
@@ -178,6 +179,7 @@ const AppContent = () => {
               {puedeVer(role, '/tables') && <Route path="/tables" element={<TablesPage />} />}
               {puedeVer(role, '/stock') && <Route path="/stock" element={<StockPage />} />}
               {puedeVer(role, '/cash') && <Route path="/cash" element={<CashPage />} />}
+              {puedeVer(role, '/delivery') && <Route path="/delivery" element={<DeliveryPage />} />}
               <Route path="/debug" element={<DebugPage />} />
               {/* Cualquier otra cosa -incluida una pantalla sin permiso- cae en
                   la pantalla de inicio del rol. */}

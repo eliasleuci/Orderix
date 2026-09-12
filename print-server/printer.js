@@ -261,6 +261,12 @@ export async function imprimirTicketCliente(order) {
   }
 
   l.push(repetir('-'));
+  // El envío se discrimina: si sólo apareciera el total, el cliente no podría
+  // saber cuánto pagó de comida y cuánto de reparto.
+  if (Number(order.deliveryFee) > 0) {
+    l.push(enLinea('Subtotal', plata(Number(order.total) - Number(order.deliveryFee))));
+    l.push(enLinea('Envio', plata(Number(order.deliveryFee))));
+  }
   l.push(enLinea('TOTAL', plata(order.total)));
   l.push(`Pago: ${PAGO[order.paymentMethod] || order.paymentMethod || '-'}`);
   l.push('');
@@ -305,6 +311,10 @@ export async function imprimirTicketCliente(order) {
     }
 
     impresora.drawLine();
+    if (Number(order.deliveryFee) > 0) {
+      impresora.leftRight('Subtotal', plata(Number(order.total) - Number(order.deliveryFee)));
+      impresora.leftRight('Envio', plata(Number(order.deliveryFee)));
+    }
     impresora.bold(true);
     impresora.setTextDoubleHeight();
     impresora.leftRight('TOTAL', plata(order.total));
