@@ -57,6 +57,25 @@ class CashService {
     }
   }
 
+  /** Corrige lo contado de un turno cerrado. Lo esperado no se toca. */
+  async corregir(id: string, montoContado: number, notas?: string): Promise<ServiceResponse<Caja>> {
+    try {
+      const { data } = await baseApi.patch(`/cash/${id}`, { montoContado, notas: notas || null });
+      return { data: data.data.caja, error: null };
+    } catch (e) {
+      return { data: null, error: fallo(e, 'No se pudo corregir el turno') };
+    }
+  }
+
+  async eliminar(id: string): Promise<ServiceResponse<boolean>> {
+    try {
+      await baseApi.delete(`/cash/${id}`);
+      return { data: true, error: null };
+    } catch (e) {
+      return { data: null, error: fallo(e, 'No se pudo eliminar el turno') };
+    }
+  }
+
   async getHistorial(): Promise<ServiceResponse<Caja[]>> {
     try {
       const { data } = await baseApi.get('/cash/historial');

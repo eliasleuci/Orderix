@@ -132,6 +132,45 @@ export class CashService {
     return { caja: serializar(cerrada), resumen };
   }
 
+  /**
+   * El monto esperado queda como está: se calculó con las ventas del turno y
+   * congelarlo es justamente el punto. Se recalcula la diferencia contra lo
+   * que se corrige.
+   */
+  async corregir(
+    branchId: string | null | undefined,
+    id: string,
+    montoContado: number,
+    notas?: string | null
+  ) {
+    const sucursal = this.exigirSucursal(branchId);
+
+    const turno = await cashRepository.findById(id);
+    if (!turno || turno.branchId !== sucursal || turno.status !== 'CLOSED') {
+      throw new AppError('No se encontró ese turno cerrado', 404);
+    }
+
+    const esperado = aNumero(turno.expectedAmount);
+    const filas = await cashRepository.corregirCierre(id, sucursal, {
+      countedAmount: montoContado,
+      difference: redondear(montoContado - esperado),
+      closingNotes: notas,
+    });
+    if (filas === 0) throw new AppError('No se pudo corregir el turno', 404);
+
+    const actualizado = await cashRepository.findById(id);
+    return serializar(actualizado);
+  }
+
+  async eliminar(branchId: string | null | undefined, id: string) {
+    const sucursal = this.exigirSucursal(branchId);
+
+    const filas = await cashRepository.eliminar(id, sucursal);
+    // Un turno abierto no se borra: primero se cierra. Si no, la caja quedaría
+    // sin turno en pleno servicio y sin registro de lo que pasó.
+    if (filas === 0) throw new AppError('No se encontró ese turno cerrado', 404);
+  }
+
   async getHistorial(branchId: string | null | undefined, limit = 30) {
     const sucursal = this.exigirSucursal(branchId);
     const turnos = await cashRepository.findHistory(sucursal, limit);

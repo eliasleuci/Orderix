@@ -41,6 +41,29 @@ export class CashController {
     }
   };
 
+  corregir = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const caja = await cashService.corregir(
+        req.user?.branchId,
+        req.params.id as string,
+        req.body.montoContado,
+        req.body.notas
+      );
+      res.status(200).json({ status: 'success', data: { caja } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  eliminar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await cashService.eliminar(req.user?.branchId, req.params.id as string);
+      res.status(204).json({ status: 'success', data: null });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getHistorial = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const turnos = await cashService.getHistorial(req.user?.branchId);

@@ -10,6 +10,9 @@ import {
   TrendingDown,
   CheckCircle2,
   History,
+  Pencil,
+  Trash2,
+  Save,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { cashService, Caja, ResumenCaja } from '../../services/cashService';
@@ -17,6 +20,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 import Toast, { ToastType } from '../../components/Toast';
 
 const plata = (n: number) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`;
@@ -45,6 +49,12 @@ const CashPage: React.FC = () => {
   const [montoInicial, setMontoInicial] = useState('');
   const [montoContado, setMontoContado] = useState('');
   const [notas, setNotas] = useState('');
+
+  // Corrección y borrado de un turno ya cerrado.
+  const [corrigiendo, setCorrigiendo] = useState<Caja | null>(null);
+  const [contadoCorregido, setContadoCorregido] = useState('');
+  const [notasCorregidas, setNotasCorregidas] = useState('');
+  const [borrando, setBorrando] = useState<Caja | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -124,6 +134,46 @@ const CashPage: React.FC = () => {
           : `Caja cerrada con ${dif > 0 ? 'sobrante' : 'faltante'} de ${plata(Math.abs(dif))}`,
       type: dif === 0 ? 'success' : 'error',
     });
+    cargar();
+  };
+
+  const abrirCorreccion = (t: Caja) => {
+    setCorrigiendo(t);
+    setContadoCorregido(String(t.montoContado ?? 0));
+    setNotasCorregidas(t.notasCierre ?? '');
+  };
+
+  const guardarCorreccion = async () => {
+    if (!corrigiendo) return;
+    const monto = parseFloat(contadoCorregido);
+    if (!Number.isFinite(monto) || monto < 0) {
+      setToast({ message: 'Ingresá un monto válido', type: 'error' });
+      return;
+    }
+
+    setGuardando(true);
+    const { error } = await cashService.corregir(corrigiendo.id, monto, notasCorregidas);
+    setGuardando(false);
+
+    if (error) {
+      setToast({ message: error, type: 'error' });
+      return;
+    }
+    setCorrigiendo(null);
+    setToast({ message: 'Turno corregido', type: 'success' });
+    cargar();
+  };
+
+  const confirmarBorrado = async () => {
+    if (!borrando) return;
+    const { error } = await cashService.eliminar(borrando.id);
+    setBorrando(null);
+
+    if (error) {
+      setToast({ message: error, type: 'error' });
+      return;
+    }
+    setToast({ message: 'Turno eliminado', type: 'success' });
     cargar();
   };
 
@@ -291,25 +341,42 @@ const CashPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div
-                      className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl border font-black text-sm ${
-                        cuadra
-                          ? 'bg-success/10 border-success/20 text-success'
-                          : sobra
-                            ? 'bg-primary/10 border-primary/20 text-primary'
-                            : 'bg-danger/10 border-danger/20 text-danger'
-                      }`}
-                    >
-                      {cuadra ? (
-                        <>
-                          <CheckCircle2 size={16} /> Cuadra
-                        </>
-                      ) : (
-                        <>
-                          {sobra ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                          {sobra ? 'Sobrante' : 'Faltante'} {plata(Math.abs(dif))}
-                        </>
-                      )}
+                    <div className="shrink-0 flex items-center gap-2">
+                      <div
+                        className={`flex items-center gap-2 px-4 py-2 rounded-2xl border font-black text-sm ${
+                          cuadra
+                            ? 'bg-success/10 border-success/20 text-success'
+                            : sobra
+                              ? 'bg-primary/10 border-primary/20 text-primary'
+                              : 'bg-danger/10 border-danger/20 text-danger'
+                        }`}
+                      >
+                        {cuadra ? (
+                          <>
+                            <CheckCircle2 size={16} /> Cuadra
+                          </>
+                        ) : (
+                          <>
+                            {sobra ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                            {sobra ? 'Sobrante' : 'Faltante'} {plata(Math.abs(dif))}
+                          </>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => abrirCorreccion(t)}
+                        title="Corregir lo contado"
+                        className="p-2.5 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => setBorrando(t)}
+                        title="Eliminar turno"
+                        className="p-2.5 rounded-xl text-text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </Card>
                 );
@@ -451,6 +518,82 @@ const CashPage: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <Modal
+        isOpen={Boolean(corrigiendo)}
+        onClose={() => !guardando && setCorrigiendo(null)}
+        title="Corregir turno"
+        maxWidth="sm"
+      >
+        {corrigiendo && (
+          <div className="space-y-5">
+            {/* Lo esperado no se puede tocar: salió de los pedidos del turno.
+                Lo único que puede estar mal es lo que alguien contó a mano. */}
+            <div className="rounded-2xl border border-white/5 bg-surface-base px-5 py-4 space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">
+                Debería haber
+              </p>
+              <p className="text-2xl font-black text-primary tracking-tighter leading-none">
+                {plata(corrigiendo.montoEsperado ?? 0)}
+              </p>
+              <p className="text-xs text-text-secondary pt-1">
+                {plata(corrigiendo.montoInicial)} de inicial + {plata(corrigiendo.ventasEfectivo ?? 0)} en
+                efectivo. Esto sale de las ventas del turno y no se edita.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-2">
+                Monto contado
+              </label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={contadoCorregido}
+                onChange={(e) => setContadoCorregido(e.target.value)}
+                className="h-14 text-2xl font-black"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-2">
+                Nota
+              </label>
+              <Input
+                placeholder="Motivo de la corrección..."
+                value={notasCorregidas}
+                onChange={(e) => setNotasCorregidas(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setCorrigiendo(null)} disabled={guardando}>
+                Cancelar
+              </Button>
+              <Button onClick={guardarCorreccion} isLoading={guardando} leftIcon={<Save size={18} />}>
+                Guardar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmModal
+        isOpen={Boolean(borrando)}
+        onClose={() => setBorrando(null)}
+        onConfirm={confirmarBorrado}
+        title="Eliminar turno"
+        message={
+          borrando
+            ? `Se elimina el arqueo del ${fecha(borrando.abiertaEn)}. Las ventas de ese turno no se tocan: lo que se borra es el registro de cuánto se contó en el cajón. Si fue una prueba, adelante; si fue un turno real, perdés el respaldo de ese arqueo.`
+            : ''
+        }
+        confirmText="Eliminar"
+      />
 
       <Toast
         message={toast?.message ?? ''}

@@ -16,3 +16,12 @@ export const abrirCajaSchema = z.object({
 export const cerrarCajaSchema = z.object({
   body: z.object({ montoContado: monto, notas }),
 });
+
+export const corregirCajaSchema = z.object({
+  body: z.object({ montoContado: monto, notas }),
+  params: z.object({ id: z.string().uuid('Turno inválido') }),
+});
+
+export const turnoSchema = z.object({
+  params: z.object({ id: z.string().uuid('Turno inválido') }),
+});

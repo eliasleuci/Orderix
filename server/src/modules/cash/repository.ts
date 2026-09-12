@@ -65,6 +65,30 @@ export class CashRepository {
   }
 
   /**
+   * Corrige lo contado de un turno ya cerrado. No se toca lo vendido ni lo
+   * esperado: eso salió de los pedidos del turno y no es opinable. Lo único que
+   * puede estar mal es lo que alguien contó a mano.
+   */
+  async corregirCierre(
+    id: string,
+    branchId: string,
+    data: { countedAmount: number; difference: number; closingNotes?: string | null }
+  ) {
+    const { count } = await prisma.cashSession.updateMany({
+      where: { id, branchId, status: 'CLOSED' },
+      data: { ...data, closingNotes: data.closingNotes ?? null },
+    });
+    return count;
+  }
+
+  async eliminar(id: string, branchId: string) {
+    const { count } = await prisma.cashSession.deleteMany({
+      where: { id, branchId, status: 'CLOSED' },
+    });
+    return count;
+  }
+
+  /**
    * Ventas de la sucursal en la ventana del turno, agrupadas por forma de pago.
    * Se usa `createdAt` a propósito, para que los números coincidan con los del
    * Financiero y los reportes: si cada pantalla contara distinto, cuadrar la
