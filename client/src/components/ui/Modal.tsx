@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -21,7 +22,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
     xl: 'max-w-4xl',
   };
 
-  return (
+  // Va montado en el body y no donde se lo invoca: casi todas las pantallas
+  // envuelven su contenido en algo con `relative z-*`, que abre un contexto de
+  // apilamiento y deja encerrado el z-index del modal. Así el reporte del
+  // Financiero quedaba tapado por las tarjetas de abajo.
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -62,7 +67,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

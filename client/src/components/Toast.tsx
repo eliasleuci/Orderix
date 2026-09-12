@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, AlertCircle, X } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -22,7 +23,9 @@ const Toast: React.FC<ToastProps> = ({ message, type, isVisible, onClose, durati
     }
   }, [isVisible, onClose, duration]);
 
-  return (
+  // Al body por el mismo motivo que el Modal: colgado del árbol de la pantalla,
+  // el z-index queda encerrado en el contexto de apilamiento de turno.
+  return createPortal(
     <AnimatePresence>
       {isVisible && (
         <motion.div
@@ -52,7 +55,8 @@ const Toast: React.FC<ToastProps> = ({ message, type, isVisible, onClose, durati
           </button>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
