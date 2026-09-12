@@ -19,6 +19,8 @@ export interface Repartidor {
 
 export interface ConfigEnvio {
   branch_id: string;
+  /** Si está apagado, el POS ni ofrece el tipo de pedido Envío. */
+  delivery_enabled: boolean;
   km_enabled: boolean;
   km_base_price: number;
   km_price: number;
@@ -111,8 +113,13 @@ class DeliveryService {
 
     if (error) return { data: null, error: error.message };
 
+    // Fail-open en delivery_enabled: una sucursal sin fila de configuración
+    // tiene que seguir vendiendo por envío como hasta ahora. Apagarlo es una
+    // decisión explícita del dueño, no algo que pase por no haber guardado.
     return {
-      data: data ?? { branch_id: branchId, km_enabled: false, km_base_price: 0, km_price: 0 },
+      data: data
+        ? { ...data, delivery_enabled: data.delivery_enabled !== false }
+        : { branch_id: branchId, delivery_enabled: true, km_enabled: false, km_base_price: 0, km_price: 0 },
       error: null,
     };
   }
@@ -124,6 +131,7 @@ class DeliveryService {
         {
           branch_id: config.branch_id,
           tenant_id: config.tenant_id,
+          delivery_enabled: config.delivery_enabled,
           km_enabled: config.km_enabled,
           km_base_price: config.km_base_price,
           km_price: config.km_price,

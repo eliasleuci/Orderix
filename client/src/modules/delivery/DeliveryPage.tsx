@@ -28,6 +28,11 @@ const DeliveryPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
+  // Los precios de km van como texto y no como número: con un number, borrar
+  // el campo deja '' y Number('') es 0, así que el 0 vuelve a aparecer solo y
+  // no hay forma de escribir otro valor. Mismo patrón que Caja y el POS.
+  const [precioBase, setPrecioBase] = useState('');
+  const [precioKm, setPrecioKm] = useState('');
   const [nuevaZona, setNuevaZona] = useState({ nombre: '', precio: '' });
   const [nuevoRepartidor, setNuevoRepartidor] = useState({ nombre: '', telefono: '' });
   const [zonaEditada, setZonaEditada] = useState<ZonaEnvio | null>(null);
@@ -48,6 +53,8 @@ const DeliveryPage: React.FC = () => {
     setZonas(z.data ?? []);
     setRepartidores(r.data ?? []);
     setConfig(c.data);
+    setPrecioBase(c.data?.km_base_price ? String(c.data.km_base_price) : '');
+    setPrecioKm(c.data?.km_price ? String(c.data.km_price) : '');
     setLoading(false);
   }, [branchId]);
 
@@ -153,13 +160,44 @@ const DeliveryPage: React.FC = () => {
     cargar();
   };
 
+  /** Un campo vacío vale 0: es lo que el local quiso decir al borrarlo. */
+  const aNumero = (texto: string) => {
+    const n = parseFloat(texto);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+
+  const configActual = (): (ConfigEnvio & { tenant_id: string }) | null =>
+    config ? { ...config, km_base_price: aNumero(precioBase), km_price: aNumero(precioKm), tenant_id: tenantId! } : null;
+
   const guardarConfig = async () => {
-    if (!config) return;
+    const payload = configActual();
+    if (!payload) return;
+
     setGuardandoConfig(true);
-    const { error } = await deliveryService.guardarConfig({ ...config, tenant_id: tenantId! });
+    const { error } = await deliveryService.guardarConfig(payload);
     setGuardandoConfig(false);
     if (error) return avisar(error, 'error');
     avisar('Configuración guardada');
+  };
+
+  /**
+   * El interruptor principal guarda solo, sin esperar al botón: es un sí o no
+   * de todo el módulo y dejarlo a medias -apagado en pantalla pero encendido en
+   * la base- es peor que un guardado de más.
+   */
+  const alternarDelivery = async () => {
+    const payload = configActual();
+    if (!payload) return;
+
+    const actualizado = { ...payload, delivery_enabled: !payload.delivery_enabled };
+    setConfig(actualizado);
+
+    const { error } = await deliveryService.guardarConfig(actualizado);
+    if (error) {
+      setConfig(payload);
+      return avisar(error, 'error');
+    }
+    avisar(actualizado.delivery_enabled ? 'Delivery activado' : 'Delivery desactivado');
   };
 
   if (loading) {
@@ -187,6 +225,44 @@ const DeliveryPage: React.FC = () => {
       </header>
 
       <div className="relative z-10 space-y-10 max-w-4xl">
+        {/* ---------- INTERRUPTOR PRINCIPAL ---------- */}
+        {config && (
+          <button
+            onClick={alternarDelivery}
+            className={`w-full flex items-center justify-between gap-4 p-5 rounded-3xl border transition-all text-left ${
+              config.delivery_enabled
+                ? 'border-warning/30 bg-warning/10'
+                : 'border-border-subtle bg-surface-elevated/40 hover:border-warning/30'
+            }`}
+          >
+            <span>
+              <span className="block font-black uppercase tracking-tight">
+                Este local hace envíos a domicilio
+              </span>
+              <span className="block text-xs text-text-muted mt-1">
+                {config.delivery_enabled
+                  ? 'El POS ofrece el tipo de pedido Envío'
+                  : 'Apagado: el POS no muestra la opción Envío y este módulo queda oculto del menú'}
+              </span>
+            </span>
+            <span
+              className={`w-12 h-7 rounded-full shrink-0 transition-colors relative ${
+                config.delivery_enabled ? 'bg-warning' : 'bg-white/10'
+              }`}
+            >
+              <span
+                className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                  config.delivery_enabled ? 'left-6' : 'left-1'
+                }`}
+              />
+            </span>
+          </button>
+        )}
+
+        {/* El resto sólo tiene sentido si el local reparte: configurar zonas y
+            repartidores de un servicio apagado es ruido. */}
+        {config?.delivery_enabled && (
+        <>
         {/* ---------- ZONAS ---------- */}
         <section>
           <div className="flex items-center gap-3 mb-5">
@@ -287,7 +363,12 @@ const DeliveryPage: React.FC = () => {
               <h2 className="text-xl font-black uppercase tracking-tighter">Cobro por distancia</h2>
             </div>
 
-            <Card variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40 space-y-6">
+            {/* El space-y va en un div adentro y no en className de la Card:
+                Card envuelve los children en su propio div, así que la clase
+                quedaba en el contenedor de afuera -con un solo hijo directo- y
+                no separaba nada. Por eso Guardar quedaba pegado al bloque. */}
+            <Card variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40">
+              <div className="space-y-6">
               <button
                 onClick={() => setConfig({ ...config, km_enabled: !config.km_enabled })}
                 className={`w-full flex items-center justify-between gap-4 p-4 rounded-2xl border transition-all text-left ${
@@ -327,8 +408,9 @@ const DeliveryPage: React.FC = () => {
                         inputMode="decimal"
                         min="0"
                         step="0.01"
-                        value={config.km_base_price}
-                        onChange={(e) => setConfig({ ...config, km_base_price: Number(e.target.value) })}
+                        placeholder="0"
+                        value={precioBase}
+                        onChange={(e) => setPrecioBase(e.target.value)}
                       />
                       <p className="text-[10px] text-text-muted mt-1.5">Se cobra siempre, sin importar la distancia</p>
                     </div>
@@ -341,8 +423,9 @@ const DeliveryPage: React.FC = () => {
                         inputMode="decimal"
                         min="0"
                         step="0.01"
-                        value={config.km_price}
-                        onChange={(e) => setConfig({ ...config, km_price: Number(e.target.value) })}
+                        placeholder="0"
+                        value={precioKm}
+                        onChange={(e) => setPrecioKm(e.target.value)}
                       />
                       <p className="text-[10px] text-text-muted mt-1.5">Se multiplica por los km del envío</p>
                     </div>
@@ -352,7 +435,9 @@ const DeliveryPage: React.FC = () => {
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-2">Ejemplo</p>
                     <p className="text-sm text-text-secondary">
                       Un envío de 5 km saldría{' '}
-                      <span className="font-black text-primary">{plata(calcularPrecioPorKm(config, 5))}</span>
+                      <span className="font-black text-primary">
+                        {plata(calcularPrecioPorKm({ ...config, km_base_price: aNumero(precioBase), km_price: aNumero(precioKm) }, 5))}
+                      </span>
                     </p>
                   </div>
                 </>
@@ -362,6 +447,7 @@ const DeliveryPage: React.FC = () => {
                 <Button onClick={guardarConfig} isLoading={guardandoConfig} leftIcon={<Save size={18} />}>
                   Guardar
                 </Button>
+              </div>
               </div>
             </Card>
           </section>
@@ -452,6 +538,8 @@ const DeliveryPage: React.FC = () => {
             </div>
           )}
         </section>
+        </>
+        )}
       </div>
 
       <Modal isOpen={Boolean(zonaEditada)} onClose={() => setZonaEditada(null)} title="Editar zona" maxWidth="sm">

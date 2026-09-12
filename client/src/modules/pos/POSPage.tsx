@@ -273,14 +273,6 @@ const POSPage: React.FC = () => {
       return;
     }
 
-    // Sin zona el envío saldría en cero sin que nadie lo note, y esa plata no
-    // se recupera. Si el local no cobra el envío, se pone 0 a mano.
-    if (orderType === 'DELIVERY' && modoEnvio === 'zona' && zonas.length > 0 && !zonaId) {
-      setErrorMessage('Elegí la zona de envío.');
-      setCheckoutStatus('error');
-      return;
-    }
-
     // Obtener tenant_id si no está en el store
     let finalTenantId = tenantId;
     if (!finalTenantId && branchId) {
@@ -628,7 +620,11 @@ const POSPage: React.FC = () => {
               { id: 'TAKEAWAY', label: 'Mostrador', icon: <User size={14} /> },
               { id: 'MESA', label: 'Mesa', icon: <Utensils size={14} /> },
               { id: 'DELIVERY', label: 'Envío', icon: <Truck size={14} /> },
-            ].map((type) => (
+            // Un local que no reparte no tiene por qué ver la opción. Se compara
+            // contra false y no por verdadero: mientras la config no cargó, el
+            // envío sigue disponible como hasta ahora.
+            ].filter((type) => type.id !== 'DELIVERY' || configEnvio?.delivery_enabled !== false)
+             .map((type) => (
               <button
                 key={type.id}
                 onClick={() => setOrderType(type.id as any)}
