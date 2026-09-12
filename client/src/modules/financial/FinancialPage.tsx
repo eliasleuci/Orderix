@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { orderService } from '../../services/orderService';
 import { useAuthStore } from '../../store/authStore';
 import { 
@@ -12,7 +13,9 @@ import {
   UtensilsCrossed,
   Store,
   Bike,
-  Clock
+  Clock,
+  ChevronDown,
+  Receipt
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -25,6 +28,9 @@ const FinancialPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilter>('hoy');
   const [customDate, setCustomDate] = useState<string>('');
+  // Los pedidos del período, para poder desplegar cuáles componen cada total.
+  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [tipoAbierto, setTipoAbierto] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalSales: 0,
     cashTotal: 0,
@@ -104,6 +110,8 @@ const FinancialPage: React.FC = () => {
         };
       };
 
+      setPedidos(filteredOrders);
+
       const sinCobrar = filteredOrders.filter((o: any) => o.payment_method === 'UNPAID');
 
       setStats({
@@ -143,6 +151,12 @@ const FinancialPage: React.FC = () => {
   const handleSetDateFilter = useCallback((filter: DateFilter) => {
     setDateFilter(filter);
   }, []);
+
+  // Al cambiar de período el detalle abierto mostraría pedidos que ya no son
+  // los del total de arriba.
+  useEffect(() => {
+    setTipoAbierto(null);
+  }, [dateFilter, customDate]);
 
   return (
     <div className="min-h-screen bg-surface-base text-text-primary p-4 lg:p-10 font-sans relative overflow-hidden">
@@ -350,14 +364,36 @@ const FinancialPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { id: 'salon', label: 'Salón', detalle: 'Comieron en el local', icon: UtensilsCrossed, color: 'text-primary', bg: 'bg-primary/10', borde: 'border-primary/20', barra: 'bg-primary', datos: stats.salon },
-                { id: 'mostrador', label: 'Mostrador', detalle: 'Pasaron a retirar', icon: Store, color: 'text-success', bg: 'bg-success/10', borde: 'border-success/20', barra: 'bg-success', datos: stats.mostrador },
-                { id: 'delivery', label: 'Delivery', detalle: 'Envío a domicilio', icon: Bike, color: 'text-warning', bg: 'bg-warning/10', borde: 'border-warning/20', barra: 'bg-warning', datos: stats.delivery },
+                { id: 'salon', tipo: 'MESA', label: 'Salón', detalle: 'Comieron en el local', icon: UtensilsCrossed, color: 'text-primary', bg: 'bg-primary/10', borde: 'border-primary/20', barra: 'bg-primary', datos: stats.salon },
+                { id: 'mostrador', tipo: 'TAKEAWAY', label: 'Mostrador', detalle: 'Pasaron a retirar', icon: Store, color: 'text-success', bg: 'bg-success/10', borde: 'border-success/20', barra: 'bg-success', datos: stats.mostrador },
+                { id: 'delivery', tipo: 'DELIVERY', label: 'Delivery', detalle: 'Envío a domicilio', icon: Bike, color: 'text-warning', bg: 'bg-warning/10', borde: 'border-warning/20', barra: 'bg-warning', datos: stats.delivery },
               ].map((t) => {
                 const porcentaje = stats.totalSales > 0 ? (t.datos.total / stats.totalSales) * 100 : 0;
                 const Icono = t.icon;
+                const abierta = tipoAbierto === t.id;
+                // Sin pedidos no hay nada que desplegar: abrir un panel vacío
+                // parece que la pantalla falló.
+                const desplegable = t.datos.cantidad > 0;
+                const alternar = () => desplegable && setTipoAbierto(abierta ? null : t.id);
                 return (
-                  <Card key={t.id} variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40">
+                  <Card
+                    key={t.id}
+                    variant="solid"
+                    padding="large"
+                    onClick={alternar}
+                    role={desplegable ? 'button' : undefined}
+                    tabIndex={desplegable ? 0 : undefined}
+                    aria-expanded={desplegable ? abierta : undefined}
+                    onKeyDown={(e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        alternar();
+                      }
+                    }}
+                    className={`bg-surface-elevated/40 transition-colors ${
+                      desplegable ? 'cursor-pointer' : ''
+                    } ${abierta ? 'border-primary/40' : `border-white/5 ${desplegable ? 'hover:border-white/20' : ''}`}`}
+                  >
                     <div className="flex items-center gap-4 mb-5">
                       <div className={`w-14 h-14 ${t.bg} rounded-3xl flex items-center justify-center border ${t.borde} shrink-0`}>
                         <Icono size={26} className={t.color} />
@@ -388,6 +424,13 @@ const FinancialPage: React.FC = () => {
                       </span>
                     </div>
 
+                    {desplegable && (
+                      <span className="inline-flex items-center gap-1 text-primary text-[10px] font-black uppercase tracking-widest mt-3">
+                        {abierta ? 'Ocultar pedidos' : 'Ver pedidos'}
+                        <ChevronDown size={12} className={`transition-transform ${abierta ? 'rotate-180' : ''}`} />
+                      </span>
+                    )}
+
                     {/* El envío está sumado al total de arriba; se discrimina
                         para no confundir plata de comida con plata de reparto. */}
                     {t.id === 'delivery' && stats.envios > 0 && (
@@ -399,6 +442,103 @@ const FinancialPage: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* ---------- DETALLE DEL TIPO ELEGIDO ---------- */}
+            <AnimatePresence initial={false}>
+              {tipoAbierto && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-6 rounded-[2rem] border border-primary/20 bg-surface-elevated/40 p-5 lg:p-6">
+                    {(() => {
+                      const tipos: Record<string, { tipo: string; label: string }> = {
+                        salon: { tipo: 'MESA', label: 'Salón' },
+                        mostrador: { tipo: 'TAKEAWAY', label: 'Mostrador' },
+                        delivery: { tipo: 'DELIVERY', label: 'Delivery' },
+                      };
+                      const actual = tipos[tipoAbierto];
+                      const delTipo = pedidos.filter((o: any) => o.order_type === actual.tipo);
+
+                      return (
+                        <>
+                          <div className="flex items-center gap-3 mb-5">
+                            <Receipt size={18} className="text-primary" />
+                            <h3 className="font-black uppercase tracking-tighter">
+                              Pedidos de {actual.label}
+                            </h3>
+                            <span className="text-text-muted text-xs font-bold">
+                              {delTipo.length} {delTipo.length === 1 ? 'pedido' : 'pedidos'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+                            {delTipo.map((o: any) => {
+                              const envio = Number(o.delivery_fee ?? 0);
+                              const mesa = o.tables?.label || (o.tables?.number ? `Mesa ${o.tables.number}` : null);
+                              const sinCobrar = o.payment_method === 'UNPAID';
+
+                              return (
+                                <div
+                                  key={o.id}
+                                  className="flex items-center gap-4 rounded-2xl border border-white/5 bg-surface-base px-4 py-3"
+                                >
+                                  <span className="font-black text-text-muted text-xs shrink-0 w-12">
+                                    #{o.ticket_number ?? '—'}
+                                  </span>
+
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-sm truncate">
+                                      {o.customer_name || mesa || 'Sin nombre'}
+                                    </p>
+                                    <p className="text-[10px] text-text-muted mt-0.5 truncate">
+                                      {new Date(o.created_at).toLocaleString('es-AR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                      {mesa && o.customer_name ? ` · ${mesa}` : ''}
+                                      {o.customer_address ? ` · ${o.customer_address}` : ''}
+                                      {envio > 0 ? ` · envío $${envio.toLocaleString()}` : ''}
+                                    </p>
+                                  </div>
+
+                                  <span
+                                    className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                                      sinCobrar
+                                        ? 'text-warning border-warning/30 bg-warning/10'
+                                        : 'text-text-muted border-white/10 bg-white/5'
+                                    }`}
+                                  >
+                                    {sinCobrar
+                                      ? 'Sin cobrar'
+                                      : o.payment_method === 'CASH'
+                                        ? 'Efectivo'
+                                        : o.payment_method === 'CARD'
+                                          ? 'Tarjeta'
+                                          : o.payment_method === 'DIGITAL'
+                                            ? 'Transf.'
+                                            : o.payment_method || '—'}
+                                  </span>
+
+                                  <span className="font-black tracking-tighter shrink-0 w-24 text-right">
+                                    ${Number(o.total ?? 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Las mesas abiertas ya suman al total facturado pero todavía no se
                 cobraron: se avisa para que no se confunda con plata en caja. */}
