@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { tableService, Table, TableStatus, Mozo } from '../../services/tableService';
+import { tableService, Table, TableStatus, Mozo, ConsumoMesa } from '../../services/tableService';
 import MozosModal from './components/MozosModal';
+import ConsumoModal from './components/ConsumoModal';
 import { supabase } from '../../lib/supabase';
 import {
   UtensilsCrossed, Plus, X, Check, Clock, Users, Edit3, Trash2,
-  ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link, UserRound
+  ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link, UserRound, Receipt
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
@@ -55,8 +56,10 @@ const TableCard: React.FC<{
   onAddOrder: (t: Table) => void;
   onLinkTable: (t: Table) => void;
   onPayBill: (t: Table) => void;
+  onVerConsumo: (t: Table) => void;
   mozos: Mozo[];
-}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, mozos }) => {
+  consumo: ConsumoMesa;
+}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, onVerConsumo, mozos, consumo }) => {
   const elapsed = useTableTimer(table.opened_at);
   const [showActions, setShowActions] = useState(false);
 
@@ -133,7 +136,7 @@ const TableCard: React.FC<{
         </div>
 
         {/* CUSTOMER INFO */}
-        {(table.customer_name || table.notes || nombreMozo) && !table.parent_table_id && (
+        {(table.customer_name || table.notes || nombreMozo || consumo.total > 0) && !table.parent_table_id && (
           <div className="px-5 pb-4 space-y-1">
             {table.customer_name && (
               <p className="text-sm font-black text-text-primary bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
@@ -145,6 +148,22 @@ const TableCard: React.FC<{
                 <UserRound size={12} className="text-text-muted shrink-0" />
                 Atiende {nombreMozo}
               </p>
+            )}
+
+            {/* Lo que lleva gastado la mesa, a la vista sin tener que abrir
+                nada: es el dato que más se mira durante el servicio. */}
+            {status === 'OCCUPIED' && consumo.total > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onVerConsumo(table); }}
+                className="w-full flex items-center justify-between gap-2 mt-2 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors"
+              >
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  <Receipt size={12} /> Consumido
+                </span>
+                <span className="text-base font-black text-primary tabular-nums">
+                  ${consumo.total.toLocaleString()}
+                </span>
+              </button>
             )}
             {table.notes && (
               <p className="text-xs text-text-muted font-medium italic px-1">
@@ -193,6 +212,12 @@ const TableCard: React.FC<{
                         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary text-xs font-black uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(245,158,11,0.2)]"
                       >
                         <HandPlatter size={16} /> Agregar Pedido
+                      </button>
+                      <button
+                        onClick={() => { onVerConsumo(table); setShowActions(false); }}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-text-primary text-xs font-black uppercase tracking-widest transition-all mt-1"
+                      >
+                        <Receipt size={16} /> Ver Consumo
                       </button>
                       <button
                         onClick={() => { onPayBill(table); setShowActions(false); }}
@@ -586,6 +611,8 @@ const TablesPage: React.FC = () => {
   const [linkModalState, setLinkModalState] = useState<{ open: boolean; table: Table | null }>({ open: false, table: null });
   const [mozosModalOpen, setMozosModalOpen] = useState(false);
   const [mozos, setMozos] = useState<Mozo[]>([]);
+  const [consumos, setConsumos] = useState<Record<string, ConsumoMesa>>({});
+  const [consumoAbierto, setConsumoAbierto] = useState<Table | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
     message: '', type: 'success', visible: false,
@@ -597,8 +624,12 @@ const TablesPage: React.FC = () => {
   const loadTables = useCallback(async () => {
     if (!branchId) return;
     setLoading(true);
-    const { data } = await tableService.getBranchTables(branchId);
-    setTables(data || []);
+    const [mesas, consumo] = await Promise.all([
+      tableService.getBranchTables(branchId),
+      tableService.getConsumoAbierto(branchId),
+    ]);
+    setTables(mesas.data || []);
+    setConsumos(consumo.data || {});
     setLoading(false);
   }, [branchId]);
 
@@ -618,6 +649,11 @@ const TablesPage: React.FC = () => {
     const channel = supabase
       .channel(`tables-${branchId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` },
+        () => loadTables()
+      )
+      // También los pedidos: sin esto, lo que lleva consumido una mesa quedaba
+      // congelado hasta que algo tocara la fila de la mesa.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` },
         () => loadTables()
       )
       .subscribe();
@@ -657,6 +693,20 @@ const TablesPage: React.FC = () => {
       loadTables();
     }
   };
+
+  /**
+   * Lo que lleva consumido una mesa. Si tiene mesas unidas, suma las de ellas:
+   * la cuenta es una sola y así se cobra.
+   */
+  const consumoDeMesa = useCallback((mesa: Table): ConsumoMesa => {
+    const hijas = tables.filter((t) => t.parent_table_id === mesa.id);
+    const propias = [consumos[mesa.id], ...hijas.map((h) => consumos[h.id])].filter(Boolean) as ConsumoMesa[];
+
+    return {
+      total: propias.reduce((a, c) => a + c.total, 0),
+      pedidos: propias.flatMap((c) => c.pedidos),
+    };
+  }, [tables, consumos]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta mesa?')) return;
@@ -783,7 +833,9 @@ const TablesPage: React.FC = () => {
                 onAddOrder={handleAddOrder}
                 onLinkTable={t => setLinkModalState({ open: true, table: t })}
                 onPayBill={t => setBillModalState({ open: true, table: t })}
+                onVerConsumo={setConsumoAbierto}
                 mozos={mozos}
+                consumo={consumoDeMesa(table as Table)}
               />
             ))}
           </AnimatePresence>
@@ -832,6 +884,14 @@ const TablesPage: React.FC = () => {
             onSuccess={handleBillSuccess}
           />
         )}
+        <ConsumoModal
+          isOpen={Boolean(consumoAbierto)}
+          onClose={() => setConsumoAbierto(null)}
+          table={consumoAbierto}
+          consumo={consumoAbierto ? consumoDeMesa(consumoAbierto) : null}
+          mozo={mozos.find((m) => m.id === consumoAbierto?.waiter_id)?.name}
+        />
+
         <MozosModal
           isOpen={mozosModalOpen}
           onClose={() => setMozosModalOpen(false)}

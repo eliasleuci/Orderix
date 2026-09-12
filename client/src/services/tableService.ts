@@ -3,6 +3,11 @@ import { ServiceResponse } from '../types/domain';
 
 export type TableStatus = 'FREE' | 'OCCUPIED' | 'RESERVED';
 
+export interface ConsumoMesa {
+  total: number;
+  pedidos: any[];
+}
+
 export interface Mozo {
   id: string;
   branch_id: string;
@@ -191,6 +196,36 @@ class TableService {
 
     const total = (data || []).reduce((acc, order) => acc + Number(order.total), 0);
     return { data: { orders: data || [], total }, error: null };
+  }
+
+  /**
+   * Lo que se está consumiendo en cada mesa abierta de la sucursal, en UNA sola
+   * consulta. Pedir la cuenta mesa por mesa con getTableBill serían dos
+   * consultas por mesa cada vez que se refresca el salón.
+   *
+   * La clave del mapa es la mesa a la que se le cargó el pedido; las mesas
+   * unidas se resuelven en la pantalla, que es la que conoce el parentesco.
+   */
+  async getConsumoAbierto(branchId: string): Promise<ServiceResponse<Record<string, ConsumoMesa>>> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, table_id, total, created_at, order_items(id, quantity, unit_price, notes, products(name))')
+      .eq('branch_id', branchId)
+      .eq('payment_method', 'UNPAID')
+      .not('table_id', 'is', null)
+      .order('created_at', { ascending: true });
+
+    if (error) return { data: null, error: error.message };
+
+    const porMesa: Record<string, ConsumoMesa> = {};
+    for (const o of data ?? []) {
+      const mesa = o.table_id as string;
+      if (!porMesa[mesa]) porMesa[mesa] = { total: 0, pedidos: [] };
+      porMesa[mesa].total += Number(o.total ?? 0);
+      porMesa[mesa].pedidos.push(o);
+    }
+
+    return { data: porMesa, error: null };
   }
 
   async closeTableBill(tableId: string, paymentMethod: string): Promise<ServiceResponse<{ closed_count: number }>> {
