@@ -15,6 +15,7 @@ import reportRoutes from './modules/reports/routes';
 import healthRoutes from './modules/health/routes';
 import menuRoutes from './modules/menu/routes';
 import cashRoutes from './modules/cash/routes';
+import webshopRoutes from './modules/webshop/routes';
 import superadminRoutes from './modules/superadmin';
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/cash', cashRoutes);
+app.use('/api/webshop', webshopRoutes);
 app.use('/api/superadmin', superadminRoutes);
 
 // Health Check

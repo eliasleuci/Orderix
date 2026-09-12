@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, Utensils, ChefHat, LogOut, BookOpen, Sun, Moon,
-  UtensilsCrossed, DollarSign, Package, KeyRound, MoreHorizontal, X, Wallet, Bike,
+  UtensilsCrossed, DollarSign, Package, KeyRound, MoreHorizontal, X, Wallet, Bike, Globe,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -31,6 +31,7 @@ const SECUNDARIOS = [
   { path: '/catalog', icon: BookOpen, label: 'Catálogo' },
   { path: '/stock', icon: Package, label: 'Stock' },
   { path: '/cash', icon: Wallet, label: 'Caja' },
+  { path: '/pedidos-web', icon: Globe, label: 'Pedidos web' },
   { path: '/delivery', icon: Bike, label: 'Delivery' },
   { path: '/financial', icon: DollarSign, label: 'Financiero' },
 ];

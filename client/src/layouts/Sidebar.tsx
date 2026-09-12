@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
-import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package, KeyRound, Wallet, Bike } from 'lucide-react';
+import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package, KeyRound, Wallet, Bike, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { puedeVer } from '../lib/permisos';
@@ -32,6 +32,7 @@ const Sidebar: React.FC = () => {
     { path: '/stock', icon: <Package />, label: 'Stock' },
     { path: '/dashboard', icon: <LayoutDashboard />, label: 'Panel' },
     { path: '/cash', icon: <Wallet />, label: 'Caja' },
+    { path: '/pedidos-web', icon: <Globe />, label: 'Pedidos web' },
     { path: '/delivery', icon: <Bike />, label: 'Delivery' },
     { path: '/financial', icon: <DollarSign />, label: 'Financiero' },
   ].filter((item) => puedeVer(role, item.path));

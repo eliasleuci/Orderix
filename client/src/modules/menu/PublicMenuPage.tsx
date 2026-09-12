@@ -1,11 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Phone, UtensilsCrossed, ImageOff, ChevronDown } from 'lucide-react';
-import { menuService, Carta, ProductoCarta } from '../../services/menuService';
+import { MapPin, Phone, UtensilsCrossed, ImageOff, ChevronDown, Plus, ShoppingCart } from 'lucide-react';
+import { webshopService, Vidriera, ProductoVidriera } from '../../services/webshopService';
+import { useWebCartStore } from '../../store/webCartStore';
+import PedidoWebDrawer from './components/PedidoWebDrawer';
 
-const ProductoItem: React.FC<{ producto: ProductoCarta }> = ({ producto }) => {
+const ProductoItem: React.FC<{
+  producto: ProductoVidriera;
+  sePuedePedir: boolean;
+  onAgregar: (p: ProductoVidriera, notas: string) => void;
+}> = ({ producto, sePuedePedir, onAgregar }) => {
   const [abierto, setAbierto] = useState(false);
+  const [notas, setNotas] = useState('');
 
   const tieneDetalle = Boolean(producto.descripcion) || producto.ingredientes.length > 0;
 
@@ -50,7 +57,18 @@ const ProductoItem: React.FC<{ producto: ProductoCarta }> = ({ producto }) => {
           {cabecera}
         </button>
       ) : (
-        <div className="flex items-center gap-4 p-3">{cabecera}</div>
+        <div className="flex items-center gap-4 p-3">
+          {cabecera}
+          {sePuedePedir && (
+            <button
+              onClick={() => onAgregar(producto, '')}
+              title="Agregar"
+              className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+            >
+              <Plus size={18} />
+            </button>
+          )}
+        </div>
       )}
 
       <AnimatePresence initial={false}>
@@ -82,6 +100,24 @@ const ProductoItem: React.FC<{ producto: ProductoCarta }> = ({ producto }) => {
                   </ul>
                 </div>
               )}
+
+              {sePuedePedir && (
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <input
+                    value={notas}
+                    onChange={(e) => setNotas(e.target.value)}
+                    placeholder="Alguna aclaración (opcional)"
+                    maxLength={200}
+                    className="flex-1 bg-surface-base border border-white/10 rounded-2xl h-11 px-4 text-sm focus:outline-none focus:border-primary"
+                  />
+                  <button
+                    onClick={() => { onAgregar(producto, notas); setNotas(''); setAbierto(false); }}
+                    className="h-11 px-5 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] inline-flex items-center justify-center gap-1.5 active:scale-95 transition-transform shrink-0"
+                  >
+                    <Plus size={15} /> Agregar
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -95,7 +131,9 @@ const PublicMenuPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const sucursalId = searchParams.get('sucursal') ?? undefined;
 
-  const [carta, setCarta] = useState<Carta | null>(null);
+  const [carta, setCarta] = useState<Vidriera | null>(null);
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const { abrirLocal, agregar, unidades, total } = useWebCartStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
@@ -107,7 +145,7 @@ const PublicMenuPage: React.FC = () => {
     let vigente = true;
 
     setLoading(true);
-    menuService.getCartaPublica(slug, sucursalId).then(({ data, error }) => {
+    webshopService.getVidriera(slug, sucursalId).then(({ data, error }) => {
       if (!vigente) return;
       setCarta(data);
       setError(error);
@@ -117,6 +155,12 @@ const PublicMenuPage: React.FC = () => {
 
     return () => { vigente = false; };
   }, [slug, sucursalId]);
+
+  // Entrar a otro local arranca con el carrito vacío: lo que había adentro no
+  // existe en esta carta.
+  useEffect(() => {
+    if (slug) abrirLocal(slug);
+  }, [slug, abrirLocal]);
 
   // La categoría activa se marca según qué sección quedó arriba de todo, para
   // que la barra de categorías acompañe al scroll en vez de quedarse fija.
@@ -166,9 +210,13 @@ const PublicMenuPage: React.FC = () => {
   }
 
   const sinProductos = carta.categorias.length === 0;
+  // Sólo se puede pedir si el local prendió el canal y no lo pausó. Con esto en
+  // false la página queda exactamente como la carta de sólo lectura de siempre.
+  const sePuedePedir = carta.pedidos.habilitado && Boolean(carta.pedidos.whatsapp);
+  const enElCarrito = unidades();
 
   return (
-    <div className="min-h-screen bg-surface-base text-text-primary pb-16">
+    <div className={`min-h-screen bg-surface-base text-text-primary ${sePuedePedir ? 'pb-32' : 'pb-16'}`}>
       <header className="relative overflow-hidden border-b border-white/5 px-6 pt-12 pb-8">
         <div className="absolute -top-32 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
         <div className="relative max-w-3xl mx-auto">
@@ -248,7 +296,20 @@ const PublicMenuPage: React.FC = () => {
 
                 <ul className="space-y-3">
                   {c.productos.map((p) => (
-                    <ProductoItem key={p.id} producto={p} />
+                    <ProductoItem
+                      key={p.id}
+                      producto={p}
+                      sePuedePedir={sePuedePedir}
+                      onAgregar={(prod, notas) =>
+                        agregar({
+                          productId: prod.id,
+                          nombre: prod.nombre,
+                          precio: prod.precio,
+                          imagen: prod.imagen,
+                          notas,
+                        })
+                      }
+                    />
                   ))}
                 </ul>
               </section>
@@ -257,11 +318,47 @@ const PublicMenuPage: React.FC = () => {
         </>
       )}
 
+      {/* Aviso de que el local no está tomando pedidos ahora mismo. La carta se
+          puede seguir mirando: cerrar no es lo mismo que no existir. */}
+      {carta.pedidos.pausado && (
+        <div className="max-w-3xl mx-auto px-6 pt-8">
+          <p className="rounded-2xl border border-warning/30 bg-warning/10 px-5 py-4 text-sm font-bold text-warning text-center">
+            En este momento no estamos tomando pedidos online. Podés ver la carta igual.
+          </p>
+        </div>
+      )}
+
       <footer className="max-w-3xl mx-auto px-6 pt-16 text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
           Los precios pueden variar sin previo aviso
         </p>
       </footer>
+
+      {/* Barra del carrito: fija abajo para que esté siempre a mano mientras se
+          recorre la carta desde el celular. */}
+      {sePuedePedir && enElCarrito > 0 && !carritoAbierto && (
+        <div className="fixed bottom-0 inset-x-0 z-50 p-4" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
+          <button
+            onClick={() => setCarritoAbierto(true)}
+            className="w-full max-w-3xl mx-auto h-14 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary/30 flex items-center justify-between px-5 active:scale-[0.98] transition-transform"
+          >
+            <span className="inline-flex items-center gap-2.5">
+              <ShoppingCart size={18} />
+              {enElCarrito} {enElCarrito === 1 ? 'producto' : 'productos'}
+            </span>
+            <span className="tracking-tighter text-base">${total().toLocaleString()}</span>
+          </button>
+        </div>
+      )}
+
+      {sePuedePedir && (
+        <PedidoWebDrawer
+          abierto={carritoAbierto}
+          onCerrar={() => setCarritoAbierto(false)}
+          vidriera={carta}
+          slug={slug!}
+        />
+      )}
     </div>
   );
 };

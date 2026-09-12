@@ -35,6 +35,9 @@ model Tenant {
   deliverySettings     DeliverySettings[]
   deliveryDrivers      DeliveryDriver[]
   waiters              Waiter[]
+  webSettings          WebSettings[]
+  webOrders            WebOrder[]
+  webOrderItems        WebOrderItem[]
 
   @@map("tenants")
 }
@@ -62,6 +65,8 @@ model Branch {
   deliverySettings DeliverySettings[]
   deliveryDrivers  DeliveryDriver[]
   waiters          Waiter[]
+  webSettings      WebSettings[]
+  webOrders        WebOrder[]
 
   @@map("branches")
 }
@@ -83,6 +88,7 @@ model User {
   stockMovements StockMovement[]
   cajasAbiertas  CashSession[] @relation("CajaAbiertaPor")
   cajasCerradas  CashSession[] @relation("CajaCerradaPor")
+  webOrdersConfirmados WebOrder[]
 
   @@map("profiles")
 }
@@ -133,6 +139,7 @@ model Product {
   branch     Branch?      @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   category   Category?    @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   recipe     RecipeItem[]
+  webOrderItems WebOrderItem[]
 
   @@index([branchId, isActive], map: "idx_products_branch_active")
   @@index([branchId], map: "idx_products_branch_id")
@@ -225,6 +232,8 @@ model Order {
   deliveryKm       Decimal?    @map("delivery_km") @db.Decimal(10, 2)
   deliveryZoneId   String?     @map("delivery_zone_id") @db.Uuid
   deliveryDriverId String?     @map("delivery_driver_id") @db.Uuid
+  customerPhone    String?     @map("customer_phone")
+  notes            String?
   waiterId         String?     @map("waiter_id") @db.Uuid
   /// Se congela al crear el pedido: subirle la comisión a un mozo no puede
   /// cambiar lo que ya se le liquidó.
@@ -240,6 +249,7 @@ model Order {
   deliveryZone     DeliveryZone?   @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   deliveryDriver   DeliveryDriver? @relation(fields: [deliveryDriverId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   waiter           Waiter?     @relation(fields: [waiterId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  webOrder         WebOrder?
 
   @@index([waiterId, createdAt(sort: Desc)], map: "idx_orders_waiter")
   @@index([branchId], map: "idx_orders_branch_id")
@@ -344,6 +354,7 @@ model DeliveryZone {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   orders    Order[]
+  webOrders WebOrder[]
 
   @@index([branchId, isActive], map: "idx_delivery_zones_branch")
   @@map("delivery_zones")
@@ -379,6 +390,91 @@ model DeliveryDriver {
 
   @@index([branchId, isActive], map: "idx_delivery_drivers_branch")
   @@map("delivery_drivers")
+}
+
+/// Configuración del canal de venta online, una fila por sucursal.
+/// Tabla propia y no una columna en DeliverySettings: por la web también se
+/// pide para retirar, y un local que no reparte igual quiere vender online.
+model WebSettings {
+  branchId        String   @id @map("branch_id") @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  enabled         Boolean  @default(false)
+  /// El "hoy no damos abasto", distinto de apagar el canal entero.
+  paused          Boolean  @default(false)
+  /// Sólo dígitos: es lo que va en el link de wa.me.
+  whatsappPhone   String?  @map("whatsapp_phone")
+  minOrder        Decimal  @default(0) @map("min_order") @db.Decimal(10, 2)
+  acceptsCash     Boolean  @default(true) @map("accepts_cash")
+  acceptsTransfer Boolean  @default(false) @map("accepts_transfer")
+  transferInfo    String?  @map("transfer_info")
+  takeawayEnabled Boolean  @default(true) @map("takeaway_enabled")
+  prepMinutes     Int?     @map("prep_minutes")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch          Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("web_settings")
+}
+
+/// Pedido que entra por la web. Vive acá y no en Order porque no es una venta
+/// hasta que el local lo confirma: el Financiero y el arqueo de caja suman
+/// todos los pedidos sin mirar el estado.
+model WebOrder {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  branchId        String    @map("branch_id") @db.Uuid
+  code            BigInt    @default(dbgenerated("nextval('web_orders_code_seq')"))
+  status          String    @default("PENDING")
+  customerName    String    @map("customer_name")
+  customerPhone   String    @map("customer_phone")
+  customerAddress String?   @map("customer_address")
+  orderType       String    @map("order_type")
+  paymentMethod   String    @map("payment_method")
+  notes           String?
+  /// Congelados al momento de pedir: es lo que el cliente vio al confirmar.
+  itemsTotal      Decimal   @map("items_total") @db.Decimal(10, 2)
+  deliveryFee     Decimal   @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+  deliveryZoneId  String?   @map("delivery_zone_id") @db.Uuid
+  /// La genera el navegador: volver atrás desde WhatsApp y reenviar es lo
+  /// normal, no la excepción.
+  idempotencyKey  String    @map("idempotency_key") @db.Uuid
+  createdMinute   DateTime  @default(now()) @map("created_minute") @db.Timestamptz(6)
+  clientIp        String?   @map("client_ip") @db.Inet
+  orderId         String?   @unique @map("order_id") @db.Uuid
+  confirmedById   String?   @map("confirmed_by") @db.Uuid
+  confirmedAt     DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  rejectedReason  String?   @map("rejected_reason")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch          Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  deliveryZone    DeliveryZone? @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  order           Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  confirmedBy     User?     @relation(fields: [confirmedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  items           WebOrderItem[]
+
+  @@index([branchId, status, createdAt(sort: Desc)], map: "idx_web_orders_bandeja")
+  @@map("web_orders")
+}
+
+/// El nombre y el precio quedan escritos acá: entre que el cliente pidió y el
+/// local confirmó, el dueño pudo remarcar o renombrar. El local tiene que ver
+/// exactamente lo que el cliente aceptó pagar.
+model WebOrderItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  webOrderId  String   @map("web_order_id") @db.Uuid
+  productId   String?  @map("product_id") @db.Uuid
+  productName String   @map("product_name")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(10, 2)
+  quantity    Int
+  notes       String?
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  webOrder    WebOrder @relation(fields: [webOrderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([webOrderId], map: "idx_web_order_items_pedido")
+  @@map("web_order_items")
 }
 
 enum movement_type {
