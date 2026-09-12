@@ -90,7 +90,7 @@ const MozosModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso }) =>
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={cerrar} title="Mozos" maxWidth="sm">
+    <Modal isOpen={isOpen} onClose={cerrar} title="Mozos" maxWidth="md">
       <div className="space-y-5">
         <p className="text-sm text-text-secondary">
           Se eligen al abrir una mesa. La comisión es el porcentaje que cobra el mozo
@@ -98,35 +98,35 @@ const MozosModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso }) =>
         </p>
 
         {esAdmin ? (
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="space-y-3">
             <Input
-              placeholder="Nombre"
+              placeholder="Nombre del mozo"
               value={nuevo.nombre}
               onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
               onKeyDown={(e) => e.key === 'Enter' && agregar()}
-              className="flex-1"
+              autoFocus
             />
-            <Input
-              placeholder="Teléfono"
-              value={nuevo.telefono}
-              onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && agregar()}
-              className="sm:w-32"
-            />
-            <Input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              max="100"
-              step="0.5"
-              placeholder="% com."
-              value={nuevo.comision}
-              onChange={(e) => setNuevo({ ...nuevo, comision: e.target.value })}
-              onKeyDown={(e) => e.key === 'Enter' && agregar()}
-              className="sm:w-28"
-            />
-            <Button leftIcon={<Plus size={18} />} onClick={agregar}>
-              Sumar
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                placeholder="Teléfono"
+                value={nuevo.telefono}
+                onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && agregar()}
+              />
+              <Input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                max="100"
+                step="0.5"
+                placeholder="% comisión"
+                value={nuevo.comision}
+                onChange={(e) => setNuevo({ ...nuevo, comision: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && agregar()}
+              />
+            </div>
+            <Button fullWidth leftIcon={<Plus size={18} />} onClick={agregar}>
+              Sumar mozo
             </Button>
           </div>
         ) : (
