@@ -2,6 +2,21 @@ import { baseApi } from './api';
 import { supabase } from '../lib/supabase';
 import { ServiceResponse } from '../types/domain';
 
+export interface OpcionExtra {
+  id: string;
+  nombre: string;
+  precio: number;
+}
+
+export interface GrupoExtras {
+  id: string;
+  nombre: string;
+  minimo: number;
+  /** null = sin techo (checkbox libre). 1 = elegir una sola (radio). */
+  maximo: number | null;
+  opciones: OpcionExtra[];
+}
+
 export interface ProductoVidriera {
   id: string;
   nombre: string;
@@ -9,11 +24,13 @@ export interface ProductoVidriera {
   precio: number;
   imagen: string | null;
   ingredientes: string[];
+  grupos: GrupoExtras[];
 }
 
 export interface CategoriaVidriera {
   id: string;
   nombre: string;
+  imagen: string | null;
   productos: ProductoVidriera[];
 }
 
@@ -52,6 +69,7 @@ export interface ItemPedidoWeb {
   precioUnitario: number;
   subtotal: number;
   notas: string | null;
+  extras: { label: string; price: number }[];
 }
 
 export interface PedidoWeb {
@@ -84,7 +102,12 @@ export interface NuevoPedido {
   paymentMethod: 'CASH' | 'TRANSFER';
   deliveryZoneId?: string | null;
   notes?: string | null;
-  items: Array<{ productId: string; quantity: number; notes?: string | null }>;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    notes?: string | null;
+    modifierOptionIds?: string[];
+  }>;
 }
 
 export type ResultadoConfirmar =
@@ -240,9 +263,11 @@ export const mensajeDeWhatsapp = (pedido: PedidoWeb, local: string): string => {
   const lineas = [
     `Hola ${local}! Te hago el pedido *#${pedido.codigo}*`,
     '',
-    ...pedido.items.map(
-      (i) => `• ${i.cantidad}x ${i.nombre}${i.notas ? ` (${i.notas})` : ''} — ${plata(i.subtotal)}`
-    ),
+    ...pedido.items.map((i) => {
+      const extras = i.extras.length > 0 ? ` + ${i.extras.map((e) => e.label).join(', ')}` : '';
+      const nota = i.notas ? ` (${i.notas})` : '';
+      return `• ${i.cantidad}x ${i.nombre}${extras}${nota} — ${plata(i.subtotal)}`;
+    }),
     '',
     pedido.tipo === 'DELIVERY'
       ? `📍 Envío a: ${pedido.direccion}${pedido.zona ? ` (${pedido.zona})` : ''}`

@@ -1,15 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface ExtraElegido {
+  optionId: string;
+  nombre: string;
+  precio: number;
+}
+
 export interface ItemCarritoWeb {
-  /** Id de línea: el mismo producto con distinta nota son dos líneas. */
+  /** Id de línea: el mismo producto con distinta nota o distintos extras es
+      otra línea, no se suma a una existente. */
   lineaId: string;
   productId: string;
   nombre: string;
+  /** Precio unitario ya con los extras sumados, para que el total del
+      carrito no tenga que recalcularlos en cada render. */
   precio: number;
   imagen: string | null;
   cantidad: number;
   notas?: string;
+  extras?: ExtraElegido[];
 }
 
 interface WebCartState {
@@ -62,13 +72,20 @@ export const useWebCartStore = create<WebCartState>()(
 
       agregar: (item, cantidad = 1) => {
         const notas = item.notas?.trim() || undefined;
+        const extras = item.extras ?? [];
+        // Los extras se comparan por id y ordenados: elegir "Cheddar, Bacon" o
+        // "Bacon, Cheddar" tiene que reconocerse como la misma combinación.
+        const firmaExtras = [...extras].map((e) => e.optionId).sort().join(',');
         const items = [...get().items];
 
-        // Mismo producto y misma nota es la misma línea: suma cantidad en vez
-        // de repetir el renglón.
-        const existente = items.find((i) => i.productId === item.productId && i.notas === notas);
+        const existente = items.find((i) => {
+          if (i.productId !== item.productId || i.notas !== notas) return false;
+          const firmaExistente = (i.extras ?? []).map((e) => e.optionId).sort().join(',');
+          return firmaExistente === firmaExtras;
+        });
+
         if (existente) existente.cantidad += cantidad;
-        else items.push({ ...item, notas, lineaId: nuevaClave(), cantidad });
+        else items.push({ ...item, notas, extras, lineaId: nuevaClave(), cantidad });
 
         set({ items });
       },

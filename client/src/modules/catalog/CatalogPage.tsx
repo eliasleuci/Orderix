@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { productService } from '../../services/productService';
 import { Product, Category } from '../../types/domain';
-import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle, Tag, QrCode } from 'lucide-react';
+import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle, Tag, QrCode, SlidersHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Button from '../../components/ui/Button';
@@ -11,6 +11,8 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Toast from '../../components/Toast';
 import QRCartaModal from './components/QRCartaModal';
+import ExtrasModal from './components/ExtrasModal';
+import CategoriasModal from './components/CategoriasModal';
 
 const CatalogPage: React.FC = () => {
   const { branchId, tenantId } = useAuthStore();
@@ -24,6 +26,8 @@ const CatalogPage: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [extrasAbiertos, setExtrasAbiertos] = useState<string | null>(null);
+  const [categoriasAbiertas, setCategoriasAbiertas] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
 
   // Feedback State
@@ -182,6 +186,15 @@ const CatalogPage: React.FC = () => {
                 className="h-14"
               />
             </div>
+            <Button
+              size="lg"
+              variant="secondary"
+              leftIcon={<Tag size={20} />}
+              onClick={() => setCategoriasAbiertas(true)}
+              className="h-14 px-8"
+            >
+              Categorías
+            </Button>
             <Button
               size="lg"
               variant="secondary"
@@ -393,6 +406,22 @@ const CatalogPage: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Sólo con el producto ya creado: los extras cuelgan de su
+                      id, que no existe hasta guardar por primera vez. */}
+                  {editingProduct.id && (
+                    <div className="pt-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        fullWidth
+                        leftIcon={<SlidersHorizontal size={18} />}
+                        onClick={() => setExtrasAbiertos(editingProduct.id!)}
+                      >
+                        Extras para el pedido web
+                      </Button>
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Descripción (Opcional)</label>
                     <textarea 
@@ -455,6 +484,23 @@ const CatalogPage: React.FC = () => {
       </AnimatePresence>
 
       <QRCartaModal isOpen={isQrModalOpen} onClose={() => setIsQrModalOpen(false)} />
+
+      <CategoriasModal
+        isOpen={categoriasAbiertas}
+        onClose={() => setCategoriasAbiertas(false)}
+        onCambios={fetchData}
+        onAviso={showToast}
+      />
+
+      {extrasAbiertos && (
+        <ExtrasModal
+          isOpen={Boolean(extrasAbiertos)}
+          onClose={() => setExtrasAbiertos(null)}
+          productId={extrasAbiertos}
+          productName={products.find((p) => p.id === extrasAbiertos)?.name ?? ''}
+          onAviso={showToast}
+        />
+      )}
 
       <Toast
         message={toast.message}

@@ -192,6 +192,11 @@ const WebOrdersPage: React.FC = () => {
               <span className="min-w-0">
                 <span className="font-bold text-text-muted mr-1.5">{i.cantidad}×</span>
                 {i.nombre}
+                {i.extras.length > 0 && (
+                  <span className="block text-[11px] text-text-secondary mt-0.5">
+                    {i.extras.map((e) => e.label).join(", ")}
+                  </span>
+                )}
                 {i.notas && <span className="block text-[11px] text-text-muted italic mt-0.5">{i.notas}</span>}
               </span>
               <span className="text-text-secondary font-bold shrink-0 tabular-nums">{plata(i.subtotal)}</span>

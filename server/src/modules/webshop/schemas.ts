@@ -12,6 +12,7 @@ const itemDelCarrito = z.object({
   productId: z.string().uuid('Producto inválido'),
   quantity: z.number().int().min(1).max(50, 'Demasiadas unidades de un mismo producto'),
   notes: z.string().trim().max(200).optional().nullable(),
+  modifierOptionIds: z.array(z.string().uuid()).max(20).optional(),
 });
 
 export const crearPedidoSchema = z.object({

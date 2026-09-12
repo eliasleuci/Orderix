@@ -11,6 +11,8 @@ export interface ItemDelCarrito {
   productId: string;
   quantity: number;
   notes?: string | null;
+  /** Ids de las opciones de extras que el cliente marcó, si el producto tiene. */
+  modifierOptionIds?: string[];
 }
 
 export interface PedidoEntrante {
@@ -50,6 +52,7 @@ const serializarPedido = (p: any) => ({
     precioUnitario: aNumero(i.unitPrice),
     subtotal: redondear(aNumero(i.unitPrice) * i.quantity),
     notas: i.notes,
+    extras: (i.modifiers ?? []) as { label: string; price: number }[],
   })),
 });
 
@@ -88,7 +91,7 @@ export class WebshopService {
       webshopRepository.findMenuProducts(sucursal.id),
     ]);
 
-    const categorias = new Map<string, { id: string; nombre: string; productos: unknown[] }>();
+    const categorias = new Map<string, { id: string; nombre: string; imagen: string | null; orden: number; productos: unknown[] }>();
     const sinCategoria: unknown[] = [];
 
     for (const p of productos) {
@@ -110,18 +113,43 @@ export class WebshopService {
         precio: aNumero(p.price),
         imagen: p.image,
         ingredientes,
+        // Sólo lo que hace falta para elegir y sumar: nada de ids de tenant ni
+        // de fechas internas.
+        grupos: p.modifierGroups.map((g) => ({
+          id: g.id,
+          nombre: g.name,
+          minimo: g.minSelect,
+          maximo: g.maxSelect,
+          opciones: g.options.map((o) => ({ id: o.id, nombre: o.name, precio: aNumero(o.price) })),
+        })),
       };
 
-      if (!p.category) {
+      // Pausada: no se ofrece en la vidriera, pero sigue existiendo para no
+      // tener que reasignar sus productos a otra categoría.
+      if (!p.category || p.category.isActive === false) {
         sinCategoria.push(producto);
         continue;
       }
       const actual = categorias.get(p.category.id);
       if (actual) actual.productos.push(producto);
-      else categorias.set(p.category.id, { id: p.category.id, nombre: p.category.name, productos: [producto] });
+      else
+        categorias.set(p.category.id, {
+          id: p.category.id,
+          nombre: p.category.name,
+          imagen: p.category.imageUrl,
+          orden: p.category.displayOrder,
+          productos: [producto],
+        });
     }
     if (sinCategoria.length > 0) {
-      categorias.set('sin-categoria', { id: 'sin-categoria', nombre: 'Otros', productos: sinCategoria });
+      categorias.set('sin-categoria', {
+        id: 'sin-categoria',
+        nombre: 'Otros',
+        imagen: null,
+        // Al final siempre: es el cajón de lo que no tiene categoría propia.
+        orden: Number.MAX_SAFE_INTEGER,
+        productos: sinCategoria,
+      });
     }
 
     // El envío sólo se ofrece si el local reparte Y tiene zonas cargadas: sin
@@ -152,7 +180,7 @@ export class WebshopService {
         minutosPreparacion: config?.prepMinutes ?? null,
       },
       zonas: haceEnvios ? zonas.map((z) => ({ id: z.id, nombre: z.name, precio: aNumero(z.price) })) : [],
-      categorias: [...categorias.values()],
+      categorias: [...categorias.values()].sort((a, b) => a.orden - b.orden),
     };
   }
 
@@ -195,8 +223,37 @@ export class WebshopService {
     let itemsTotal = 0;
     const items = entrada.items.map((i) => {
       const producto = porId.get(i.productId)!;
-      const precio = aNumero(producto.price);
-      itemsTotal += precio * i.quantity;
+      const precioBase = aNumero(producto.price);
+
+      // Los extras se precian y validan contra la base, igual que el producto:
+      // el navegador dice qué se marcó, nunca a qué precio ni si correspondía.
+      const idsElegidos = new Set(i.modifierOptionIds ?? []);
+      const modifiers: { label: string; price: number }[] = [];
+      let sumaExtras = 0;
+
+      for (const grupo of producto.modifierGroups) {
+        const elegidasDelGrupo = grupo.options.filter((o) => idsElegidos.has(o.id));
+
+        if (elegidasDelGrupo.length < grupo.minSelect) {
+          throw new AppError(`Elegí una opción de "${grupo.name}" en ${producto.name}`, 400);
+        }
+        if (grupo.maxSelect != null && elegidasDelGrupo.length > grupo.maxSelect) {
+          throw new AppError(`En "${grupo.name}" de ${producto.name} podés elegir hasta ${grupo.maxSelect}`, 400);
+        }
+
+        for (const o of elegidasDelGrupo) {
+          const precio = aNumero(o.price);
+          modifiers.push({ label: o.name, price: precio });
+          sumaExtras += precio;
+        }
+      }
+
+      // Un id que no pertenece a ningún grupo de este producto (de otro
+      // producto, o inventado) no rompe el pedido: simplemente no se cobra ni
+      // se agrega, porque no hay de dónde sacarle un precio confiable.
+
+      const precioUnitario = redondear(precioBase + sumaExtras);
+      itemsTotal += precioUnitario * i.quantity;
 
       return {
         tenantId: tenant.id,
@@ -204,9 +261,10 @@ export class WebshopService {
         // Congelado: el local tiene que ver qué aceptó el cliente, aunque
         // después le cambien el precio o el nombre al producto.
         productName: producto.name,
-        unitPrice: precio,
+        unitPrice: precioUnitario,
         quantity: i.quantity,
         notes: i.notes?.trim() || null,
+        modifiers: modifiers.length > 0 ? modifiers : null,
       };
     });
     itemsTotal = redondear(itemsTotal);

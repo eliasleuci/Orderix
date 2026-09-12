@@ -21,7 +21,7 @@ class ProductService implements IProductService {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .order('name');
+      .order('display_order');
 
     return { data, error: error?.message || null };
   }
@@ -51,6 +51,30 @@ class ProductService implements IProductService {
       .select()
       .single();
     return { data, error: error?.message || null };
+  }
+
+  async updateCategory(id: string, cambios: Partial<Category>): Promise<ServiceResponse<Category>> {
+    const { data, error } = await supabase
+      .from('categories')
+      .update(cambios)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error: error?.message || null };
+  }
+
+  /**
+   * Una categoría con productos no se puede borrar: la base la protege (el
+   * producto no puede quedar apuntando a una categoría inexistente). Se
+   * traduce el error crudo de Postgres en algo que tenga sentido para quien
+   * está gestionando el menú.
+   */
+  async deleteCategory(id: string): Promise<ServiceResponse<boolean>> {
+    const { error } = await supabase.from('categories').delete().eq('id', id);
+    if (error?.code === '23503') {
+      return { data: null, error: 'Esta categoría tiene productos. Movelos a otra categoría o pausala en vez de borrarla.' };
+    }
+    return { data: !error, error: error?.message || null };
   }
 }
 

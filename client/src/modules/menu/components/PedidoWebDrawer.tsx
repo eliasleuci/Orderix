@@ -74,7 +74,12 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
       paymentMethod: pago,
       deliveryZoneId: tipo === 'DELIVERY' ? zonaId : null,
       notes: nota || null,
-      items: items.map((i) => ({ productId: i.productId, quantity: i.cantidad, notes: i.notas ?? null })),
+      items: items.map((i) => ({
+        productId: i.productId,
+        quantity: i.cantidad,
+        notes: i.notas ?? null,
+        modifierOptionIds: i.extras?.map((e) => e.optionId),
+      })),
     });
     setEnviando(false);
 
@@ -151,6 +156,11 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
                       <li key={i.lineaId} className="flex items-center gap-3 rounded-2xl border border-white/5 bg-surface-base p-3">
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm truncate">{i.nombre}</p>
+                          {i.extras && i.extras.length > 0 && (
+                            <p className="text-[11px] text-text-secondary mt-0.5">
+                              {i.extras.map((e) => e.nombre).join(", ")}
+                            </p>
+                          )}
                           {i.notas && <p className="text-[11px] text-text-muted italic mt-0.5">{i.notas}</p>}
                           <p className="text-xs text-primary font-black mt-1">{plata(i.precio * i.cantidad)}</p>
                         </div>

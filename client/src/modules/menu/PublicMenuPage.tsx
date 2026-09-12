@@ -1,20 +1,25 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Phone, UtensilsCrossed, ImageOff, ChevronDown, Plus, ShoppingCart } from 'lucide-react';
+import { MapPin, Phone, UtensilsCrossed, ImageOff, ChevronDown, Plus, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { webshopService, Vidriera, ProductoVidriera } from '../../services/webshopService';
 import { useWebCartStore } from '../../store/webCartStore';
 import PedidoWebDrawer from './components/PedidoWebDrawer';
+import PersonalizarModal from './components/PersonalizarModal';
 
 const ProductoItem: React.FC<{
   producto: ProductoVidriera;
   sePuedePedir: boolean;
   onAgregar: (p: ProductoVidriera, notas: string) => void;
-}> = ({ producto, sePuedePedir, onAgregar }) => {
+  onPersonalizar: (p: ProductoVidriera) => void;
+}> = ({ producto, sePuedePedir, onAgregar, onPersonalizar }) => {
   const [abierto, setAbierto] = useState(false);
   const [notas, setNotas] = useState('');
 
-  const tieneDetalle = Boolean(producto.descripcion) || producto.ingredientes.length > 0;
+  // Con extras para elegir, siempre hay algo que mostrar: la vista con el
+  // "+" directo no alcanza para dejarlo personalizar antes de agregar.
+  const personalizable = producto.grupos.length > 0;
+  const tieneDetalle = Boolean(producto.descripcion) || producto.ingredientes.length > 0 || personalizable;
 
   const cabecera = (
     <>
@@ -59,7 +64,7 @@ const ProductoItem: React.FC<{
       ) : (
         <div className="flex items-center gap-4 p-3">
           {cabecera}
-          {sePuedePedir && (
+          {sePuedePedir && !personalizable && (
             <button
               onClick={() => onAgregar(producto, '')}
               title="Agregar"
@@ -101,7 +106,16 @@ const ProductoItem: React.FC<{
                 </div>
               )}
 
-              {sePuedePedir && (
+              {sePuedePedir && personalizable && (
+                <button
+                  onClick={() => onPersonalizar(producto)}
+                  className="w-full h-11 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] inline-flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
+                >
+                  <Plus size={15} /> Personalizar y agregar
+                </button>
+              )}
+
+              {sePuedePedir && !personalizable && (
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <input
                     value={notas}
@@ -140,11 +154,14 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
   const [carta, setCarta] = useState<Vidriera | null>(null);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const { abrirLocal, agregar, unidades, total } = useWebCartStore();
+  const [personalizando, setPersonalizando] = useState<ProductoVidriera | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
-
-  const seccionesRef = useRef<Record<string, HTMLElement | null>>({});
+  // null = mostrando las tarjetas de categoría; con un id, la lista de esa
+  // categoría sola. Antes era todo junto en un scroll con nav pegajosa; se
+  // cambia a este ida-y-vuelta porque es como funciona la tienda de
+  // referencia y porque una carta con muchas categorías scrolleaba eterno.
+  const [categoriaAbierta, setCategoriaAbierta] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -155,7 +172,6 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
       if (!vigente) return;
       setCarta(data);
       setError(error);
-      setCategoriaActiva(data?.categorias[0]?.id ?? null);
       setLoading(false);
     });
 
@@ -167,29 +183,6 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
   useEffect(() => {
     if (slug) abrirLocal(slug);
   }, [slug, abrirLocal]);
-
-  // La categoría activa se marca según qué sección quedó arriba de todo, para
-  // que la barra de categorías acompañe al scroll en vez de quedarse fija.
-  useEffect(() => {
-    if (!carta) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible?.target.id) setCategoriaActiva(visible.target.id);
-      },
-      { rootMargin: '-96px 0px -70% 0px' }
-    );
-
-    Object.values(seccionesRef.current).forEach((el) => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, [carta]);
-
-  const irACategoria = useCallback((id: string) => {
-    seccionesRef.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
 
   if (loading) {
     return (
@@ -224,112 +217,129 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
   const sePuedePedir = modoPedido && carta.pedidos.habilitado && Boolean(carta.pedidos.whatsapp);
   const enElCarrito = unidades();
 
+  const categoriaSeleccionada = carta.categorias.find((c) => c.id === categoriaAbierta) ?? null;
+
   return (
     <div className={`min-h-screen bg-surface-base text-text-primary ${sePuedePedir ? 'pb-32' : 'pb-16'}`}>
-      <header className="relative overflow-hidden border-b border-white/5 px-6 pt-12 pb-8">
-        <div className="absolute -top-32 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 text-primary mb-3">
-            <UtensilsCrossed size={18} />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em]">Nuestra carta</span>
-          </div>
-          <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter leading-none mb-4">
-            {carta.local.nombre}
-          </h1>
+      {/* En la grilla se ve el encabezado completo; dentro de una categoría se
+          achica a una barra con volver, para no repetir la misma info dos
+          veces y que la lista de productos arranque más arriba. */}
+      {!categoriaSeleccionada ? (
+        <header className="relative overflow-hidden border-b border-white/5 px-6 pt-12 pb-8">
+          <div className="absolute -top-32 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
+          <div className="relative max-w-3xl mx-auto">
+            <div className="flex items-center gap-2 text-primary mb-3">
+              <UtensilsCrossed size={18} />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em]">Nuestra carta</span>
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter leading-none mb-4">
+              {carta.local.nombre}
+            </h1>
 
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-text-secondary text-xs font-bold">
-            {carta.sucursalActual.direccion && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin size={14} className="text-text-muted" />
-                {carta.sucursalActual.direccion}
-              </span>
-            )}
-            {carta.sucursalActual.telefono && (
-              <a
-                href={`tel:${carta.sucursalActual.telefono}`}
-                className="inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-text-secondary text-xs font-bold">
+              {carta.sucursalActual.direccion && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin size={14} className="text-text-muted" />
+                  {carta.sucursalActual.direccion}
+                </span>
+              )}
+              {carta.sucursalActual.telefono && (
+                <a
+                  href={`tel:${carta.sucursalActual.telefono}`}
+                  className="inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+                >
+                  <Phone size={14} className="text-text-muted" />
+                  {carta.sucursalActual.telefono}
+                </a>
+              )}
+            </div>
+
+            {carta.sucursales.length > 1 && (
+              <select
+                value={carta.sucursalActual.id}
+                onChange={(e) => setSearchParams({ sucursal: e.target.value })}
+                className="mt-5 bg-surface-elevated border border-white/10 rounded-2xl h-11 px-4 text-text-primary text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary"
               >
-                <Phone size={14} className="text-text-muted" />
-                {carta.sucursalActual.telefono}
-              </a>
+                {carta.sucursales.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
             )}
           </div>
-
-          {carta.sucursales.length > 1 && (
-            <select
-              value={carta.sucursalActual.id}
-              onChange={(e) => setSearchParams({ sucursal: e.target.value })}
-              className="mt-5 bg-surface-elevated border border-white/10 rounded-2xl h-11 px-4 text-text-primary text-xs font-black uppercase tracking-widest focus:outline-none focus:border-primary"
-            >
-              {carta.sucursales.map((s) => (
-                <option key={s.id} value={s.id}>{s.nombre}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </header>
+        </header>
+      ) : (
+        <header className="sticky top-0 z-20 flex items-center gap-3 px-4 py-4 bg-surface-elevated border-b border-white/5">
+          <button
+            onClick={() => setCategoriaAbierta(null)}
+            className="p-2 -ml-1 rounded-xl hover:bg-white/5 transition-colors shrink-0"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="font-black uppercase tracking-tighter text-lg truncate">{categoriaSeleccionada.nombre}</h1>
+        </header>
+      )}
 
       {sinProductos ? (
         <p className="max-w-3xl mx-auto px-6 py-20 text-center text-text-secondary text-sm">
           Todavía no hay productos cargados en esta carta.
         </p>
-      ) : (
-        <>
-          <nav className="sticky top-0 z-20 bg-surface-base/90 backdrop-blur-md border-b border-white/5">
-            <div className="max-w-3xl mx-auto flex gap-2 overflow-x-auto scrollbar-none px-6 py-3">
-              {carta.categorias.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => irACategoria(c.id)}
-                  className={`shrink-0 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors ${
-                    categoriaActiva === c.id
-                      ? 'bg-primary text-white'
-                      : 'bg-surface-elevated text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  {c.nombre}
-                </button>
-              ))}
-            </div>
-          </nav>
-
-          <main className="max-w-3xl mx-auto px-6">
+      ) : !categoriaSeleccionada ? (
+        <main className="max-w-3xl mx-auto px-6 pt-8">
+          <h2 className="text-xl font-black uppercase tracking-tighter mb-5">Categorías</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {carta.categorias.map((c) => (
-              <section
+              <button
                 key={c.id}
-                id={c.id}
-                ref={(el) => { seccionesRef.current[c.id] = el; }}
-                className="pt-10 scroll-mt-20"
+                onClick={() => setCategoriaAbierta(c.id)}
+                className="relative aspect-square rounded-3xl overflow-hidden border border-white/5 bg-surface-elevated group text-left"
               >
-                <h2 className="text-xl font-black uppercase tracking-tighter mb-5">{c.nombre}</h2>
-
-                <ul className="space-y-3">
-                  {c.productos.map((p) => (
-                    <ProductoItem
-                      key={p.id}
-                      producto={p}
-                      sePuedePedir={sePuedePedir}
-                      onAgregar={(prod, notas) =>
-                        agregar({
-                          productId: prod.id,
-                          nombre: prod.nombre,
-                          precio: prod.precio,
-                          imagen: prod.imagen,
-                          notas,
-                        })
-                      }
-                    />
-                  ))}
-                </ul>
-              </section>
+                {c.imagen ? (
+                  <img
+                    src={c.imagen}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/[0.03]">
+                    <UtensilsCrossed size={32} className="text-text-muted opacity-40" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                <span className="absolute inset-x-0 bottom-0 p-3 font-black uppercase tracking-tight text-white text-sm leading-tight drop-shadow">
+                  {c.nombre}
+                </span>
+              </button>
             ))}
-          </main>
-        </>
+          </div>
+        </main>
+      ) : (
+        <main className="max-w-3xl mx-auto px-6 pt-6">
+          <ul className="space-y-3">
+            {categoriaSeleccionada.productos.map((p) => (
+              <ProductoItem
+                key={p.id}
+                producto={p}
+                sePuedePedir={sePuedePedir}
+                onAgregar={(prod, notas) =>
+                  agregar({
+                    productId: prod.id,
+                    nombre: prod.nombre,
+                    precio: prod.precio,
+                    imagen: prod.imagen,
+                    notas,
+                  })
+                }
+                onPersonalizar={setPersonalizando}
+              />
+            ))}
+          </ul>
+        </main>
       )}
 
       {/* Aviso de que el local no está tomando pedidos ahora mismo. La carta se
           puede seguir mirando: cerrar no es lo mismo que no existir. */}
-      {carta.pedidos.pausado && (
+      {carta.pedidos.pausado && !categoriaSeleccionada && (
         <div className="max-w-3xl mx-auto px-6 pt-8">
           <p className="rounded-2xl border border-warning/30 bg-warning/10 px-5 py-4 text-sm font-bold text-warning text-center">
             En este momento no estamos tomando pedidos online. Podés ver la carta igual.
@@ -337,11 +347,13 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
         </div>
       )}
 
-      <footer className="max-w-3xl mx-auto px-6 pt-16 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
-          Los precios pueden variar sin previo aviso
-        </p>
-      </footer>
+      {!categoriaSeleccionada && (
+        <footer className="max-w-3xl mx-auto px-6 pt-16 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+            Los precios pueden variar sin previo aviso
+          </p>
+        </footer>
+      )}
 
       {/* Barra del carrito: fija abajo para que esté siempre a mano mientras se
           recorre la carta desde el celular. */}
@@ -358,6 +370,26 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
             <span className="tracking-tighter text-base">${total().toLocaleString()}</span>
           </button>
         </div>
+      )}
+
+      {sePuedePedir && (
+        <PersonalizarModal
+          producto={personalizando}
+          onCerrar={() => setPersonalizando(null)}
+          onAgregar={(extras, notas) => {
+            if (!personalizando) return;
+            const extraTotal = extras.reduce((a, e) => a + e.precio, 0);
+            agregar({
+              productId: personalizando.id,
+              nombre: personalizando.nombre,
+              precio: personalizando.precio + extraTotal,
+              imagen: personalizando.imagen,
+              notas,
+              extras,
+            });
+            setPersonalizando(null);
+          }}
+        />
       )}
 
       {sePuedePedir && (
