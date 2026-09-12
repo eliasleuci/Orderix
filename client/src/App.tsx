@@ -104,14 +104,21 @@ const AppContent = () => {
     );
   }
 
-  // La carta pública se resuelve antes que cualquier chequeo de sesión: la abre
-  // un comensal desde el QR, sin cuenta. Si cayera en el ruteo de abajo, sin
-  // usuario la mandaría al login y con usuario al panel de su rol.
-  if (location.pathname.startsWith('/carta/')) {
+  // Carta y pedidos se resuelven antes que cualquier chequeo de sesión: los abre
+  // un comensal sin cuenta. Si cayeran en el ruteo de abajo, sin usuario la
+  // mandaría al login y con usuario al panel de su rol.
+  //
+  // Son dos rutas separadas y no una sola con la venta condicionada por config:
+  // el QR de las mesas apunta a /carta y tiene que quedar SIEMPRE de sólo
+  // lectura, para que a quien ya está comiendo en el local no le aparezca un
+  // botón de agregar al carrito y pida por accidente lo que ya tiene servido.
+  // /pedir es un link aparte, pensado para compartir fuera del local.
+  if (location.pathname.startsWith('/carta/') || location.pathname.startsWith('/pedir/')) {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/carta/:slug" element={<PublicMenuPage />} />
+          <Route path="/carta/:slug" element={<PublicMenuPage modoPedido={false} />} />
+          <Route path="/pedir/:slug" element={<PublicMenuPage modoPedido={true} />} />
         </Routes>
       </Suspense>
     );

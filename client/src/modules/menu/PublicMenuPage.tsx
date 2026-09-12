@@ -126,7 +126,13 @@ const ProductoItem: React.FC<{
   );
 };
 
-const PublicMenuPage: React.FC = () => {
+interface Props {
+  /** Sin esto en true, la página nunca ofrece pedir: es la carta de sólo
+      lectura que apunta el QR de las mesas. */
+  modoPedido?: boolean;
+}
+
+const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const sucursalId = searchParams.get('sucursal') ?? undefined;
@@ -212,7 +218,10 @@ const PublicMenuPage: React.FC = () => {
   const sinProductos = carta.categorias.length === 0;
   // Sólo se puede pedir si el local prendió el canal y no lo pausó. Con esto en
   // false la página queda exactamente como la carta de sólo lectura de siempre.
-  const sePuedePedir = carta.pedidos.habilitado && Boolean(carta.pedidos.whatsapp);
+  // El canal puede estar prendido en la configuración del local y esta
+  // pantalla igual no ofrecer pedir: /carta es sólo lectura siempre, sin
+  // importar la config. Sólo /pedir puede vender.
+  const sePuedePedir = modoPedido && carta.pedidos.habilitado && Boolean(carta.pedidos.whatsapp);
   const enElCarrito = unidades();
 
   return (

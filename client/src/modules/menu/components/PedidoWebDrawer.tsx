@@ -36,6 +36,7 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
     config.permiteEnvio ? 'DELIVERY' : 'TAKEAWAY'
   );
   const [direccion, setDireccion] = useState('');
+  const [referencia, setReferencia] = useState('');
   const [zonaId, setZonaId] = useState('');
   const [pago, setPago] = useState<'CASH' | 'TRANSFER'>(config.aceptaEfectivo ? 'CASH' : 'TRANSFER');
   const [nota, setNota] = useState('');
@@ -51,7 +52,7 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
   const enviar = async () => {
     setError(null);
 
-    if (nombre.trim().length < 2) return setError('Poné tu nombre');
+    if (nombre.trim().length < 2) return setError('Poné tu nombre y apellido');
     if (telefono.replace(/\D/g, '').length < 6) return setError('Poné un teléfono de contacto');
     if (tipo === 'DELIVERY' && !direccion.trim()) return setError('Poné la dirección de entrega');
     if (tipo === 'DELIVERY' && !zonaId) return setError('Elegí la zona de envío');
@@ -64,7 +65,11 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
       idempotencyKey: clave(),
       customerName: nombre,
       customerPhone: telefono.replace(/\D/g, ''),
-      customerAddress: tipo === 'DELIVERY' ? direccion : null,
+      // La referencia va pegada a la dirección: el pedido en la base tiene un
+      // solo campo de texto, no columnas separadas por calle/barrio/referencia.
+      customerAddress: tipo === 'DELIVERY'
+        ? `${direccion.trim()}${referencia.trim() ? ` (${referencia.trim()})` : ''}`
+        : null,
       orderType: tipo,
       paymentMethod: pago,
       deliveryZoneId: tipo === 'DELIVERY' ? zonaId : null,
@@ -180,12 +185,12 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
               {/* ---------- DATOS ---------- */}
               {paso === 'datos' && (
                 <div className="space-y-4">
-                  <input className={campo} placeholder="Tu nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                  <input className={campo} placeholder="Nombre y apellido" value={nombre} onChange={(e) => setNombre(e.target.value)} />
                   <input
                     className={campo}
                     type="tel"
                     inputMode="tel"
-                    placeholder="Tu teléfono (WhatsApp)"
+                    placeholder="Teléfono de contacto"
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
                   />
@@ -220,18 +225,24 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
                     <>
                       <input
                         className={campo}
-                        placeholder="Dirección de entrega"
+                        placeholder="Calle y número"
                         value={direccion}
                         onChange={(e) => setDireccion(e.target.value)}
                       />
                       <select value={zonaId} onChange={(e) => setZonaId(e.target.value)} className={`${campo} appearance-none`}>
-                        <option value="">Elegí tu zona...</option>
+                        <option value="">Elegí tu barrio o zona...</option>
                         {vidriera.zonas.map((z) => (
                           <option key={z.id} value={z.id}>
                             {z.nombre} — {plata(z.precio)}
                           </option>
                         ))}
                       </select>
+                      <input
+                        className={campo}
+                        placeholder="Referencias (piso, timbre, entre calles...)"
+                        value={referencia}
+                        onChange={(e) => setReferencia(e.target.value)}
+                      />
                     </>
                   )}
 

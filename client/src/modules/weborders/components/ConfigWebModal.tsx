@@ -66,7 +66,10 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
     if (isOpen) cargar();
   }, [isOpen, cargar]);
 
-  const url = slug ? `${window.location.origin}/carta/${slug}` : '';
+  // /pedir y no /carta: son links distintos a propósito. El de la carta es el
+  // que ya está impreso en las mesas y tiene que quedar de sólo lectura para
+  // siempre; éste es el que el local comparte para vender online.
+  const url = slug ? `${window.location.origin}/pedir/${slug}` : '';
 
   const guardar = async () => {
     if (!config) return;
@@ -93,7 +96,7 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
 
     if (error) return onAviso(error, 'error');
     onAviso('Configuración guardada', 'success');
-    cargar();
+    onClose();
   };
 
   const copiar = async () => {
@@ -210,7 +213,7 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
               {url && (
                 <div className="rounded-2xl border border-white/5 bg-surface-base px-4 py-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-2">
-                    El link para tus clientes
+                    El link para pedir online
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="flex-1 text-xs text-text-secondary font-mono truncate">{url}</span>
@@ -228,7 +231,9 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
                     </a>
                   </div>
                   <p className="text-[10px] text-text-muted mt-2">
-                    Es el mismo de la carta: los QR que ya imprimiste siguen sirviendo.
+                    Es un link aparte del de la carta: compartilo por Instagram, WhatsApp o
+                    donde publiques tus pedidos. El QR de las mesas sigue siendo sólo para
+                    mirar el menú, nunca vende.
                   </p>
                 </div>
               )}
