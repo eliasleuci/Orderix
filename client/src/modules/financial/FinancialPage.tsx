@@ -23,6 +23,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import BotonReporte from '../reports/BotonReporte';
 import { tableService, Mozo } from '../../services/tableService';
+import { etiquetaMedioPago, etiquetaCorta, esEfectivo, estaCobrado } from '../../lib/mediosDePago';
 
 type DateFilter = 'hoy' | 'ayer' | 'semana' | 'mes' | 'personalizado';
 
@@ -37,6 +38,7 @@ const FinancialPage: React.FC = () => {
   // Estado propio y no compartido con tipoAbierto: si no, abrir un mozo
   // cerraría el desglose por tipo y al revés.
   const [mozoAbierto, setMozoAbierto] = useState<string | null>(null);
+  const [verMedios, setVerMedios] = useState(false);
   const [mozos, setMozos] = useState<Mozo[]>([]);
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -101,10 +103,12 @@ const FinancialPage: React.FC = () => {
 
       const totalSales = filteredOrders.reduce((acc: number, o: any) => acc + Number(o.total ?? 0), 0);
       const cashTotal = filteredOrders
-        .filter((o: any) => o.payment_method === 'CASH')
+        .filter((o: any) => esEfectivo(o.payment_method))
         .reduce((acc: number, o: any) => acc + Number(o.total ?? 0), 0);
+      // Todo lo cobrado que no sea efectivo. Enumerar los medios uno por uno
+      // dejaba afuera cualquiera que se agregara después, como pasó con QR.
       const cardTotal = filteredOrders
-        .filter((o: any) => o.payment_method === 'CARD' || o.payment_method === 'DIGITAL')
+        .filter((o: any) => estaCobrado(o.payment_method) && !esEfectivo(o.payment_method))
         .reduce((acc: number, o: any) => acc + Number(o.total ?? 0), 0);
 
       // El POS guarda el tipo como MESA (salón), TAKEAWAY (mostrador y retiro)
@@ -160,6 +164,28 @@ const FinancialPage: React.FC = () => {
    * que tiene el mozo hoy: si le cambian la comisión, lo ya liquidado no se
    * mueve.
    */
+  /**
+   * Cada forma de cobro por separado. Antes tarjeta, QR y transferencia caían
+   * todas en el mismo total y no había forma de saber cuánto entró por cada una.
+   */
+  const porMedioDePago = useMemo(() => {
+    const acumulado = new Map<string, { total: number; cantidad: number }>();
+
+    for (const o of pedidos) {
+      const medio = o.payment_method;
+      if (!estaCobrado(medio) || esEfectivo(medio)) continue;
+
+      const actual = acumulado.get(medio) ?? { total: 0, cantidad: 0 };
+      actual.total += Number(o.total ?? 0);
+      actual.cantidad += 1;
+      acumulado.set(medio, actual);
+    }
+
+    return [...acumulado.entries()]
+      .map(([medio, datos]) => ({ medio, nombre: etiquetaMedioPago(medio), ...datos }))
+      .sort((a, b) => b.total - a.total);
+  }, [pedidos]);
+
   const ventasPorMozo = useMemo(() => {
     const porMozo = new Map<string, { total: number; cantidad: number; comision: number }>();
 
@@ -201,6 +227,7 @@ const FinancialPage: React.FC = () => {
   useEffect(() => {
     setTipoAbierto(null);
     setMozoAbierto(null);
+    setVerMedios(false);
   }, [dateFilter, customDate]);
 
   return (
@@ -395,6 +422,58 @@ const FinancialPage: React.FC = () => {
               <p className="text-[10px] font-bold text-text-muted mt-2 text-right">
                 {stats.totalSales > 0 ? ((stats.cardTotal / stats.totalSales) * 100).toFixed(1) : 0}% del total
               </p>
+
+              {/* Las tres formas van juntas en el total de arriba, pero cada una
+                  se cobra distinto: hace falta poder abrirlas. */}
+              {porMedioDePago.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setVerMedios((v) => !v)}
+                    aria-expanded={verMedios}
+                    className="inline-flex items-center gap-1 text-primary text-[10px] font-black uppercase tracking-widest mt-4 hover:text-primary-hover transition-colors"
+                  >
+                    {verMedios ? 'Ocultar detalle' : 'Ver por forma de cobro'}
+                    <ChevronDown size={12} className={`transition-transform ${verMedios ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {verMedios && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                          {porMedioDePago.map((m) => {
+                            const parte = stats.cardTotal > 0 ? (m.total / stats.cardTotal) * 100 : 0;
+                            return (
+                              <div key={m.medio} className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-text-secondary w-28 shrink-0 truncate">
+                                  {m.nombre}
+                                </span>
+                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-primary/60 rounded-full transition-all duration-500"
+                                    style={{ width: `${parte}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs font-black text-text-primary shrink-0 w-24 text-right tabular-nums">
+                                  ${m.total.toLocaleString()}
+                                </span>
+                                <span className="text-[10px] font-bold text-text-muted shrink-0 w-16 text-right">
+                                  {m.cantidad} {m.cantidad === 1 ? 'pago' : 'pagos'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
             </Card>
           </div>
 
@@ -559,15 +638,7 @@ const FinancialPage: React.FC = () => {
                                         : 'text-text-muted border-white/10 bg-white/5'
                                     }`}
                                   >
-                                    {sinCobrar
-                                      ? 'Sin cobrar'
-                                      : o.payment_method === 'CASH'
-                                        ? 'Efectivo'
-                                        : o.payment_method === 'CARD'
-                                          ? 'Tarjeta'
-                                          : o.payment_method === 'DIGITAL'
-                                            ? 'Transf.'
-                                            : o.payment_method || '—'}
+                                    {etiquetaCorta(o.payment_method)}
                                   </span>
 
                                   <span className="font-black tracking-tighter shrink-0 w-24 text-right">

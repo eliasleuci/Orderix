@@ -59,6 +59,9 @@ const TIPO = {
 const PAGO = {
   CASH: 'Efectivo',
   CARD: 'Tarjeta',
+  QR: 'QR',
+  TRANSFER: 'Transferencia',
+  // Valor viejo: juntaba QR y transferencia en una sola opción.
   DIGITAL: 'QR / Transferencia',
   UNPAID: 'Pendiente de pago',
 };

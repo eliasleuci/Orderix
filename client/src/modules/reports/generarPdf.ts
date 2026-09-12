@@ -15,7 +15,9 @@ const TITULO: Record<Periodo, string> = {
 const METODO: Record<string, string> = {
   CASH: 'Efectivo',
   CARD: 'Tarjeta',
-  DIGITAL: 'Digital',
+  QR: 'QR',
+  TRANSFER: 'Transferencia',
+  DIGITAL: 'QR / Transf.',
 };
 
 // El POS guarda 'MESA', no 'DINE_IN': con la clave vieja el detalle mostraba

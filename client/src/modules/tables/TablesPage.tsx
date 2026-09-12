@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { tableService, Table, TableStatus, Mozo, ConsumoMesa } from '../../services/tableService';
 import MozosModal from './components/MozosModal';
 import ConsumoModal from './components/ConsumoModal';
+import { MEDIOS_DE_PAGO, MedioPago, etiquetaCorta } from '../../lib/mediosDePago';
 import AsignarMozoModal from './components/AsignarMozoModal';
 import { supabase } from '../../lib/supabase';
 import {
@@ -438,7 +439,7 @@ const PayBillModal: React.FC<{
 }> = ({ isOpen, table, onClose, onSuccess }) => {
   const [bill, setBill] = useState<{ orders: any[], total: number } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [method, setMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
+  const [method, setMethod] = useState<MedioPago>('CASH');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -514,8 +515,8 @@ const PayBillModal: React.FC<{
 
               <div>
                 <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2 block">Método de Pago</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['CASH', 'CARD', 'DIGITAL'] as const).map(m => (
+                <div className="grid grid-cols-2 gap-2">
+                  {MEDIOS_DE_PAGO.map(({ id: m }) => (
                     <button
                       key={m}
                       onClick={() => setMethod(m)}
@@ -526,7 +527,7 @@ const PayBillModal: React.FC<{
                           : "bg-surface-base border-white/5 text-text-muted hover:bg-white/5"
                       )}
                     >
-                      {m === 'CASH' ? 'Efectivo' : m === 'CARD' ? 'Tarjeta' : 'Transf.'}
+                      {etiquetaCorta(m)}
                     </button>
                   ))}
                 </div>

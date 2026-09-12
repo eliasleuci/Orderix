@@ -13,6 +13,7 @@ import {
   ConfigEnvio,
 } from '../../services/deliveryService';
 import { printService } from '../../lib/printService';
+import { MEDIOS_DE_PAGO, MedioPago } from '../../lib/mediosDePago';
 import { ShoppingCart, Search, LogOut, Utensils, Truck, User, Printer, Check, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,7 +52,7 @@ const POSPage: React.FC = () => {
   // Ingredientes que quedaron en negativo por esta venta. No la frena:
   // sólo avisa, para que la caja lo sepa en el momento.
   const [avisoStock, setAvisoStock] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'DIGITAL'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<MedioPago>('CASH');
   const [searchParams] = useSearchParams();
 
   // ----- Envío -----
@@ -837,24 +838,22 @@ const POSPage: React.FC = () => {
                   {checkoutStatus === 'loading' ? 'Procesando...' : 'Confirmar Pedido'}
                 </Button>
                 
-                <div className="flex gap-2">
-                  <Button 
-                    variant={paymentMethod === 'CASH' ? 'primary' : 'secondary'} 
-                    fullWidth 
-                    disabled={checkoutStatus === 'loading'}
-                    onClick={() => setPaymentMethod('CASH')}
-                  >
-                    Efectivo
-                  </Button>
-                  <Button 
-                    variant={paymentMethod === 'CARD' ? 'primary' : 'secondary'} 
-                    fullWidth 
-                    disabled={checkoutStatus === 'loading'}
-                    onClick={() => setPaymentMethod('CARD')}
-                    className="text-xs"
-                  >
-                    Tarjeta / QR / Transferencia
-                  </Button>
+                {/* Cuatro botones y no dos: antes todo lo que no era efectivo
+                    se guardaba como CARD, así que después no había forma de
+                    saber cuánto entró por QR y cuánto por transferencia. */}
+                <div className="grid grid-cols-2 gap-2">
+                  {MEDIOS_DE_PAGO.map((m) => (
+                    <Button
+                      key={m.id}
+                      variant={paymentMethod === m.id ? 'primary' : 'secondary'}
+                      fullWidth
+                      disabled={checkoutStatus === 'loading'}
+                      onClick={() => setPaymentMethod(m.id)}
+                      className="text-xs"
+                    >
+                      {m.label}
+                    </Button>
+                  ))}
                 </div>
               </>
             )}

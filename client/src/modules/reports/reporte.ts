@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { orderService } from '../../services/orderService';
 import type { Order } from '../../types/domain';
+import { esEfectivo, estaCobrado } from '../../lib/mediosDePago';
 
 export type Periodo = 'dia' | 'semana' | 'mes';
 
@@ -64,7 +65,9 @@ export interface DatosReporte {
   ordenes: Order[];
 }
 
-const esTarjeta = (m?: string) => m === 'CARD' || m === 'DIGITAL';
+// Cualquier cobro que no sea efectivo. Listarlos uno por uno dejaba afuera los
+// medios nuevos: QR y transferencia no entraban en el total.
+const esTarjeta = (m?: string) => estaCobrado(m) && !esEfectivo(m);
 
 /** Nombre del negocio y de la sucursal para el encabezado del reporte. */
 const obtenerEncabezado = async (branchId: string) => {
@@ -103,7 +106,7 @@ export const obtenerDatos = async (
 
   const totalVentas = ordenes.reduce((a, o) => a + Number(o.total ?? 0), 0);
   const efectivo = ordenes
-    .filter((o) => o.payment_method === 'CASH')
+    .filter((o) => esEfectivo(o.payment_method))
     .reduce((a, o) => a + Number(o.total ?? 0), 0);
   const tarjeta = ordenes
     .filter((o) => esTarjeta(o.payment_method))
