@@ -92,6 +92,51 @@ class ModifierService {
     const { error } = await supabase.from('modifier_options').delete().eq('id', id);
     return { data: !error, error: error?.message || null };
   }
+
+  /**
+   * Copia un grupo (y sus opciones) a otros productos. Son copias
+   * independientes, no un grupo compartido: cada producto sigue teniendo su
+   * propia fila y editar el precio en uno no toca a los demás. Existe sólo
+   * para no tener que tipear la misma lista de extras producto por producto
+   * cuando varios comparten los mismos.
+   */
+  async copiarGrupoAProductos(
+    grupo: GrupoDeExtras,
+    opciones: OpcionDeExtra[],
+    productIds: string[],
+    tenantId: string
+  ): Promise<ServiceResponse<number>> {
+    let copiados = 0;
+
+    for (const productId of productIds) {
+      const { data: nuevoGrupo, error: errGrupo } = await this.crearGrupo({
+        tenant_id: tenantId,
+        branch_id: grupo.branch_id,
+        product_id: productId,
+        name: grupo.name,
+        min_select: grupo.min_select,
+        max_select: grupo.max_select,
+      });
+      if (errGrupo || !nuevoGrupo) return { data: copiados, error: errGrupo || 'No se pudo copiar el grupo' };
+
+      if (opciones.length > 0) {
+        const { error: errOpciones } = await supabase.from('modifier_options').insert(
+          opciones.map((o) => ({
+            tenant_id: tenantId,
+            group_id: nuevoGrupo.id,
+            name: o.name,
+            price: o.price,
+            display_order: o.display_order,
+          }))
+        );
+        if (errOpciones) return { data: copiados, error: errOpciones.message };
+      }
+
+      copiados += 1;
+    }
+
+    return { data: copiados, error: null };
+  }
 }
 
 export const modifierService = new ModifierService();

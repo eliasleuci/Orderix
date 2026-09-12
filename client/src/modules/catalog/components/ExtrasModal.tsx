@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, GripVertical, Pencil, Check, X } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Pencil, Check, X, Copy, Search } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { modifierService, GrupoDeExtras, OpcionDeExtra } from '../../../services/modifierService';
+import { productService } from '../../../services/productService';
+import { Product } from '../../../types/domain';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -35,6 +37,14 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
   const [precioEditado, setPrecioEditado] = useState('');
   const [borrando, setBorrando] = useState<{ tipo: 'grupo' | 'opcion'; id: string; nombre: string } | null>(null);
 
+  // Copiar un grupo ya armado a otros productos, para no tipear la misma
+  // lista de extras producto por producto cuando varios comparten los mismos.
+  const [copiando, setCopiando] = useState<GrupoDeExtras | null>(null);
+  const [productos, setProductos] = useState<Product[]>([]);
+  const [buscarProducto, setBuscarProducto] = useState('');
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [copiandoGuardando, setCopiandoGuardando] = useState(false);
+
   const cargar = useCallback(async () => {
     setCargando(true);
     const { data: gs } = await modifierService.getGrupos(productId);
@@ -53,6 +63,13 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
   useEffect(() => {
     if (isOpen) cargar();
   }, [isOpen, cargar]);
+
+  useEffect(() => {
+    if (!branchId) return;
+    productService.getBranchProducts(branchId).then(({ data }) => {
+      setProductos((data ?? []).filter((p) => p.id !== productId));
+    });
+  }, [branchId, productId]);
 
   const agregarGrupo = async () => {
     const nombre = nuevoGrupo.trim();
@@ -118,6 +135,38 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
     cargar();
   };
 
+  const abrirCopiar = (g: GrupoDeExtras) => {
+    setCopiando(g);
+    setSeleccionados(new Set());
+    setBuscarProducto('');
+  };
+
+  const alternarSeleccionado = (id: string) => {
+    setSeleccionados((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
+  };
+
+  const confirmarCopia = async () => {
+    if (!copiando || seleccionados.size === 0) return;
+
+    setCopiandoGuardando(true);
+    const { data: copiados, error } = await modifierService.copiarGrupoAProductos(
+      copiando,
+      opciones[copiando.id] ?? [],
+      [...seleccionados],
+      tenantId!
+    );
+    setCopiandoGuardando(false);
+    setCopiando(null);
+
+    if (error) return onAviso(error, 'error');
+    onAviso(`Copiado a ${copiados} ${copiados === 1 ? 'producto' : 'productos'}`, 'success');
+  };
+
   const confirmarBorrado = async () => {
     if (!borrando) return;
     const { error } =
@@ -173,6 +222,13 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
                       <GripVertical size={16} className="text-text-muted shrink-0" />
                       <h3 className="font-black tracking-tight truncate">{g.name}</h3>
                     </div>
+                    <button
+                      onClick={() => abrirCopiar(g)}
+                      className="p-2 rounded-xl text-text-muted hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
+                      title="Copiar a otros productos"
+                    >
+                      <Copy size={16} />
+                    </button>
                     <button
                       onClick={() => setBorrando({ tipo: 'grupo', id: g.id, nombre: g.name })}
                       className="p-2 rounded-xl text-text-muted hover:text-danger hover:bg-danger/10 transition-colors shrink-0"
@@ -301,6 +357,60 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
         }
         confirmText="Eliminar"
       />
+
+      <Modal
+        isOpen={Boolean(copiando)}
+        onClose={() => setCopiando(null)}
+        title={`Copiar "${copiando?.name}"`}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-secondary">
+            Se crea una copia de este grupo y sus opciones en cada producto que elijas. Son
+            copias independientes: si después cambiás un precio acá, no se actualiza en las
+            demás.
+          </p>
+
+          <Input
+            placeholder="Buscar producto..."
+            icon={<Search size={16} />}
+            value={buscarProducto}
+            onChange={(e) => setBuscarProducto(e.target.value)}
+          />
+
+          <div className="max-h-64 overflow-y-auto space-y-1 rounded-2xl border border-white/10 p-2">
+            {productos
+              .filter((p) => p.name.toLowerCase().includes(buscarProducto.toLowerCase()))
+              .map((p) => (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.has(p.id)}
+                    onChange={() => alternarSeleccionado(p.id)}
+                    className="accent-primary w-4 h-4"
+                  />
+                  <span className="text-sm truncate">{p.name}</span>
+                </label>
+              ))}
+            {productos.length === 0 && (
+              <p className="text-text-muted text-sm text-center py-6">No hay otros productos.</p>
+            )}
+          </div>
+
+          <Button
+            fullWidth
+            disabled={seleccionados.size === 0 || copiandoGuardando}
+            onClick={confirmarCopia}
+          >
+            {copiandoGuardando
+              ? 'Copiando...'
+              : `Copiar a ${seleccionados.size || ''} ${seleccionados.size === 1 ? 'producto' : 'productos'}`}
+          </Button>
+        </div>
+      </Modal>
     </Modal>
   );
 };
