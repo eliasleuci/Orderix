@@ -35,9 +35,15 @@ export class MenuRepository {
       select: {
         id: true,
         name: true,
+        description: true,
         price: true,
         image: true,
         category: { select: { id: true, name: true } },
+        // Sólo el nombre del ingrediente. Las cantidades de la receta son
+        // información de costos del local y no tienen por qué salir al público.
+        recipe: {
+          select: { ingredient: { select: { name: true, is_active: true } } },
+        },
       },
       orderBy: { name: 'asc' },
     });

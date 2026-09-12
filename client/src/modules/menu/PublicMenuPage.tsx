@@ -1,7 +1,94 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { MapPin, Phone, UtensilsCrossed, ImageOff } from 'lucide-react';
-import { menuService, Carta } from '../../services/menuService';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, Phone, UtensilsCrossed, ImageOff, ChevronDown } from 'lucide-react';
+import { menuService, Carta, ProductoCarta } from '../../services/menuService';
+
+const ProductoItem: React.FC<{ producto: ProductoCarta }> = ({ producto }) => {
+  const [abierto, setAbierto] = useState(false);
+
+  const tieneDetalle = Boolean(producto.descripcion) || producto.ingredientes.length > 0;
+
+  const cabecera = (
+    <>
+      <div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center">
+        {producto.imagen ? (
+          <img src={producto.imagen} alt={producto.nombre} loading="lazy" className="w-full h-full object-cover" />
+        ) : (
+          <ImageOff size={22} className="text-text-muted" />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <h3 className="font-black tracking-tight leading-tight">{producto.nombre}</h3>
+        {producto.descripcion && !abierto && (
+          <p className="text-text-secondary text-xs mt-1 leading-snug line-clamp-1">{producto.descripcion}</p>
+        )}
+        {tieneDetalle && (
+          <span className="inline-flex items-center gap-1 text-primary text-[10px] font-black uppercase tracking-widest mt-1.5">
+            {abierto ? 'Ocultar' : 'Ver detalle'}
+            <ChevronDown size={12} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} />
+          </span>
+        )}
+      </div>
+
+      <span className="text-lg font-black text-primary tracking-tighter shrink-0">
+        ${producto.precio.toLocaleString()}
+      </span>
+    </>
+  );
+
+  return (
+    <li className="bg-surface-elevated/40 border border-white/5 rounded-3xl overflow-hidden">
+      {tieneDetalle ? (
+        <button
+          type="button"
+          onClick={() => setAbierto((v) => !v)}
+          aria-expanded={abierto}
+          className="w-full flex items-center gap-4 p-3 text-left hover:bg-white/[0.03] transition-colors"
+        >
+          {cabecera}
+        </button>
+      ) : (
+        <div className="flex items-center gap-4 p-3">{cabecera}</div>
+      )}
+
+      <AnimatePresence initial={false}>
+        {abierto && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-4 pt-1 space-y-4 border-t border-white/5 mt-1">
+              {producto.descripcion && (
+                <p className="text-text-secondary text-sm leading-relaxed pt-3">{producto.descripcion}</p>
+              )}
+
+              {producto.ingredientes.length > 0 && (
+                <div className={producto.descripcion ? '' : 'pt-3'}>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-2">Lleva</h4>
+                  <ul className="flex flex-wrap gap-2">
+                    {producto.ingredientes.map((i) => (
+                      <li
+                        key={i}
+                        className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-text-secondary"
+                      >
+                        {i}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </li>
+  );
+};
 
 const PublicMenuPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -161,24 +248,7 @@ const PublicMenuPage: React.FC = () => {
 
                 <ul className="space-y-3">
                   {c.productos.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center gap-4 bg-surface-elevated/40 border border-white/5 rounded-3xl p-3"
-                    >
-                      <div className="w-20 h-20 shrink-0 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center">
-                        {p.imagen ? (
-                          <img src={p.imagen} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageOff size={22} className="text-text-muted" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-black tracking-tight leading-tight">{p.nombre}</h3>
-                      </div>
-                      <span className="text-lg font-black text-primary tracking-tighter shrink-0">
-                        ${p.precio.toLocaleString()}
-                      </span>
-                    </li>
+                    <ProductoItem key={p.id} producto={p} />
                   ))}
                 </ul>
               </section>

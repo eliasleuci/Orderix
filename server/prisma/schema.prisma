@@ -106,8 +106,9 @@ model Category {
 }
 
 model Product {
-  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
   price      Decimal      @db.Decimal(10, 2)
   categoryId String?      @map("category_id") @db.Uuid
   image      String?      @map("image_url")

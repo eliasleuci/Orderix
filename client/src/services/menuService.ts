@@ -4,8 +4,10 @@ import { ServiceResponse } from '../types/domain';
 export interface ProductoCarta {
   id: string;
   nombre: string;
+  descripcion: string | null;
   precio: number;
   imagen: string | null;
+  ingredientes: string[];
 }
 
 export interface CategoriaCarta {

@@ -31,11 +31,24 @@ export class MenuService {
     const sinCategoria: unknown[] = [];
 
     for (const p of products) {
+      // Un ingrediente dado de baja sigue atado a recetas viejas: mostrarlo
+      // diría que el plato lleva algo que el local ya no usa.
+      const ingredientes = [
+        ...new Set(
+          p.recipe
+            .filter((r) => r.ingredient?.is_active)
+            .map((r) => r.ingredient!.name.trim())
+            .filter(Boolean)
+        ),
+      ].sort((a, b) => a.localeCompare(b, 'es'));
+
       const producto = {
         id: p.id,
         nombre: p.name,
+        descripcion: p.description,
         precio: Number(p.price),
         imagen: p.image,
+        ingredientes,
       };
 
       if (!p.category) {
