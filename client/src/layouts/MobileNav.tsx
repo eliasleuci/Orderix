@@ -83,7 +83,7 @@ const MobileNav: React.FC = () => {
                 <Icono size={21} className={activo ? 'text-primary' : 'text-text-muted'} />
                 <span
                   className={cn(
-                    'text-[9px] font-black uppercase tracking-wider',
+                    'text-[9px] font-black uppercase tracking-wider text-center leading-tight',
                     activo ? 'text-primary' : 'text-text-muted'
                   )}
                 >
@@ -160,7 +160,7 @@ const MobileNav: React.FC = () => {
                       )}
                     >
                       <Icono size={22} />
-                      <span className="text-[10px] font-black uppercase tracking-wider">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-center leading-tight">
                         {item.label}
                       </span>
                     </button>

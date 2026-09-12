@@ -66,7 +66,7 @@ const Sidebar: React.FC = () => {
                   {React.cloneElement(item.icon as React.ReactElement<any>, { size: 24 })}
                 </div>
                 <span className={cn(
-                  "text-[9px] font-black uppercase tracking-[0.1em] transition-all",
+                  "text-[9px] font-black uppercase tracking-[0.1em] text-center leading-tight transition-all",
                   isActive ? 'text-primary' : 'text-text-muted group-hover:text-text-secondary'
                 )}>
                   {item.label}
