@@ -83,36 +83,36 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* ACTIONS */}
-      <div className="flex flex-col gap-3 shrink-0 pt-5 mt-3 border-t border-border-subtle w-full items-center">
+      <div className="flex flex-col gap-1.5 shrink-0 pt-4 mt-2 border-t border-border-subtle w-full items-center">
         {/* THEME TOGGLE */}
         <button 
           onClick={toggleTheme}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 group"
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 group"
           title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
         >
           {theme === 'dark' ? (
-            <Moon size={24} className="transition-transform group-hover:-rotate-12" />
+            <Moon size={20} className="transition-transform group-hover:-rotate-12" />
           ) : (
-            <Sun size={24} className="transition-transform group-hover:rotate-45" />
+            <Sun size={20} className="transition-transform group-hover:rotate-45" />
           )}
         </button>
 
         {/* MI CONTRASEÑA */}
         <button
           onClick={() => setCambiarClave(true)}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 group"
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 group"
           title="Cambiar mi contraseña"
         >
-          <KeyRound size={24} className="transition-transform group-hover:rotate-12" />
+          <KeyRound size={20} className="transition-transform group-hover:rotate-12" />
         </button>
 
         {/* SIGN OUT */}
         <button 
           onClick={handleSignOut}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-text-muted hover:bg-danger/10 hover:text-danger transition-all border border-transparent hover:border-danger/20 group"
+          className="w-11 h-11 rounded-xl flex items-center justify-center text-text-muted hover:bg-danger/10 hover:text-danger transition-all border border-transparent hover:border-danger/20 group"
           title="Cerrar sesión"
         >
-          <LogOut size={24} className="transition-transform group-hover:-translate-x-1" />
+          <LogOut size={20} className="transition-transform group-hover:-translate-x-1" />
         </button>
       </div>
 
