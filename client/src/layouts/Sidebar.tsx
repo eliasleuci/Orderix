@@ -37,15 +37,17 @@ const Sidebar: React.FC = () => {
   ].filter((item) => puedeVer(role, item.path));
 
   return (
-    <aside className="hidden lg:flex w-24 bg-surface-base border-r border-border-subtle flex-col items-center py-8 justify-between relative z-50 transition-colors duration-300">
-      <div className="space-y-10 flex flex-col items-center w-full">
-        {/* LOGO AREA */}
-        <div className="w-14 h-14 bg-primary/10 rounded-[1.2rem] flex items-center justify-center shadow-2xl border border-primary/20 mb-4 transition-transform hover:scale-110">
-          <Store className="text-primary" size={28} />
-        </div>
+    <aside className="hidden lg:flex w-24 bg-surface-base border-r border-border-subtle flex-col items-center py-6 relative z-50 transition-colors duration-300">
+      {/* LOGO AREA */}
+      <div className="w-14 h-14 bg-primary/10 rounded-[1.2rem] flex items-center justify-center shadow-2xl border border-primary/20 mb-6 shrink-0 transition-transform hover:scale-110">
+        <Store className="text-primary" size={28} />
+      </div>
 
-        {/* NAVIGATION */}
-        <nav className="flex flex-col gap-8 w-full px-2">
+      {/* NAVIGATION
+          Scrollea sola en vez de empujar: con el menú completo los accesos de
+          abajo (cerrar sesión, tema, contraseña) quedaban fuera de la pantalla
+          y no había forma de llegar a ellos. */}
+      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-none flex flex-col gap-5 w-full px-3">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -77,11 +79,10 @@ const Sidebar: React.FC = () => {
               </Link>
             );
           })}
-        </nav>
-      </div>
+      </nav>
 
       {/* ACTIONS */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 shrink-0 pt-5 mt-3 border-t border-border-subtle w-full items-center">
         {/* THEME TOGGLE */}
         <button 
           onClick={toggleTheme}

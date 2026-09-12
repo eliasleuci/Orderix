@@ -84,3 +84,16 @@
   --color-text-muted: rgba(255, 255, 255, 0.5);
   --color-border-subtle: rgba(255, 255, 255, 0.1);
 }
+
+/*
+ * Oculta la barra de scroll dejando el scroll funcionando. Ya se usaba en el
+ * Financiero y en la carta pública, pero nunca se había definido: Tailwind no
+ * la trae y la clase no hacía nada.
+ */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
