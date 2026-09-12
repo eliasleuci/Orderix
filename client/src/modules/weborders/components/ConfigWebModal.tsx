@@ -235,7 +235,7 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
             </>
           )}
 
-          <div className="flex justify-end gap-3 pt-1">
+          <div className="flex justify-end gap-3 sticky bottom-0 -mx-1 px-1 pt-4 pb-1 bg-surface-elevated border-t border-white/5">
             <Button variant="ghost" onClick={onClose} disabled={guardando}>
               Cerrar
             </Button>

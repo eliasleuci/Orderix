@@ -45,10 +45,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={cn("w-full relative", maxWidthClasses[maxWidth], className)}
+            className={cn("w-full relative max-h-[90vh] flex", maxWidthClasses[maxWidth], className)}
           >
-            <Card variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl overflow-visible">
-              <header className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+            <Card variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl w-full">
+              <header className="flex items-center justify-between mb-6 pb-4 border-b border-white/5 shrink-0">
                 <h2 className="text-2xl font-black uppercase tracking-tighter text-text-primary leading-none">
                   {title}
                 </h2>
@@ -60,7 +60,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
                 </button>
               </header>
 
-              <div className="relative">
+              <div className="relative overflow-y-auto min-h-0 scrollbar-none">
                 {children}
               </div>
             </Card>
