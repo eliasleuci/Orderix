@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   LayoutDashboard, Utensils, ChefHat, LogOut, BookOpen, Sun, Moon,
-  UtensilsCrossed, DollarSign, Package, KeyRound, MoreHorizontal, X,
+  UtensilsCrossed, DollarSign, Package, KeyRound, MoreHorizontal, X, Wallet,
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -30,6 +30,7 @@ const PRINCIPALES = [
 const SECUNDARIOS = [
   { path: '/catalog', icon: BookOpen, label: 'Catálogo' },
   { path: '/stock', icon: Package, label: 'Stock' },
+  { path: '/cash', icon: Wallet, label: 'Caja' },
   { path: '/financial', icon: DollarSign, label: 'Financiero' },
 ];
 

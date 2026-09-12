@@ -30,6 +30,7 @@ model Tenant {
   recipeItems          RecipeItem[]
   stockMovements       StockMovement[]
   tables               tables[]
+  cashSessions         CashSession[]
 
   @@map("tenants")
 }
@@ -52,6 +53,7 @@ model Branch {
   products    Product[]
   users       User[]
   tables      tables[]
+  cashSessions CashSession[]
 
   @@map("branches")
 }
@@ -71,6 +73,8 @@ model User {
   tenant    Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_profiles_tenant")
   branch    Branch?   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   stockMovements StockMovement[]
+  cajasAbiertas  CashSession[] @relation("CajaAbiertaPor")
+  cajasCerradas  CashSession[] @relation("CajaCerradaPor")
 
   @@map("profiles")
 }
@@ -258,6 +262,33 @@ model tables {
   branches      Branch?   @relation(fields: [branch_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([branch_id, number])
+}
+
+/// Turno de caja. Los montos calculados se congelan al cerrar: si después se
+/// anula un pedido, el arqueo de ese día no se mueve.
+model CashSession {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  branchId       String    @map("branch_id") @db.Uuid
+  openedById     String?   @map("opened_by") @db.Uuid
+  closedById     String?   @map("closed_by") @db.Uuid
+  openingAmount  Decimal   @default(0) @map("opening_amount") @db.Decimal(12, 2)
+  countedAmount  Decimal?  @map("counted_amount") @db.Decimal(12, 2)
+  cashSales      Decimal?  @map("cash_sales") @db.Decimal(12, 2)
+  expectedAmount Decimal?  @map("expected_amount") @db.Decimal(12, 2)
+  difference     Decimal?  @db.Decimal(12, 2)
+  status         String    @default("OPEN")
+  openingNotes   String?   @map("opening_notes")
+  closingNotes   String?   @map("closing_notes")
+  openedAt       DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt       DateTime? @map("closed_at") @db.Timestamptz(6)
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch         Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  openedBy       User?     @relation("CajaAbiertaPor", fields: [openedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  closedBy       User?     @relation("CajaCerradaPor", fields: [closedById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([branchId, openedAt(sort: Desc)], map: "idx_cash_sessions_historial")
+  @@map("cash_sessions")
 }
 
 enum movement_type {
