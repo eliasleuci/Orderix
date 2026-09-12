@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import { tableService, Table, TableStatus, Mozo, ConsumoMesa } from '../../services/tableService';
 import MozosModal from './components/MozosModal';
 import ConsumoModal from './components/ConsumoModal';
+import AsignarMozoModal from './components/AsignarMozoModal';
 import { supabase } from '../../lib/supabase';
 import {
   UtensilsCrossed, Plus, X, Check, Clock, Users, Edit3, Trash2,
@@ -57,9 +58,10 @@ const TableCard: React.FC<{
   onLinkTable: (t: Table) => void;
   onPayBill: (t: Table) => void;
   onVerConsumo: (t: Table) => void;
+  onAsignarMozo: (t: Table) => void;
   mozos: Mozo[];
   consumo: ConsumoMesa;
-}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, onVerConsumo, mozos, consumo }) => {
+}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, onVerConsumo, onAsignarMozo, mozos, consumo }) => {
   const elapsed = useTableTimer(table.opened_at);
   const [showActions, setShowActions] = useState(false);
 
@@ -136,18 +138,33 @@ const TableCard: React.FC<{
         </div>
 
         {/* CUSTOMER INFO */}
-        {(table.customer_name || table.notes || nombreMozo || consumo.total > 0) && !table.parent_table_id && (
+        {(status === 'OCCUPIED' || table.customer_name || table.notes) && !table.parent_table_id && (
           <div className="px-5 pb-4 space-y-1">
             {table.customer_name && (
               <p className="text-sm font-black text-text-primary bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
                 👤 {table.customer_name}
               </p>
             )}
-            {nombreMozo && (
-              <p className="text-xs font-bold text-text-secondary flex items-center gap-1.5 px-1">
-                <UserRound size={12} className="text-text-muted shrink-0" />
-                Atiende {nombreMozo}
-              </p>
+            {/* Aparece siempre con la mesa abierta, tenga mozo o no: si sólo se
+                mostrara cuando hay uno asignado, no habría desde dónde
+                asignarlo. */}
+            {status === 'OCCUPIED' && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onAsignarMozo(table); }}
+                className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl hover:bg-white/5 transition-colors group/mozo"
+              >
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold min-w-0">
+                  <UserRound size={12} className="text-text-muted shrink-0" />
+                  {nombreMozo ? (
+                    <span className="text-text-secondary truncate">Atiende {nombreMozo}</span>
+                  ) : (
+                    <span className="text-text-muted truncate">Sin mozo asignado</span>
+                  )}
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-primary shrink-0 opacity-0 group-hover/mozo:opacity-100 transition-opacity">
+                  {nombreMozo ? 'Cambiar' : 'Asignar'}
+                </span>
+              </button>
             )}
 
             {/* Lo que lleva gastado la mesa, a la vista sin tener que abrir
@@ -375,6 +392,13 @@ const ActionModal: React.FC<ActionModalProps> = ({ isOpen, mode, table, mozos, o
           {/* MOZO: al abrir la mesa, y al editarla si ya está abierta -el mozo
               del turno puede cambiar a mitad de servicio-. En una reserva no
               va: todavía no hay nadie atendiendo. */}
+          {(mode === 'occupy' || (mode === 'edit' && table?.status === 'OCCUPIED')) && mozos.length === 0 && (
+            <p className="text-[10px] text-text-muted leading-snug">
+              Para asignar un mozo primero hay que cargarlos, con el botón <b>Mozos</b> de
+              esta pantalla.
+            </p>
+          )}
+
           {mozos.length > 0 && (mode === 'occupy' || (mode === 'edit' && table?.status === 'OCCUPIED')) && (
             <div>
               <label className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2 block">
@@ -613,6 +637,7 @@ const TablesPage: React.FC = () => {
   const [mozos, setMozos] = useState<Mozo[]>([]);
   const [consumos, setConsumos] = useState<Record<string, ConsumoMesa>>({});
   const [consumoAbierto, setConsumoAbierto] = useState<Table | null>(null);
+  const [asignandoMozo, setAsignandoMozo] = useState<Table | null>(null);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
     message: '', type: 'success', visible: false,
@@ -834,6 +859,7 @@ const TablesPage: React.FC = () => {
                 onLinkTable={t => setLinkModalState({ open: true, table: t })}
                 onPayBill={t => setBillModalState({ open: true, table: t })}
                 onVerConsumo={setConsumoAbierto}
+                onAsignarMozo={setAsignandoMozo}
                 mozos={mozos}
                 consumo={consumoDeMesa(table as Table)}
               />
@@ -884,6 +910,18 @@ const TablesPage: React.FC = () => {
             onSuccess={handleBillSuccess}
           />
         )}
+        <AsignarMozoModal
+          isOpen={Boolean(asignandoMozo)}
+          onClose={() => setAsignandoMozo(null)}
+          table={asignandoMozo}
+          mozos={mozos}
+          onAsignado={(nombre) => {
+            showToast(nombre ? `Ahora atiende ${nombre}` : 'Mesa sin mozo', 'success');
+            loadTables();
+          }}
+          onError={(m) => showToast(m, 'error')}
+        />
+
         <ConsumoModal
           isOpen={Boolean(consumoAbierto)}
           onClose={() => setConsumoAbierto(null)}

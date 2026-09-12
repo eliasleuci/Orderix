@@ -93,17 +93,24 @@ class TableService {
    * 21:00 con tres pedidos figuraba abierta desde el último. El nombre del
    * cliente sólo se escribe si viene y si la mesa no tenía uno.
    */
-  async marcarOcupada(id: string, customerName?: string): Promise<ServiceResponse<Table>> {
+  async marcarOcupada(
+    id: string,
+    customerName?: string,
+    waiterId?: string | null
+  ): Promise<ServiceResponse<Table>> {
     const cambios: Partial<Table> = { status: 'OCCUPIED' };
 
     const { data: actual } = await supabase
       .from('tables')
-      .select('customer_name, opened_at')
+      .select('customer_name, opened_at, waiter_id')
       .eq('id', id)
       .maybeSingle();
 
     if (customerName && !actual?.customer_name) cambios.customer_name = customerName;
     if (!actual?.opened_at) cambios.opened_at = new Date().toISOString();
+    // El mozo sólo se escribe si la mesa no tenía uno: quien ya está atendiendo
+    // no se pisa porque desde la caja eligieron otro en el desplegable.
+    if (waiterId && !actual?.waiter_id) cambios.waiter_id = waiterId;
 
     return this.updateTable(id, cambios);
   }

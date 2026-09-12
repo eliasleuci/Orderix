@@ -5,7 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { productService } from '../../services/productService';
 import { orderService } from '../../services/orderService';
-import { tableService, Table } from '../../services/tableService';
+import { tableService, Table, Mozo } from '../../services/tableService';
 import {
   deliveryService,
   calcularPrecioPorKm,
@@ -42,6 +42,8 @@ const POSPage: React.FC = () => {
   const [customerAddress, setCustomerAddress] = useState('');
   const [orderType, setOrderType] = useState<'MESA' | 'DELIVERY' | 'TAKEAWAY'>('TAKEAWAY');
   const [selectedTableId, setSelectedTableId] = useState<string>('');
+  const [mozos, setMozos] = useState<Mozo[]>([]);
+  const [mozoId, setMozoId] = useState('');
   const [loading, setLoading] = useState(true);
   const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [activeBill, setActiveBill] = useState<{ orders: any[], total: number } | null>(null);
@@ -101,18 +103,20 @@ const POSPage: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, tableRes, zonaRes, configRes] = await Promise.all([
+        const [prodRes, catRes, tableRes, zonaRes, configRes, mozoRes] = await Promise.all([
           productService.getBranchProducts(branchId),
           productService.getCategories(),
           tableService.getBranchTables(branchId),
           deliveryService.getZonas(branchId),
-          deliveryService.getConfig(branchId)
+          deliveryService.getConfig(branchId),
+          tableService.getMozos(branchId)
         ]);
         setProducts(prodRes.data || []);
         setCategories(catRes.data || []);
         setTables(tableRes.data || []);
         setZonas(zonaRes.data || []);
         setConfigEnvio(configRes.data);
+        setMozos(mozoRes.data || []);
       } catch (err) {
         console.error('Error fetching POS data:', err);
       } finally {
@@ -136,10 +140,13 @@ const POSPage: React.FC = () => {
   useEffect(() => {
     if (orderType === 'MESA' && selectedTableId) {
       loadTableBill(selectedTableId);
+      // Si la mesa ya venía abierta con un mozo, se muestra ese y no se pide
+      // elegir de nuevo.
+      setMozoId(tables.find((t) => t.id === selectedTableId)?.waiter_id ?? '');
     } else {
       setActiveBill(null);
     }
-  }, [orderType, selectedTableId, loadTableBill]);
+  }, [orderType, selectedTableId, loadTableBill, tables]);
 
   // Lo que propone la configuración del local: el precio de la zona elegida o
   // el cálculo por distancia.
@@ -293,6 +300,18 @@ const POSPage: React.FC = () => {
     setCheckoutStatus('loading');
     setErrorMessage('');
 
+    // El mozo se escribe en la mesa ANTES de crear el pedido: la atribución la
+    // hace un trigger que lee tables.waiter_id en el momento del insert, así que
+    // si se dejara para después, el primer pedido de la mesa entraría sin mozo.
+    // Sólo el mozo, no se ocupa la mesa todavía: si el pedido falla, no puede
+    // quedar una mesa ocupada de gusto.
+    if (orderType === 'MESA' && selectedTableId && mozoId) {
+      const mesa = tables.find((t) => t.id === selectedTableId);
+      if (!mesa?.waiter_id) {
+        await tableService.updateTable(selectedTableId, { waiter_id: mozoId });
+      }
+    }
+
     const { data, error } = await orderService.createOrder({
       tenantId: finalTenantId,
       branchId,
@@ -341,7 +360,7 @@ const POSPage: React.FC = () => {
       // Sólo marcar la mesa como ocupada. Antes se llamaba a occupyTable, que
       // reescribe la fila entera: borraba el mozo asignado, las observaciones y
       // reseteaba la hora de apertura en cada pedido que se le agregaba.
-      await tableService.marcarOcupada(selectedTableId, customerName || undefined);
+      await tableService.marcarOcupada(selectedTableId, customerName || undefined, mozoId || null);
     }
 
     // Save order for printing
@@ -382,6 +401,7 @@ const POSPage: React.FC = () => {
     setCustomerAddress('');
     setOrderType('TAKEAWAY');
     setSelectedTableId('');
+    setMozoId('');
     setZonaId('');
     setKm('');
     setCostoEnvio('');
@@ -394,7 +414,7 @@ const POSPage: React.FC = () => {
         searchInputRef.current?.focus();
       }
     }, 2000);
-  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables, envio, modoEnvio, zonaId, km, zonas.length]);
+  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables, envio, modoEnvio, zonaId, km, zonas.length, mozoId]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -748,6 +768,22 @@ const POSPage: React.FC = () => {
                       );
                     })}
                   </select>
+
+                  {/* Cargando el pedido desde acá la mesa se abre sola, así que
+                      sin este desplegable el pedido entraba sin mozo y no había
+                      forma de atribuirlo desde la caja. */}
+                  {mozos.length > 0 && selectedTableId && (
+                    <select
+                      value={mozoId}
+                      onChange={(e) => setMozoId(e.target.value)}
+                      className="w-full mt-2 bg-surface-elevated border border-white/10 rounded-2xl h-12 px-4 text-text-primary uppercase tracking-widest text-[10px] font-black focus:outline-none focus:border-primary appearance-none"
+                    >
+                      <option value="">Mozo: sin asignar</option>
+                      {mozos.map(m => (
+                        <option key={m.id} value={m.id}>Mozo: {m.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </motion.div>
               )}
             </div>
