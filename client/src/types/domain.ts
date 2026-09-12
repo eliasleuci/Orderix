@@ -56,6 +56,10 @@ export interface Order {
   updated_at: string;
   started_at?: string | null;   // Timestamp cuando cocina presiona EMPEZAR
   ready_at?: string | null;     // Timestamp cuando cocina presiona LISTO
+  delivery_fee?: number;
+  delivery_km?: number | null;
+  delivery_zone_id?: string | null;
+  delivery_driver_id?: string | null;
   order_items?: OrderItem[];
 }
 

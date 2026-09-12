@@ -12,7 +12,8 @@ import {
   PackageCheck,
   CheckCircle,
   ArrowUpRight,
-  RefreshCw
+  RefreshCw,
+  Bike
 } from 'lucide-react';
 import { Order } from '../../types/domain';
 import { cn } from '../../lib/utils';
@@ -21,6 +22,9 @@ import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import BotonReporte from '../reports/BotonReporte';
+import { deliveryService, Repartidor } from '../../services/deliveryService';
+import AsignarRepartidorModal from '../delivery/components/AsignarRepartidorModal';
+import Toast, { ToastType } from '../../components/Toast';
 
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -163,6 +167,11 @@ const DashboardPage: React.FC = () => {
   const [isConfirmDeleteSingleOpen, setIsConfirmDeleteSingleOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
+  const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
+  // Pedido de envío al que se le está cambiando el repartidor.
+  const [reasignando, setReasignando] = useState<Order | null>(null);
+  const [avisoRepartidor, setAvisoRepartidor] = useState<{ texto: string; tipo: ToastType } | null>(null);
+
   const fetchStats = useCallback(async (silent = false) => {
     if (!branchId) return;
     if (!silent) setLoading(true);
@@ -208,6 +217,11 @@ const DashboardPage: React.FC = () => {
     if (!silent) setLoading(false);
     else setRefreshing(false);
   }, [branchId, dateFilter, customDate]);
+
+  useEffect(() => {
+    if (!branchId) return;
+    deliveryService.getRepartidores(branchId).then(({ data }) => setRepartidores(data ?? []));
+  }, [branchId]);
 
   useEffect(() => {
     fetchStats();
@@ -426,6 +440,32 @@ const DashboardPage: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                    {/* REPARTIDOR: se puede cambiar después de despachado, que
+                        es cuando suele saberse quién pudo salir realmente. */}
+                    {order.order_type === 'DELIVERY' && repartidores.length > 0 && (() => {
+                      const asignado = repartidores.find((r) => r.id === order.delivery_driver_id);
+                      return (
+                        <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-white/5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Bike size={16} className={asignado ? 'text-warning shrink-0' : 'text-text-muted shrink-0'} />
+                            <span className="text-xs font-bold truncate">
+                              {asignado ? (
+                                <>Lo lleva <span className="text-text-primary font-black">{asignado.name}</span></>
+                              ) : (
+                                <span className="text-text-muted">Sin repartidor asignado</span>
+                              )}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setReasignando(order)}
+                            className="shrink-0 text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-hover transition-colors px-3 py-1.5 rounded-xl hover:bg-primary/10"
+                          >
+                            {asignado ? 'Cambiar' : 'Asignar'}
+                          </button>
+                        </div>
+                      );
+                    })()}
+
                     {/* MINI TIMELINE */}
                     <MiniTimeline order={order} />
                   </div>
@@ -468,6 +508,35 @@ const DashboardPage: React.FC = () => {
         message={`¿Estás seguro de eliminar el pedido #${orderToDelete?.id?.substring(0, 6).toUpperCase()} de ${orderToDelete?.customer_name || 'Consumidor Final'}?`}
         confirmText="Eliminar Pedido"
         variant="danger"
+      />
+
+      <AsignarRepartidorModal
+        isOpen={Boolean(reasignando)}
+        onClose={() => setReasignando(null)}
+        pedido={reasignando}
+        repartidores={repartidores}
+        title={reasignando?.delivery_driver_id ? 'Cambiar repartidor' : '¿Quién lo lleva?'}
+        onAsignado={(id, nombre) => {
+          // Se refleja en la lista sin esperar al refresco de 20 segundos.
+          setStats((prev: any) => ({
+            ...prev,
+            recentOrders: prev.recentOrders.map((o: Order) =>
+              o.id === reasignando?.id ? { ...o, delivery_driver_id: id } : o
+            ),
+          }));
+          setAvisoRepartidor({
+            texto: nombre ? `Ahora lo lleva ${nombre}` : 'Se quitó el repartidor',
+            tipo: 'success',
+          });
+        }}
+        onError={(texto) => setAvisoRepartidor({ texto, tipo: 'error' })}
+      />
+
+      <Toast
+        message={avisoRepartidor?.texto ?? ''}
+        type={avisoRepartidor?.tipo ?? 'success'}
+        isVisible={Boolean(avisoRepartidor)}
+        onClose={() => setAvisoRepartidor(null)}
       />
     </div>
   );

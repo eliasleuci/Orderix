@@ -3,14 +3,13 @@ import { useOrders } from '../../hooks/useOrders';
 import { useAuthStore } from '../../store/authStore';
 import { orderService } from '../../services/orderService';
 import { Order, OrderStatus } from '../../types/domain';
-import { ChefHat, Loader2, Signal, LogOut, Package, Bike } from 'lucide-react';
+import { ChefHat, Loader2, Signal, LogOut, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
 import OrderCard from './components/OrderCard';
-import Modal from '../../components/ui/Modal';
-import Button from '../../components/ui/Button';
 import { deliveryService, Repartidor } from '../../services/deliveryService';
+import AsignarRepartidorModal from '../delivery/components/AsignarRepartidorModal';
 import { useNavigate } from 'react-router-dom';
 import { puedeVer } from '../../lib/permisos';
 
@@ -109,18 +108,7 @@ const KitchenPage: React.FC = () => {
     }
   }, [setOrders, orders, repartidores.length]);
 
-  const asignarRepartidor = useCallback(async (driverId: string) => {
-    if (!asignando) return;
-    const pedido = asignando;
-    setAsignando(null);
 
-    const { error } = await deliveryService.asignarRepartidor(pedido.id, driverId);
-    if (error) {
-      setErrorToast('No se pudo asignar el repartidor');
-      return;
-    }
-    setSuccessToast(`Asignado a ${repartidores.find((r) => r.id === driverId)?.name ?? 'repartidor'}`);
-  }, [asignando, repartidores]);
 
   // 2. FIFO LOGIC & FILTERING
   const activeOrders = useMemo(() => {
@@ -270,44 +258,14 @@ const KitchenPage: React.FC = () => {
         </div>
       </footer>
 
-      <Modal
+      <AsignarRepartidorModal
         isOpen={Boolean(asignando)}
         onClose={() => setAsignando(null)}
-        title="¿Quién lo lleva?"
-        maxWidth="sm"
-      >
-        <div className="space-y-5">
-          <div className="flex items-center gap-3 rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3">
-            <Bike size={20} className="text-warning shrink-0" />
-            <div className="min-w-0">
-              <p className="font-black tracking-tight truncate">
-                {asignando?.customer_name || 'Envío'}
-              </p>
-              {asignando?.customer_address && (
-                <p className="text-xs text-text-secondary truncate">{asignando.customer_address}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {repartidores.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => asignarRepartidor(r.id)}
-                className="w-full text-left p-4 rounded-2xl border border-border-subtle bg-surface-elevated/50 hover:border-primary/40 transition-all"
-              >
-                <span className="block font-black text-text-primary">{r.name}</span>
-                {r.phone && <span className="block text-xs text-text-muted mt-0.5">{r.phone}</span>}
-              </button>
-            ))}
-          </div>
-
-          {/* El pedido ya está despachado: esto sólo salta la asignación. */}
-          <Button variant="ghost" fullWidth onClick={() => setAsignando(null)}>
-            Después
-          </Button>
-        </div>
-      </Modal>
+        pedido={asignando}
+        repartidores={repartidores}
+        onAsignado={(_id, nombre) => setSuccessToast(nombre ? `Asignado a ${nombre}` : 'Repartidor quitado')}
+        onError={setErrorToast}
+      />
 
       {/* TOAST SYSTEM */}
       <Toast 
