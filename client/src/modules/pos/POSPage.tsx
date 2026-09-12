@@ -346,7 +346,10 @@ const POSPage: React.FC = () => {
     }
 
     if (orderType === 'MESA' && selectedTableId) {
-      await tableService.occupyTable(selectedTableId, customerName || 'Cliente POS');
+      // Sólo marcar la mesa como ocupada. Antes se llamaba a occupyTable, que
+      // reescribe la fila entera: borraba el mozo asignado, las observaciones y
+      // reseteaba la hora de apertura en cada pedido que se le agregaba.
+      await tableService.marcarOcupada(selectedTableId, customerName || undefined);
     }
 
     // Save order for printing

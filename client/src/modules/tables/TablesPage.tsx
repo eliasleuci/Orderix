@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { tableService, Table, TableStatus } from '../../services/tableService';
+import { tableService, Table, TableStatus, Mozo } from '../../services/tableService';
+import MozosModal from './components/MozosModal';
 import { supabase } from '../../lib/supabase';
 import {
   UtensilsCrossed, Plus, X, Check, Clock, Users, Edit3, Trash2,
-  ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link
+  ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link, UserRound
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
@@ -54,13 +55,15 @@ const TableCard: React.FC<{
   onAddOrder: (t: Table) => void;
   onLinkTable: (t: Table) => void;
   onPayBill: (t: Table) => void;
-}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill }) => {
+  mozos: Mozo[];
+}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, mozos }) => {
   const elapsed = useTableTimer(table.opened_at);
   const [showActions, setShowActions] = useState(false);
 
   // Consider table implicitly occupied if it has a parent
   const status = table.parent_table_id ? 'OCCUPIED' : table.status;
   const parentTable = tables.find(t => t.id === table.parent_table_id);
+  const nombreMozo = mozos.find(m => m.id === table.waiter_id)?.name;
 
   const statusConfig = {
     FREE: {
@@ -130,11 +133,17 @@ const TableCard: React.FC<{
         </div>
 
         {/* CUSTOMER INFO */}
-        {(table.customer_name || table.notes) && !table.parent_table_id && (
+        {(table.customer_name || table.notes || nombreMozo) && !table.parent_table_id && (
           <div className="px-5 pb-4 space-y-1">
             {table.customer_name && (
               <p className="text-sm font-black text-text-primary bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
                 👤 {table.customer_name}
+              </p>
+            )}
+            {nombreMozo && (
+              <p className="text-xs font-bold text-text-secondary flex items-center gap-1.5 px-1">
+                <UserRound size={12} className="text-text-muted shrink-0" />
+                Atiende {nombreMozo}
               </p>
             )}
             {table.notes && (
@@ -236,10 +245,11 @@ interface ActionModalProps {
   isOpen: boolean;
   mode: 'occupy' | 'reserve' | 'edit' | 'create';
   table: Partial<Table> | null;
+  mozos: Mozo[];
   onClose: () => void;
   onConfirm: (data: Partial<Table>) => void;
 }
-const ActionModal: React.FC<ActionModalProps> = ({ isOpen, mode, table, onClose, onConfirm }) => {
+const ActionModal: React.FC<ActionModalProps> = ({ isOpen, mode, table, mozos, onClose, onConfirm }) => {
   const [form, setForm] = useState<Partial<Table>>({});
 
   useEffect(() => {
@@ -335,6 +345,27 @@ const ActionModal: React.FC<ActionModalProps> = ({ isOpen, mode, table, onClose,
                 />
               </div>
             </>
+          )}
+
+          {/* MOZO: al abrir la mesa, y al editarla si ya está abierta -el mozo
+              del turno puede cambiar a mitad de servicio-. En una reserva no
+              va: todavía no hay nadie atendiendo. */}
+          {mozos.length > 0 && (mode === 'occupy' || (mode === 'edit' && table?.status === 'OCCUPIED')) && (
+            <div>
+              <label className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2 block">
+                Mozo a cargo
+              </label>
+              <select
+                value={form.waiter_id || ''}
+                onChange={e => setForm(p => ({ ...p, waiter_id: e.target.value || null }))}
+                className="w-full bg-surface-base border border-white/10 rounded-2xl h-12 px-4 text-text-primary font-bold focus:outline-none focus:border-primary text-sm appearance-none"
+              >
+                <option value="">Sin asignar</option>
+                {mozos.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
 
@@ -553,6 +584,8 @@ const TablesPage: React.FC = () => {
 
   const [billModalState, setBillModalState] = useState<{ open: boolean; table: Table | null }>({ open: false, table: null });
   const [linkModalState, setLinkModalState] = useState<{ open: boolean; table: Table | null }>({ open: false, table: null });
+  const [mozosModalOpen, setMozosModalOpen] = useState(false);
+  const [mozos, setMozos] = useState<Mozo[]>([]);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
     message: '', type: 'success', visible: false,
@@ -570,6 +603,14 @@ const TablesPage: React.FC = () => {
   }, [branchId]);
 
   useEffect(() => { loadTables(); }, [loadTables]);
+
+  const loadMozos = useCallback(async () => {
+    if (!branchId) return;
+    const { data } = await tableService.getMozos(branchId);
+    setMozos(data || []);
+  }, [branchId]);
+
+  useEffect(() => { loadMozos(); }, [loadMozos]);
 
   // Realtime subscription
   useEffect(() => {
@@ -591,10 +632,17 @@ const TablesPage: React.FC = () => {
       const res = await tableService.createTable({ ...data, branch_id: branchId, tenant_id: tenantId || '', status: 'FREE' });
       error = res.error;
     } else if (modal.mode === 'edit' && modal.table?.id) {
-      const res = await tableService.updateTable(modal.table.id, { label: data.label, capacity: data.capacity, number: data.number });
+      const res = await tableService.updateTable(modal.table.id, {
+        label: data.label,
+        capacity: data.capacity,
+        number: data.number,
+        // Sólo llega con valor si la mesa está abierta: el selector de mozo
+        // aparece nada más que en ese caso.
+        ...(data.waiter_id !== undefined ? { waiter_id: data.waiter_id || null } : {}),
+      });
       error = res.error;
     } else if (modal.mode === 'occupy' && modal.table?.id) {
-      const res = await tableService.occupyTable(modal.table.id, data.customer_name || undefined, data.notes || undefined);
+      const res = await tableService.occupyTable(modal.table.id, data.customer_name || undefined, data.notes || undefined, data.waiter_id || null);
       error = res.error;
     } else if (modal.mode === 'reserve' && modal.table?.id) {
       const res = await tableService.reserveTable(modal.table.id, data.customer_name || undefined, data.notes || undefined);
@@ -674,6 +722,9 @@ const TablesPage: React.FC = () => {
           <button onClick={loadTables} className="w-12 h-12 bg-white/5 hover:bg-white/10 rounded-2xl flex items-center justify-center text-text-muted transition-all border border-white/5" title="Actualizar">
             <RefreshCw size={18} />
           </button>
+          <Button variant="secondary" leftIcon={<UserRound size={18} />} onClick={() => setMozosModalOpen(true)}>
+            Mozos
+          </Button>
           <Button leftIcon={<Plus size={18} />} onClick={() => setModal({ open: true, mode: 'create', table: null })}>
             Nueva Mesa
           </Button>
@@ -732,6 +783,7 @@ const TablesPage: React.FC = () => {
                 onAddOrder={handleAddOrder}
                 onLinkTable={t => setLinkModalState({ open: true, table: t })}
                 onPayBill={t => setBillModalState({ open: true, table: t })}
+                mozos={mozos}
               />
             ))}
           </AnimatePresence>
@@ -767,6 +819,7 @@ const TablesPage: React.FC = () => {
             isOpen={modal.open}
             mode={modal.mode}
             table={modal.table}
+            mozos={mozos}
             onClose={() => setModal(m => ({ ...m, open: false }))}
             onConfirm={handleConfirm}
           />
@@ -779,6 +832,13 @@ const TablesPage: React.FC = () => {
             onSuccess={handleBillSuccess}
           />
         )}
+        <MozosModal
+          isOpen={mozosModalOpen}
+          onClose={() => setMozosModalOpen(false)}
+          onCambios={loadMozos}
+          onAviso={showToast}
+        />
+
         {linkModalState.open && (
           <LinkModal
             isOpen={linkModalState.open}

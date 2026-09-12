@@ -15,11 +15,14 @@ import {
   Bike,
   Clock,
   ChevronDown,
-  Receipt
+  Receipt,
+  UserRound,
+  Percent
 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import BotonReporte from '../reports/BotonReporte';
+import { tableService, Mozo } from '../../services/tableService';
 
 type DateFilter = 'hoy' | 'ayer' | 'semana' | 'mes' | 'personalizado';
 
@@ -31,6 +34,10 @@ const FinancialPage: React.FC = () => {
   // Los pedidos del período, para poder desplegar cuáles componen cada total.
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [tipoAbierto, setTipoAbierto] = useState<string | null>(null);
+  // Estado propio y no compartido con tipoAbierto: si no, abrir un mozo
+  // cerraría el desglose por tipo y al revés.
+  const [mozoAbierto, setMozoAbierto] = useState<string | null>(null);
+  const [mozos, setMozos] = useState<Mozo[]>([]);
   const [stats, setStats] = useState({
     totalSales: 0,
     cashTotal: 0,
@@ -138,6 +145,43 @@ const FinancialPage: React.FC = () => {
     fetchStats();
   }, [branchId, fetchStats]);
 
+  // Se piden los pausados también: un mozo que ya no trabaja igual vendió en
+  // el período y su comisión hay que liquidarla.
+  useEffect(() => {
+    if (!branchId) return;
+    tableService.getMozos(branchId, true).then(({ data }) => setMozos(data ?? []));
+  }, [branchId]);
+
+  /**
+   * Ventas agrupadas por mozo. Sale de los mismos pedidos que ya se trajeron
+   * para los totales de arriba, así que no cuesta una consulta más.
+   *
+   * La comisión se calcula con el porcentaje guardado EN EL PEDIDO, no con el
+   * que tiene el mozo hoy: si le cambian la comisión, lo ya liquidado no se
+   * mueve.
+   */
+  const ventasPorMozo = useMemo(() => {
+    const porMozo = new Map<string, { total: number; cantidad: number; comision: number }>();
+
+    for (const o of pedidos) {
+      if (!o.waiter_id) continue;
+      const actual = porMozo.get(o.waiter_id) ?? { total: 0, cantidad: 0, comision: 0 };
+      const total = Number(o.total ?? 0);
+      actual.total += total;
+      actual.cantidad += 1;
+      actual.comision += total * (Number(o.waiter_commission_pct ?? 0) / 100);
+      porMozo.set(o.waiter_id, actual);
+    }
+
+    return [...porMozo.entries()]
+      .map(([id, datos]) => ({
+        id,
+        nombre: mozos.find((m) => m.id === id)?.name ?? 'Mozo dado de baja',
+        ...datos,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [pedidos, mozos]);
+
   const getFilterLabel = useMemo(() => {
     switch (dateFilter) {
       case 'hoy': return 'Hoy';
@@ -156,6 +200,7 @@ const FinancialPage: React.FC = () => {
   // los del total de arriba.
   useEffect(() => {
     setTipoAbierto(null);
+    setMozoAbierto(null);
   }, [dateFilter, customDate]);
 
   return (
@@ -557,6 +602,154 @@ const FinancialPage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* ---------- VENTAS POR MOZO ---------- */}
+          {ventasPorMozo.length > 0 && (
+            <div className="pt-4">
+              <div className="flex items-center gap-3 mb-5">
+                <h2 className="text-xl font-black uppercase tracking-tighter">Ventas por mozo</h2>
+                <span className="text-text-muted text-xs font-bold">
+                  Para liquidar comisiones
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {ventasPorMozo.map((m) => {
+                  const abierto = mozoAbierto === m.id;
+                  return (
+                    <Card
+                      key={m.id}
+                      variant="solid"
+                      padding="large"
+                      onClick={() => setMozoAbierto(abierto ? null : m.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={abierto}
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setMozoAbierto(abierto ? null : m.id);
+                        }
+                      }}
+                      className={`bg-surface-elevated/40 cursor-pointer transition-colors ${
+                        abierto ? 'border-primary/40' : 'border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 mb-5">
+                        <div className="w-14 h-14 bg-white/5 rounded-3xl flex items-center justify-center border border-white/10 shrink-0">
+                          <UserRound size={26} className="text-text-secondary" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em] truncate">
+                            {m.nombre}
+                          </h3>
+                          <span className="text-3xl font-black tracking-tighter leading-none block">
+                            ${m.total.toLocaleString()}
+                          </span>
+                          <p className="text-[10px] font-bold text-text-muted mt-1">
+                            {m.cantidad} {m.cantidad === 1 ? 'pedido' : 'pedidos'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* La comisión es el número que se le paga: va destacado
+                          y separado del total vendido, que es otra cosa. */}
+                      <div className="flex items-center justify-between rounded-2xl border border-success/20 bg-success/10 px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">
+                          <Percent size={12} /> Comisión
+                        </span>
+                        <span className="text-xl font-black text-success tracking-tighter">
+                          ${m.comision.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      <span className="inline-flex items-center gap-1 text-primary text-[10px] font-black uppercase tracking-widest mt-3">
+                        {abierto ? 'Ocultar pedidos' : 'Ver pedidos'}
+                        <ChevronDown size={12} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} />
+                      </span>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <AnimatePresence initial={false}>
+                {mozoAbierto && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-6 rounded-[2rem] border border-primary/20 bg-surface-elevated/40 p-5 lg:p-6">
+                      {(() => {
+                        const mozo = ventasPorMozo.find((m) => m.id === mozoAbierto);
+                        const suyos = pedidos.filter((o: any) => o.waiter_id === mozoAbierto);
+
+                        return (
+                          <>
+                            <div className="flex items-center gap-3 mb-5">
+                              <Receipt size={18} className="text-primary" />
+                              <h3 className="font-black uppercase tracking-tighter">
+                                Pedidos de {mozo?.nombre}
+                              </h3>
+                              <span className="text-text-muted text-xs font-bold">
+                                {suyos.length} {suyos.length === 1 ? 'pedido' : 'pedidos'}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+                              {suyos.map((o: any) => {
+                                const mesa = o.tables?.label || (o.tables?.number ? `Mesa ${o.tables.number}` : null);
+                                const pct = Number(o.waiter_commission_pct ?? 0);
+                                const comision = Number(o.total ?? 0) * (pct / 100);
+
+                                return (
+                                  <div
+                                    key={o.id}
+                                    className="flex items-center gap-4 rounded-2xl border border-white/5 bg-surface-base px-4 py-3"
+                                  >
+                                    <span className="font-black text-text-muted text-xs shrink-0 w-12">
+                                      #{o.ticket_number ?? '—'}
+                                    </span>
+
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-sm truncate">
+                                        {mesa || o.customer_name || 'Sin mesa'}
+                                      </p>
+                                      <p className="text-[10px] text-text-muted mt-0.5">
+                                        {new Date(o.created_at).toLocaleString('es-AR', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })}
+                                        {pct > 0 ? ` · ${pct}% de comisión` : ' · sin comisión'}
+                                      </p>
+                                    </div>
+
+                                    {comision > 0 && (
+                                      <span className="text-sm font-black text-success shrink-0">
+                                        +${comision.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                      </span>
+                                    )}
+
+                                    <span className="font-black tracking-tighter shrink-0 w-24 text-right">
+                                      ${Number(o.total ?? 0).toLocaleString()}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -3,6 +3,16 @@ import { ServiceResponse } from '../types/domain';
 
 export type TableStatus = 'FREE' | 'OCCUPIED' | 'RESERVED';
 
+export interface Mozo {
+  id: string;
+  branch_id: string;
+  name: string;
+  phone: string | null;
+  /** Porcentaje sobre la venta que cobra el mozo. */
+  commission_pct: number;
+  is_active: boolean;
+}
+
 export interface Table {
   id: string;
   branch_id: string;
@@ -13,6 +23,7 @@ export interface Table {
   customer_name?: string | null;
   notes?: string | null;
   opened_at?: string | null;
+  waiter_id?: string | null;
   parent_table_id?: string | null;
   tenant_id: string;
   created_at: string;
@@ -48,13 +59,48 @@ class TableService {
     return { data, error: error?.message || null };
   }
 
-  async occupyTable(id: string, customerName?: string, notes?: string): Promise<ServiceResponse<Table>> {
+  /**
+   * Abre la mesa desde cero: pisa cliente, observaciones y mozo con lo que se
+   * le pase. Es lo correcto al abrirla, pero NO sirve para agregarle un pedido
+   * a una mesa que ya está abierta; para eso está marcarOcupada.
+   */
+  async occupyTable(
+    id: string,
+    customerName?: string,
+    notes?: string,
+    waiterId?: string | null
+  ): Promise<ServiceResponse<Table>> {
     return this.updateTable(id, {
       status: 'OCCUPIED',
       customer_name: customerName || null,
       notes: notes || null,
+      waiter_id: waiterId || null,
       opened_at: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Marca la mesa ocupada sin tocar nada más de lo necesario.
+   *
+   * El POS llamaba a occupyTable con dos argumentos al confirmar cada pedido, y
+   * como esa función escribe la fila entera, le borraba el mozo asignado y las
+   * observaciones, y le reseteaba la hora de apertura: una mesa abierta a las
+   * 21:00 con tres pedidos figuraba abierta desde el último. El nombre del
+   * cliente sólo se escribe si viene y si la mesa no tenía uno.
+   */
+  async marcarOcupada(id: string, customerName?: string): Promise<ServiceResponse<Table>> {
+    const cambios: Partial<Table> = { status: 'OCCUPIED' };
+
+    const { data: actual } = await supabase
+      .from('tables')
+      .select('customer_name, opened_at')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (customerName && !actual?.customer_name) cambios.customer_name = customerName;
+    if (!actual?.opened_at) cambios.opened_at = new Date().toISOString();
+
+    return this.updateTable(id, cambios);
   }
 
   async reserveTable(id: string, customerName?: string, notes?: string): Promise<ServiceResponse<Table>> {
@@ -71,9 +117,48 @@ class TableService {
       status: 'FREE',
       customer_name: null,
       notes: null,
+      // El mozo se limpia con la mesa: si no, la próxima que la abra arrancaría
+      // con el del turno anterior ya puesto.
+      waiter_id: null,
       opened_at: null,
     });
   }
+
+  async getMozos(branchId: string, incluirInactivos = false): Promise<ServiceResponse<Mozo[]>> {
+    let query = supabase.from('waiters').select('*').eq('branch_id', branchId).order('name');
+    if (!incluirInactivos) query = query.eq('is_active', true);
+
+    const { data, error } = await query;
+    return { data, error: error?.message || null };
+  }
+
+  async crearMozo(m: {
+    tenant_id: string;
+    branch_id: string;
+    name: string;
+    phone: string | null;
+    commission_pct: number;
+  }): Promise<ServiceResponse<Mozo>> {
+    const { data, error } = await supabase.from('waiters').insert([m]).select().single();
+    return { data, error: error?.message || null };
+  }
+
+  /**
+   * También es la baja de un mozo, con is_active en false. No hay borrado: los
+   * pedidos guardan su id con ON DELETE SET NULL, así que eliminarlo le
+   * arrancaría la atribución a todo lo que vendió y se perdería el historial de
+   * comisiones ya liquidadas.
+   */
+  async actualizarMozo(id: string, cambios: Partial<Mozo>): Promise<ServiceResponse<Mozo>> {
+    const { data, error } = await supabase
+      .from('waiters')
+      .update(cambios)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error: error?.message || null };
+  }
+
 
   async deleteTable(id: string): Promise<ServiceResponse<boolean>> {
     const { error } = await supabase.from('tables').delete().eq('id', id);

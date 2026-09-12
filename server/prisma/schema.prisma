@@ -34,6 +34,7 @@ model Tenant {
   deliveryZones        DeliveryZone[]
   deliverySettings     DeliverySettings[]
   deliveryDrivers      DeliveryDriver[]
+  waiters              Waiter[]
 
   @@map("tenants")
 }
@@ -60,6 +61,7 @@ model Branch {
   deliveryZones    DeliveryZone[]
   deliverySettings DeliverySettings[]
   deliveryDrivers  DeliveryDriver[]
+  waiters          Waiter[]
 
   @@map("branches")
 }
@@ -223,6 +225,10 @@ model Order {
   deliveryKm       Decimal?    @map("delivery_km") @db.Decimal(10, 2)
   deliveryZoneId   String?     @map("delivery_zone_id") @db.Uuid
   deliveryDriverId String?     @map("delivery_driver_id") @db.Uuid
+  waiterId         String?     @map("waiter_id") @db.Uuid
+  /// Se congela al crear el pedido: subirle la comisión a un mozo no puede
+  /// cambiar lo que ya se le liquidó.
+  waiterCommissionPct Decimal? @map("waiter_commission_pct") @db.Decimal(5, 2)
   createdAt        DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenantId         String      @map("tenant_id") @db.Uuid
@@ -233,7 +239,9 @@ model Order {
   user             User?       @relation(fields: [userId], references: [id], onUpdate: NoAction)
   deliveryZone     DeliveryZone?   @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   deliveryDriver   DeliveryDriver? @relation(fields: [deliveryDriverId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  waiter           Waiter?     @relation(fields: [waiterId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
+  @@index([waiterId, createdAt(sort: Desc)], map: "idx_orders_waiter")
   @@index([branchId], map: "idx_orders_branch_id")
   @@index([status], map: "idx_orders_status")
   @@map("orders")
@@ -266,10 +274,12 @@ model tables {
   customer_name String?
   notes         String?
   opened_at     DateTime? @db.Timestamptz(6)
+  waiter_id     String?   @db.Uuid
   created_at    DateTime? @default(now()) @db.Timestamptz(6)
   updated_at    DateTime? @default(now()) @db.Timestamptz(6)
   tenant_id     String    @db.Uuid
   orders        Order[]
+  waiter        Waiter?   @relation(fields: [waiter_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   tenants       Tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_tables_tenant")
   branches      Branch?   @relation(fields: [branch_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -305,6 +315,24 @@ model CashSession {
 
 /// Área de reparto con precio fijo. Zona y barrio son lo mismo para el sistema:
 /// el local decide si la llama "Centro" o "Villa Crespo".
+model Waiter {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  name      String
+  phone     String?
+  commissionPct Decimal @default(0) @map("commission_pct") @db.Decimal(5, 2)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tables    tables[]
+  orders    Order[]
+
+  @@index([branchId, isActive], map: "idx_waiters_branch")
+  @@map("waiters")
+}
+
 model DeliveryZone {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
@@ -326,6 +354,7 @@ model DeliveryZone {
 model DeliverySettings {
   branchId    String   @id @map("branch_id") @db.Uuid
   tenantId    String   @map("tenant_id") @db.Uuid
+  deliveryEnabled Boolean @default(true) @map("delivery_enabled")
   kmEnabled   Boolean  @default(false) @map("km_enabled")
   kmBasePrice Decimal  @default(0) @map("km_base_price") @db.Decimal(10, 2)
   kmPrice     Decimal  @default(0) @map("km_price") @db.Decimal(10, 2)
