@@ -40,6 +40,7 @@ const LandingPage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState(false);
 
   const galleryImages = [
+    '/landing/img/galeria-1.jpg',
     '/landing/img/galeria-7.jpg',
     '/landing/img/galeria-3.jpg',
     '/landing/img/galeria-5.jpg',
@@ -230,7 +231,7 @@ const LandingPage: React.FC = () => {
               
               <div className="hero-image-container relative rounded-2xl overflow-hidden shadow-2xl shadow-[#FF6B00]/10 border border-white/10">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c20] via-transparent to-transparent z-10"></div>
-                <img src="/landing/img/galeria-7.jpg" alt="ORDERIX Dashboard" decoding="async" fetchPriority="high" className="w-full h-auto relative z-0" />
+                <img src="/landing/img/galeria-1.jpg" alt="ORDERIX Dashboard" decoding="async" fetchPriority="high" className="w-full h-auto relative z-0" />
                 
                 <div className="absolute top-6 left-6 z-20 animate-float glass rounded-xl p-4 scale-75 lg:scale-100 origin-top-left">
                   <div className="flex items-center gap-3">
