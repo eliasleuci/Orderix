@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Image as ImageIcon, EyeOff, Eye, Utensils, UtensilsCrossed } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, ImagePlus, EyeOff, Eye, Utensils, UtensilsCrossed } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { productService } from '../../../services/productService';
 import { Category } from '../../../types/domain';
@@ -121,10 +121,11 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
     <Modal isOpen={isOpen} onClose={cerrar} title="Categorías" maxWidth="md">
       <div className="space-y-5">
         <p className="text-sm text-text-secondary">
-          El orden de acá abajo es el mismo con el que se muestran en el pedido web.
-          Pausada no se borra, sólo se oculta. El ícono de cubiertos controla si se
-          muestra en la carta del salón (la de los QR de mesa); una categoría puede
-          quedar sólo para pedidos online sin pausarla del todo.
+          Tocá el recuadro punteado de la izquierda para ponerle la foto a cada
+          categoría. El orden de acá abajo es el mismo con el que se muestran en el
+          pedido web. Pausada no se borra, sólo se oculta. El ícono de cubiertos
+          controla si se muestra en la carta del salón (la de los QR de mesa): una
+          categoría puede quedar sólo para pedidos online sin pausarla del todo.
         </p>
 
         <div className="flex gap-3">
@@ -172,15 +173,33 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                   </button>
                 </div>
 
-                <label className="w-14 h-14 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0 cursor-pointer relative group">
+                {/* Sin foto se muestra como un recuadro punteado que dice
+                    "Foto": antes era un cuadradito gris que parecía decoración
+                    y la única pista de que se podía tocar aparecía al pasar el
+                    mouse por encima, cosa que en un celular no pasa nunca. */}
+                <label
+                  title={cat.image_url ? 'Cambiar la foto' : 'Agregar una foto'}
+                  className={`w-16 h-16 rounded-xl overflow-hidden flex flex-col items-center justify-center shrink-0 cursor-pointer relative group transition-colors ${
+                    cat.image_url
+                      ? 'bg-white/5 border border-white/10'
+                      : 'border-2 border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10'
+                  }`}
+                >
                   {cat.image_url ? (
-                    <img src={cat.image_url} alt="" className="w-full h-full object-cover" />
+                    <>
+                      <img src={cat.image_url} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <ImagePlus size={16} className="text-white" />
+                      </div>
+                    </>
                   ) : (
-                    <ImageIcon size={18} className="text-text-muted" />
+                    <>
+                      <ImagePlus size={18} className="text-primary" />
+                      <span className="text-[8px] font-black uppercase tracking-wider text-primary mt-1">
+                        Foto
+                      </span>
+                    </>
                   )}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <ImageIcon size={16} className="text-white" />
-                  </div>
                   <input
                     type="file"
                     accept="image/*"
