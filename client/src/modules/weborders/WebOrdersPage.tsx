@@ -6,6 +6,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { webshopService, PedidoWeb, linkDeWhatsapp } from '../../services/webshopService';
+import { printService } from '../../lib/printService';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -35,6 +36,26 @@ const WebOrdersPage: React.FC = () => {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cantidadPrevia = useRef(0);
+
+  // Nombre del negocio y de la sucursal, para el encabezado del ticket del
+  // cliente, igual que en el POS.
+  const [nombreNegocio, setNombreNegocio] = useState('Orderix');
+  const [nombreSucursal, setNombreSucursal] = useState('');
+
+  useEffect(() => {
+    if (!branchId) return;
+    supabase
+      .from('branches')
+      .select('name, tenants(name)')
+      .eq('id', branchId)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        const t: any = (data as any).tenants;
+        setNombreSucursal((data as any).name ?? '');
+        setNombreNegocio((Array.isArray(t) ? t[0]?.name : t?.name) ?? 'Orderix');
+      });
+  }, [branchId]);
 
   const sonar = useCallback(() => {
     if (!audioRef.current) {
@@ -107,7 +128,43 @@ const WebOrdersPage: React.FC = () => {
         : `Pedido #${pedido.codigo} confirmado y mandado a cocina`,
       type: faltantes.length > 0 ? 'error' : 'success',
     });
+
+    imprimirTickets(pedido);
     cargar();
+  };
+
+  // Al confirmar salen SIEMPRE los dos tickets (cocina + cliente), como en una
+  // venta del mostrador. Se dispara sin esperarlo y nunca frena la pantalla: el
+  // pedido ya está tomado y en cocina, así que un problema con la impresora no
+  // puede trabar la caja. Si falla, se avisa aparte, sin pisar el "confirmado".
+  const imprimirTickets = (p: PedidoWeb) => {
+    printService
+      .printBoth({
+        ticketNumber: p.codigo,
+        negocio: nombreNegocio,
+        sucursal: nombreSucursal,
+        customerName: p.cliente || undefined,
+        customerAddress: p.direccion || undefined,
+        orderType: p.tipo,
+        items: p.items.map((i) => ({
+          name: i.nombre,
+          quantity: i.cantidad,
+          price: i.precioUnitario,
+          modifiers: i.extras,
+          notes: i.notas || undefined,
+        })),
+        paymentMethod: p.formaDePago,
+        deliveryFee: p.costoEnvio,
+        total: p.total,
+      })
+      .then((r) => {
+        if (r?.error || r?.success === false) {
+          setToast({
+            message: `Pedido #${p.codigo} confirmado, pero no se pudo imprimir. Revisá que el servidor de impresión esté abierto.`,
+            type: 'error',
+          });
+        }
+      });
   };
 
   const rechazar = async () => {

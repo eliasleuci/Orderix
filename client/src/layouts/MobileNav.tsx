@@ -22,16 +22,18 @@ import Toast from '../components/Toast';
 
 const PRINCIPALES = [
   { path: '/pos', icon: Utensils, label: 'Ventas' },
-  { path: '/tables', icon: UtensilsCrossed, label: 'Mesas' },
+  // Pedidos web ocupa el segundo lugar -antes Mesas-: es el acceso que más se
+  // usa desde el celular, así que va en la barra de abajo, al alcance del pulgar.
+  { path: '/pedidos-web', icon: Globe, label: 'Pedidos web' },
   { path: '/kitchen', icon: ChefHat, label: 'Cocina' },
   { path: '/dashboard', icon: LayoutDashboard, label: 'Panel' },
 ];
 
 const SECUNDARIOS = [
+  { path: '/tables', icon: UtensilsCrossed, label: 'Mesas' },
   { path: '/catalog', icon: BookOpen, label: 'Catálogo' },
   { path: '/stock', icon: Package, label: 'Stock' },
   { path: '/cash', icon: Wallet, label: 'Caja' },
-  { path: '/pedidos-web', icon: Globe, label: 'Pedidos web' },
   { path: '/delivery', icon: Bike, label: 'Delivery' },
   { path: '/financial', icon: DollarSign, label: 'Financiero' },
 ];
