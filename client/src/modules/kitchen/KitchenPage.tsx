@@ -219,7 +219,7 @@ const KitchenPage: React.FC = () => {
       </header>
 
       {/* KITCHEN GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-8 relative z-10 scroll-smooth">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 relative z-10 scroll-smooth">
         <AnimatePresence mode="popLayout" initial={false}>
           {activeOrders.map((order) => (
             <OrderCard 

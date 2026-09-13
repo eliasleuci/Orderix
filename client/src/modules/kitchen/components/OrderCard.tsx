@@ -61,95 +61,31 @@ interface TimelineProps {
   currentSec: number;
 }
 
-const OrderTimeline: React.FC<TimelineProps> = ({ createdAt, startedAt, readyAt, status, currentMin, currentSec }) => {
-  const steps = [
-    {
-      key: 'received',
-      label: 'Recibido',
-      time: formatTime(createdAt),
-      done: true,
-      active: status === 'PENDING',
-      icon: <PackageCheck size={12} />,
-      color: 'text-primary border-primary bg-primary/20',
-    },
-    {
-      key: 'started',
-      label: 'Empezado',
-      time: startedAt ? formatTime(startedAt) : null,
-      duration: startedAt ? getDuration(createdAt, startedAt) : null,
-      done: !!startedAt,
-      active: status === 'PREPARING',
-      icon: <ChefHat size={12} />,
-      color: startedAt ? 'text-warning border-warning bg-warning/20' : 'text-text-muted border-white/10 bg-white/5',
-    },
-    {
-      key: 'ready',
-      label: 'Listo',
-      time: readyAt ? formatTime(readyAt) : null,
-      duration: readyAt && startedAt ? getDuration(startedAt, readyAt) : readyAt ? getDuration(createdAt, readyAt) : null,
-      done: !!readyAt,
-      active: status === 'READY',
-      icon: <CheckCircle size={12} />,
-      color: readyAt ? 'text-success border-success bg-success/20' : 'text-text-muted border-white/10 bg-white/5',
-    },
-  ];
-
-  return (
-    <div className="px-5 pb-4 pt-1">
-      <div className="flex items-center gap-1.5 mb-2">
-        <Timer size={10} className="text-text-muted" />
-        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-text-muted">Línea de Tiempo</span>
-      </div>
-      <div className="flex items-center gap-0">
-        {steps.map((step, idx) => (
-          <React.Fragment key={step.key}>
-            {/* NODE */}
-            <div className="flex flex-col items-center min-w-0 flex-1">
-              {/* Circle */}
-              <div className={cn(
-                "w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
-                step.done || step.active ? step.color : 'text-text-muted border-white/10 bg-white/5'
-              )}>
-                {step.icon}
-              </div>
-              {/* Label + time */}
-              <div className="text-center mt-2 px-0.5">
-                <p className={cn(
-                  "text-[9px] font-black uppercase tracking-widest leading-none",
-                  step.done || step.active ? (step.active && !step.done ? 'text-text-secondary' : 'text-text-primary') : 'text-text-muted'
-                )}>
-                  {step.label}
-                </p>
-                {step.time ? (
-                  <p className="text-[9px] font-bold text-text-muted mt-0.5 tabular-nums leading-none">{step.time}</p>
-                ) : step.active ? (
-                  <p className="text-[9px] font-black text-warning mt-0.5 tabular-nums leading-none animate-pulse">
-                    {currentMin}m {currentSec.toString().padStart(2,'0')}s
-                  </p>
-                ) : (
-                  <p className="text-[9px] text-text-muted mt-0.5 leading-none">—</p>
-                )}
-                {step.duration && (
-                  <p className="text-[10px] font-black text-text-muted mt-0.5 leading-none opacity-70">
-                    ({step.duration})
-                  </p>
-                )}
-              </div>
-            </div>
-            
-            {/* CONNECTOR */}
-            {idx < steps.length - 1 && (
-              <div className={cn(
-                "h-px flex-1 mb-6 mx-1 transition-all",
-                steps[idx + 1].done ? 'bg-white/30' : 'bg-white/10'
-              )} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-};
+/**
+ * Una sola línea en vez de la línea de tiempo con círculos que había antes.
+ * Los tres nodos con sus timestamps y duraciones ocupaban casi 100px -un
+ * quinto de la tarjeta- para contar algo que el cocinero no usa mientras
+ * cocina: lo que necesita saber es cuánto hace que espera, y eso ya está
+ * grande arriba. Los horarios siguen estando, sólo que no gritan.
+ */
+const OrderTimeline: React.FC<TimelineProps> = ({ createdAt, startedAt, readyAt }) => (
+  <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold text-text-muted tabular-nums">
+    <Timer size={10} className="shrink-0" />
+    <span>Entró {formatTime(createdAt)}</span>
+    {startedAt && (
+      <>
+        <span className="opacity-40">·</span>
+        <span>Empezó {formatTime(startedAt)} ({getDuration(createdAt, startedAt)})</span>
+      </>
+    )}
+    {readyAt && (
+      <>
+        <span className="opacity-40">·</span>
+        <span className="text-success">Listo ({getDuration(startedAt || createdAt, readyAt)})</span>
+      </>
+    )}
+  </div>
+);
 
 // --- PARSE MODIFIERS SAFELY ---
 const parseModifier = (mod: any): { label: string; price: number } => {
@@ -209,73 +145,73 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, onStatusChange 
           statusStyles.bgPulse
         )}
       >
-        {/* HEADER: ORDER # & TIMER */}
-        <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-text-primary tracking-tighter uppercase leading-none">
+        {/* CABECERA. Todo lo de logística en dos renglones: antes iban el
+            número, el tipo, el estado y el cliente cada uno en su propia fila
+            apilada, y sólo la cabecera se comía 130px. */}
+        <div className="p-3 border-b border-white/5 bg-white/[0.02]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-2xl font-black text-text-primary tracking-tighter uppercase leading-none shrink-0">
                 #{(order.id || '').substring(0, 4).toUpperCase()}
               </span>
-              {isNew && (
-                <Badge variant="warning" size="sm" className="animate-bounce">NUEVO</Badge>
-              )}
+              {isNew && <Badge variant="warning" size="sm" className="animate-bounce shrink-0">NUEVO</Badge>}
             </div>
 
-            {/* ORDER TYPE LOGISTICS */}
-            <div className="flex items-center gap-2 mt-0.5">
-              {order.order_type === 'MESA' && (
-                <div className="bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                  <Utensils size={12} className="fill-success/20" />
-                  <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                    {order.tables?.label || `Mesa ${order.tables?.number || '?'}`}
-                  </span>
-                </div>
-              )}
-              {order.order_type === 'DELIVERY' && (
-                <div className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                  <Truck size={12} className="fill-primary/20" />
-                  <span className="text-[9px] font-black uppercase tracking-widest leading-none">Delivery</span>
-                </div>
-              )}
-              {order.order_type === 'TAKEAWAY' && (
-                <div className="bg-white/10 text-text-muted border border-white/20 px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                  <User size={12} className="fill-text-muted/20" />
-                  <span className="text-[9px] font-black uppercase tracking-widest leading-none">Mostrador</span>
-                </div>
-              )}
+            <div className={cn(
+              "flex items-center gap-1.5 font-black text-xl tracking-tighter tabular-nums shrink-0",
+              statusStyles.timeText
+            )}>
+              <Clock size={18} />
+              <span>{min}m {sec.toString().padStart(2, '0')}s</span>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap mt-1.5">
+            {order.order_type === 'MESA' && (
+              <span className="bg-success/20 text-success border border-success/30 px-2 py-0.5 rounded-full flex items-center gap-1 text-[9px] font-black uppercase tracking-widest leading-none">
+                <Utensils size={11} />
+                {order.tables?.label || `Mesa ${order.tables?.number || '?'}`}
+              </span>
+            )}
+            {order.order_type === 'DELIVERY' && (
+              <span className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full flex items-center gap-1 text-[9px] font-black uppercase tracking-widest leading-none">
+                <Truck size={11} /> Delivery
+              </span>
+            )}
+            {order.order_type === 'TAKEAWAY' && (
+              <span className="bg-white/10 text-text-muted border border-white/20 px-2 py-0.5 rounded-full flex items-center gap-1 text-[9px] font-black uppercase tracking-widest leading-none">
+                <User size={11} /> Mostrador
+              </span>
+            )}
 
             <span className={cn(
-              "text-[9px] font-black uppercase tracking-[0.2em] leading-none mt-1.5",
+              "text-[9px] font-black uppercase tracking-[0.2em] leading-none",
               order.status === 'PREPARING' ? "text-primary" : "text-text-muted"
             )}>
               {order.status === 'PREPARING' ? 'EN FUEGO' : 'PENDIENTE'}
             </span>
+
             {order.customer_name && (
-              <span className="mt-1.5 text-sm font-black text-white bg-primary/20 px-2.5 py-1 rounded-lg border border-primary/30 w-fit shadow-md block leading-tight">
-                👤 {order.customer_name.substring(0, 20)}{order.customer_name.length > 20 ? '...' : ''} {order.order_type === 'DELIVERY' && order.customer_address ? `(${order.customer_address})` : ''}
+              <span className="inline-flex items-center gap-1 text-[11px] font-black text-text-primary leading-none min-w-0">
+                <User size={11} className="text-primary shrink-0" />
+                <span className="truncate">
+                  {order.customer_name}
+                  {order.order_type === 'DELIVERY' && order.customer_address ? ` · ${order.customer_address}` : ''}
+                </span>
               </span>
             )}
-          </div>
-
-          <div className={cn(
-            "flex items-center gap-1.5 font-black text-xl tracking-tighter tabular-nums",
-            statusStyles.timeText
-          )}>
-            <Clock size={20} />
-            <span>{min}m {sec.toString().padStart(2, '0')}s</span>
           </div>
         </div>
 
         {/* BODY: ITEMS LIST */}
-        <div className="p-4 flex-1 space-y-4 overflow-y-auto">
+        <div className="p-3 flex-1 space-y-2.5 overflow-y-auto">
           {order.order_items?.map((item: any, idx: number) => {
             const parsedModifiers = (item.modifiers || []).map(parseModifier);
             const hasModifs = parsedModifiers.length > 0 || item.notes;
             
             return (
               <div key={item.id || idx} className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-surface-base rounded-xl flex items-center justify-center border border-white/5 font-black text-xl text-primary shrink-0 shadow-inner">
+                <div className="w-9 h-9 bg-surface-base rounded-lg flex items-center justify-center border border-white/5 font-black text-lg text-primary shrink-0 shadow-inner">
                   {item.quantity}
                 </div>
                 <div className="flex-1 pt-0.5">
@@ -307,11 +243,7 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, onStatusChange 
                         </span>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex gap-2 mt-1">
-                      <Badge variant="neutral" size="sm">REGULAR</Badge>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );
@@ -331,12 +263,12 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, onStatusChange 
         </div>
 
         {/* FOOTER: ACTION BUTTON */}
-        <div className="p-4 bg-white/[0.03] border-t border-white/5">
+        <div className="p-3 bg-white/[0.03] border-t border-white/5">
           <Button
             size="lg"
             fullWidth
             variant={order.status === 'PENDING' ? 'primary' : 'success'}
-            className="h-14 text-lg font-black shadow-2xl"
+            className="h-12 text-base font-black shadow-lg"
             onClick={() => onStatusChange(order.id, order.status)}
             leftIcon={order.status === 'PREPARING' ? <CheckCircle size={20} /> : <ChefHat size={20} />}
           >
