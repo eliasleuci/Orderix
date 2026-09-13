@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Phone, UserRound, Percent, Check, X } from 'lucide-react';
+import { Plus, Phone, UserRound, Percent, Check, X, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { tableService, Mozo } from '../../../services/tableService';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 interface Props {
   isOpen: boolean;
@@ -86,6 +87,44 @@ const MozosModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso }) =>
     const { error } = await tableService.actualizarMozo(m.id, { is_active: !m.is_active });
     if (error) return onAviso(error, 'error');
     setHuboCambios(true);
+    cargar();
+  };
+
+  /**
+   * Borrar un mozo sólo es seguro si nunca vendió: orders.waiter_id está con ON
+   * DELETE SET NULL, así que borrar a uno con ventas le arrancaría la
+   * atribución a todo su historial de comisiones. Por eso se cuentan primero
+   * las ventas y, si tiene, se ofrece pausarlo en lugar de borrarlo.
+   */
+  const [borrando, setBorrando] = useState<{ mozo: Mozo; ventas: number } | null>(null);
+  const [verificando, setVerificando] = useState<string | null>(null);
+
+  const pedirBorrado = async (m: Mozo) => {
+    setVerificando(m.id);
+    const { data, error } = await tableService.contarVentasDeMozo(m.id);
+    setVerificando(null);
+    if (error) return onAviso(error, 'error');
+    setBorrando({ mozo: m, ventas: data ?? 0 });
+  };
+
+  const confirmarBorrado = async () => {
+    if (!borrando) return;
+
+    // Con ventas no se borra: se pausa, que es la baja que conserva el historial.
+    if (borrando.ventas > 0) {
+      const { error } = await tableService.actualizarMozo(borrando.mozo.id, { is_active: false });
+      setBorrando(null);
+      if (error) return onAviso(error, 'error');
+      setHuboCambios(true);
+      onAviso(`${borrando.mozo.name} quedó pausado`, 'success');
+      return cargar();
+    }
+
+    const { error } = await tableService.eliminarMozo(borrando.mozo.id);
+    setBorrando(null);
+    if (error) return onAviso(error, 'error');
+    setHuboCambios(true);
+    onAviso('Mozo eliminado', 'success');
     cargar();
   };
 
@@ -214,12 +253,22 @@ const MozosModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso }) =>
                     </button>
 
                     {esAdmin && (
-                      <button
-                        onClick={() => alternar(m)}
-                        className="px-3 py-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest"
-                      >
-                        {m.is_active ? 'Pausar' : 'Activar'}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => alternar(m)}
+                          className="px-3 py-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors text-[10px] font-black uppercase tracking-widest"
+                        >
+                          {m.is_active ? 'Pausar' : 'Activar'}
+                        </button>
+                        <button
+                          onClick={() => pedirBorrado(m)}
+                          disabled={verificando === m.id}
+                          title="Eliminar"
+                          className="p-2 rounded-xl text-text-muted hover:text-danger hover:bg-danger/10 transition-colors disabled:opacity-40"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
@@ -230,8 +279,10 @@ const MozosModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso }) =>
 
         {esAdmin && mozos.length > 0 && (
           <p className="text-[10px] text-text-muted leading-snug">
-            Un mozo que se va se pausa, no se borra: sus pedidos ya vendidos guardan
-            quién los atendió y borrarlo perdería el historial de comisiones.
+            Al mozo que se va del local conviene pausarlo: deja de aparecer al abrir
+            una mesa, pero sus ventas siguen figurando a su nombre. El tacho elimina
+            de verdad, y sólo se puede con uno que todavía no vendió nada -cargado
+            por error o repetido-.
           </p>
         )}
 
@@ -239,6 +290,22 @@ const MozosModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso }) =>
           Listo
         </Button>
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(borrando)}
+        onClose={() => setBorrando(null)}
+        onConfirm={confirmarBorrado}
+        variant={borrando && borrando.ventas > 0 ? 'warning' : 'danger'}
+        title={borrando && borrando.ventas > 0 ? 'Mejor pausarlo' : 'Eliminar mozo'}
+        message={
+          borrando && borrando.ventas > 0
+            ? `${borrando.mozo.name} ya tiene ${borrando.ventas} ${
+                borrando.ventas === 1 ? 'pedido vendido' : 'pedidos vendidos'
+              }. Si lo borramos, esas ventas quedan sin dueño y perdés el historial de sus comisiones en el Financiero. Lo dejamos pausado: no aparece más al abrir una mesa, pero lo que vendió sigue a su nombre.`
+            : `Se elimina a ${borrando?.mozo.name} de forma definitiva. Todavía no tiene ventas registradas, así que no se pierde ningún historial.`
+        }
+        confirmText={borrando && borrando.ventas > 0 ? 'Pausar' : 'Eliminar'}
+      />
     </Modal>
   );
 };

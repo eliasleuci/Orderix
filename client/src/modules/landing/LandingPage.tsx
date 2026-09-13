@@ -125,12 +125,15 @@ const LandingPage: React.FC = () => {
       <nav id="navbar" className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'glass shadow-2xl h-16' : 'h-20'}`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-full">
           <div className="flex items-center justify-between h-full">
-            <a href="/" className="flex items-center gap-3 group">
-              <div className="relative w-11 h-11">
+            {/* En un teléfono de 320px el logo y "Ingresar" quedaban pegados, y la
+                marca se leía cortada. Se achica el ícono y el texto en pantallas
+                chicas para que quede aire entre los dos. */}
+            <a href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+              <div className="relative w-9 h-9 sm:w-11 sm:h-11 shrink-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B00] to-[#CC5500] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity blur-lg"></div>
-                <img src="/landing/img/icono.webp" alt="ORDERIX" className="relative w-11 h-11 rounded-xl object-cover shadow-lg shadow-[#FF6B00]/30" />
+                <img src="/landing/img/icono.webp" alt="ORDERIX" className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl object-cover shadow-lg shadow-[#FF6B00]/30" />
               </div>
-              <span className="font-display font-bold text-xl tracking-tight">ORDERIX</span>
+              <span className="font-display font-bold text-lg sm:text-xl tracking-tight">ORDERIX</span>
             </a>
             
             <div className="hidden md:flex items-center gap-10">
@@ -139,7 +142,7 @@ const LandingPage: React.FC = () => {
               <a href="#precios" className="text-gray-400 hover:text-white transition-colors font-medium text-sm tracking-wide">Precios</a>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0 pl-3">
               <Link to="/login" className="text-gray-400 hover:text-white transition-colors font-bold text-[10px] uppercase tracking-[0.2em] mr-2">
                 Ingresar
               </Link>
@@ -179,7 +182,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-4 lg:pt-40 relative w-full">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-center">
             
-            <div className="space-y-8 animate-fadeUp flex flex-col items-center lg:items-start text-center lg:text-left">
+            <div className="min-w-0 space-y-8 animate-fadeUp flex flex-col items-center lg:items-start text-center lg:text-left">
               <div className="inline-flex items-center gap-3 px-4 py-2 glass rounded-full text-[12px] sm:text-sm mt-4 lg:mt-0">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -208,7 +211,11 @@ const LandingPage: React.FC = () => {
                 </a>
               </div>
               
-              <div className="flex items-center justify-center lg:justify-start gap-10 pt-6 border-t border-white/10 w-full lg:w-auto">
+              {/* El gap no se puede encoger: con gap-10 fijo, los 4 huecos sumaban
+                  160px y forzaban un ancho mínimo de ~345px en toda la columna del
+                  hero. En un teléfono de 320-360px eso dejaba "3h / Ahorradas" y el
+                  borde de la imagen cortados fuera de pantalla. */}
+              <div className="flex items-center justify-center lg:justify-start gap-4 sm:gap-8 lg:gap-10 pt-6 border-t border-white/10 w-full lg:w-auto">
                 <div>
                   <div className="font-display font-bold text-2xl lg:text-3xl text-[#FF6B00]">+40%</div>
                   <div className="text-[10px] text-gray-500 mt-1 uppercase font-black">Más ventas</div>
@@ -226,7 +233,7 @@ const LandingPage: React.FC = () => {
               </div>
             </div>
             
-            <div className="relative animate-fadeUp delay-300 perspective-3d block mt-12 lg:mt-0">
+            <div className="min-w-0 relative animate-fadeUp delay-300 perspective-3d block mt-12 lg:mt-0">
               <div className="hero-glow absolute -inset-10 bg-gradient-to-r from-[#FF6B00]/30 via-transparent to-[#FF6B00]/30 rounded-3xl blur-2xl animate-pulse-glow"></div>
               
               <div className="hero-image-container relative rounded-2xl overflow-hidden shadow-2xl shadow-[#FF6B00]/10 border border-white/10">

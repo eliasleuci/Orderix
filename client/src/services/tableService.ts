@@ -156,10 +156,8 @@ class TableService {
   }
 
   /**
-   * También es la baja de un mozo, con is_active en false. No hay borrado: los
-   * pedidos guardan su id con ON DELETE SET NULL, así que eliminarlo le
-   * arrancaría la atribución a todo lo que vendió y se perdería el historial de
-   * comisiones ya liquidadas.
+   * La baja de un mozo que se fue del local: is_active en false. Deja de
+   * aparecer al abrir una mesa, pero sus ventas siguen atribuidas a él.
    */
   async actualizarMozo(id: string, cambios: Partial<Mozo>): Promise<ServiceResponse<Mozo>> {
     const { data, error } = await supabase
@@ -169,6 +167,30 @@ class TableService {
       .select()
       .single();
     return { data, error: error?.message || null };
+  }
+
+  /**
+   * Cuántos pedidos tiene atribuidos un mozo. Se consulta antes de borrarlo:
+   * orders.waiter_id está con ON DELETE SET NULL, así que borrar a uno que ya
+   * vendió le arrancaría la atribución a todo su historial de comisiones.
+   */
+  async contarVentasDeMozo(id: string): Promise<ServiceResponse<number>> {
+    const { count, error } = await supabase
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('waiter_id', id);
+    return { data: count ?? 0, error: error?.message || null };
+  }
+
+  /**
+   * Borrado definitivo. Sólo tiene sentido para un mozo que nunca vendió nada
+   * -uno cargado por error, repetido o de prueba-. Para el que se fue del local
+   * está la pausa, que conserva el historial. La pantalla verifica las ventas
+   * antes de llamar acá.
+   */
+  async eliminarMozo(id: string): Promise<ServiceResponse<boolean>> {
+    const { error } = await supabase.from('waiters').delete().eq('id', id);
+    return { data: !error, error: error?.message || null };
   }
 
 

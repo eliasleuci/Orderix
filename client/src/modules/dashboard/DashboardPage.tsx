@@ -294,11 +294,11 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <BotonReporte />
-          <Button 
-            variant="ghost" 
-            size="md" 
+          <Button
+            variant="ghost"
+            size="md"
             onClick={() => fetchStats(true)}
             leftIcon={<RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />}
             className="text-text-muted hover:text-text-primary border border-white/10"
@@ -400,13 +400,17 @@ const DashboardPage: React.FC = () => {
               <div className="space-y-4">
                 {stats.recentOrders.map((order: Order) => (
                   <div key={order.id} className="group flex flex-col p-5 rounded-[2rem] bg-surface-base/50 border border-white/5 hover:border-primary/30 transition-all cursor-default">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-6">
+                    {/* En el celular el nombre del cliente empujaba todo hacia
+                        afuera y el tachito quedaba cortado contra el borde. El
+                        bloque de la izquierda ahora se encoge y recorta el
+                        nombre; el de la derecha nunca se achica. */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
                         <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xs text-text-muted border border-white/5 group-hover:text-primary transition-colors shrink-0">
                           #{(order.id || '').substring(0, 4).toUpperCase()}
                         </div>
-                        <div>
-                          <h4 className="font-bold text-lg text-text-primary leading-none mb-1 group-hover:text-primary transition-colors">
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-lg text-text-primary leading-none mb-1 group-hover:text-primary transition-colors truncate">
                             {order.customer_name || 'Consumidor Final'}
                           </h4>
                           <div className="flex items-center gap-3">
@@ -423,7 +427,7 @@ const DashboardPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-right">
+                      <div className="flex items-center gap-2 sm:gap-4 text-right shrink-0">
                         <div className="space-y-1">
                           <div className="text-xl font-black text-text-primary tracking-tighter">${order.total}</div>
                           <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest leading-none">{order.payment_method || 'Efectivo'}</div>

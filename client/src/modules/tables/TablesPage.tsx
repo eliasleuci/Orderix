@@ -869,9 +869,14 @@ const TablesPage: React.FC = () => {
         </div>
       )}
 
-      {/* SUMMARY FOOTER */}
+      {/* SUMMARY FOOTER
+          En el celular esta píldora quedaba justo encima de la barra de
+          navegación y con su mismo z-index: tapaba los botones y se comía los
+          toques, así que desde Mesas no se podía entrar a "Más". Se sube por
+          encima de la barra y se deja por debajo en z para que la navegación
+          siempre gane. */}
       {tables.length > 0 && (
-        <footer className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+        <footer className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-40">
           <div className="bg-surface-elevated shadow-2xl px-6 py-3 rounded-full border border-white/5 backdrop-blur-md flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success" />

@@ -177,8 +177,13 @@ const CatalogPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <div className="w-80">
+          {/* En el celular esta fila no entraba: el buscador tenía 320px fijos y
+              los tres botones no envolvían, así que "Nuevo Producto" quedaba
+              directamente fuera de la pantalla y no había forma de cargar un
+              producto desde el teléfono. Ahora el buscador ocupa su propia fila
+              y los botones se acomodan abajo. */}
+          <div className="flex flex-wrap gap-3 lg:gap-4">
+            <div className="w-full lg:w-80">
               <Input
                 placeholder="Buscar producto..."
                 icon={<Search size={20} />}
@@ -192,7 +197,7 @@ const CatalogPage: React.FC = () => {
               variant="secondary"
               leftIcon={<Tag size={20} />}
               onClick={() => setCategoriasAbiertas(true)}
-              className="h-14 px-8"
+              className="h-14 px-5 lg:px-8 flex-1 lg:flex-none"
             >
               Categorías
             </Button>
@@ -201,11 +206,16 @@ const CatalogPage: React.FC = () => {
               variant="secondary"
               leftIcon={<QrCode size={20} />}
               onClick={() => setIsQrModalOpen(true)}
-              className="h-14 px-8"
+              className="h-14 px-5 lg:px-8 flex-1 lg:flex-none"
             >
               Carta QR
             </Button>
-            <Button size="lg" leftIcon={<Plus size={20} />} onClick={() => handleOpenModal()} className="h-14 px-8">
+            <Button
+              size="lg"
+              leftIcon={<Plus size={20} />}
+              onClick={() => handleOpenModal()}
+              className="h-14 px-5 lg:px-8 w-full lg:w-auto"
+            >
               Nuevo Producto
             </Button>
           </div>
