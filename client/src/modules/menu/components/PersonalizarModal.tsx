@@ -135,14 +135,20 @@ const PersonalizarModal: React.FC<Props> = ({ producto, onCerrar, onAgregar }) =
             className="w-full bg-surface-base border border-white/10 rounded-2xl h-12 px-4 text-sm focus:outline-none focus:border-primary"
           />
 
-          <Button
-            fullWidth
-            disabled={Boolean(faltaElegir)}
-            onClick={confirmar}
-            leftIcon={<Plus size={18} />}
-          >
-            {faltaElegir ? `Elegí ${faltaElegir.nombre.toLowerCase()}` : `Agregar — ${plata(visible.precio + extraTotal)}`}
-          </Button>
+          {/* Pegado al fondo del modal. Con una lista larga de opciones el
+              botón quedaba abajo del pliegue, y como el modal esconde la barra
+              de scroll no había ninguna señal de que hubiera que bajar: el
+              cliente veía la lista y concluía que no se podía agregar nada. */}
+          <div className="sticky bottom-0 bg-surface-elevated pt-3 pb-1 -mb-1">
+            <Button
+              fullWidth
+              disabled={Boolean(faltaElegir)}
+              onClick={confirmar}
+              leftIcon={<Plus size={18} />}
+            >
+              {faltaElegir ? `Elegí ${faltaElegir.nombre.toLowerCase()}` : `Agregar — ${plata(visible.precio + extraTotal)}`}
+            </Button>
+          </div>
         </div>
       )}
     </Modal>
