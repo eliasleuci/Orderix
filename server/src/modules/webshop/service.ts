@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { WebshopRepository } from './repository';
 import { AppError } from '../../common/exceptions/AppError';
 import { getContext } from '../../common/utils/context';
@@ -321,7 +322,10 @@ export class WebshopService {
         unitPrice: precioUnitario,
         quantity: i.quantity,
         notes: i.notes?.trim() || null,
-        modifiers: modifiers.length > 0 ? modifiers : null,
+        // DbNull y no null: en una columna Json, Prisma escribe el `null` de
+        // JSON, que es un escalar y no un vacío. La función que confirma el
+        // pedido recorre este campo como lista y se cortaba contra ese escalar.
+        modifiers: modifiers.length > 0 ? modifiers : Prisma.DbNull,
       };
     });
     itemsTotal = redondear(itemsTotal);
