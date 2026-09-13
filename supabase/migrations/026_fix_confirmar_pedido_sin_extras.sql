@@ -156,6 +156,7 @@ BEGIN
     'advertencias', COALESCE(v_res->'advertencias','[]'::jsonb)
   );
 END;
+$function$;
 
 SELECT public.blindar_rpcs_de_pedidos();
 
