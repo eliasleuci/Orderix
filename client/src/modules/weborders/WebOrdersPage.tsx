@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Globe, Check, X, MessageCircle, Bike, ShoppingBag, Clock,
-  Banknote, Landmark, History, Receipt, AlertTriangle, Settings,
+  Banknote, Landmark, History, Receipt, AlertTriangle, Settings, MapPin, StickyNote,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
@@ -146,13 +146,13 @@ const WebOrdersPage: React.FC = () => {
       <Card
         key={p.id}
         variant="solid"
-        padding="large"
+        padding="normal"
         className={`bg-surface-elevated/40 ${esPendiente ? 'border-primary/30' : 'border-white/5 opacity-70'}`}
       >
-        <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 mb-1">
-              <span className="text-2xl font-black tracking-tighter">#{p.codigo}</span>
+              <span className="text-xl font-black tracking-tighter">#{p.codigo}</span>
               <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
                 p.tipo === 'DELIVERY'
                   ? 'text-warning border-warning/30 bg-warning/10'
@@ -172,21 +172,22 @@ const WebOrdersPage: React.FC = () => {
               <Clock size={11} /> {hora(p.creadoEn)}
             </p>
             {p.direccion && (
-              <p className="text-xs text-text-secondary mt-1">
-                📍 {p.direccion}{p.zona ? ` · ${p.zona}` : ''}
+              <p className="text-xs text-text-secondary mt-1 flex items-center gap-1.5">
+                <MapPin size={11} className="shrink-0" />
+                {p.direccion}{p.zona ? ` · ${p.zona}` : ''}
               </p>
             )}
           </div>
 
           <div className="text-right shrink-0">
-            <p className="text-2xl font-black text-primary tracking-tighter">{plata(p.total)}</p>
+            <p className="text-xl font-black text-primary tracking-tighter">{plata(p.total)}</p>
             {p.costoEnvio > 0 && (
               <p className="text-[10px] text-text-muted mt-0.5">incluye {plata(p.costoEnvio)} de envío</p>
             )}
           </div>
         </div>
 
-        <ul className="space-y-1.5 rounded-2xl border border-white/5 bg-surface-base px-4 py-3 mb-4">
+        <ul className="space-y-1.5 rounded-2xl border border-white/5 bg-surface-base px-3 py-2.5 mb-3">
           {p.items.map((i) => (
             <li key={i.id} className="flex items-start justify-between gap-3 text-sm">
               <span className="min-w-0">
@@ -205,11 +206,14 @@ const WebOrdersPage: React.FC = () => {
         </ul>
 
         {p.notas && (
-          <p className="text-xs text-text-secondary italic mb-4 px-1">📝 {p.notas}</p>
+          <p className="text-xs text-text-secondary italic mb-3 px-1 flex items-center gap-1.5">
+            <StickyNote size={11} className="shrink-0" />
+            {p.notas}
+          </p>
         )}
 
         {p.estado === 'REJECTED' && p.motivoRechazo && (
-          <p className="text-xs text-danger mb-4 px-1">Rechazado: {p.motivoRechazo}</p>
+          <p className="text-xs text-danger mb-3 px-1">Rechazado: {p.motivoRechazo}</p>
         )}
 
         <div className="flex flex-wrap gap-2">
@@ -276,22 +280,22 @@ const WebOrdersPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="relative z-10 space-y-8 max-w-4xl">
+      <div className="relative z-10 space-y-8">
         {pendientes.length === 0 ? (
-          <Card variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40 text-center">
+          <Card variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40 text-center max-w-2xl">
             <Receipt size={40} className="text-text-muted mx-auto mb-4 opacity-40" />
             <p className="text-text-secondary text-sm">
               No hay pedidos esperando confirmación.
             </p>
           </Card>
         ) : (
-          <div className="space-y-5">{pendientes.map(tarjeta)}</div>
+          <div className="grid gap-4 items-start md:grid-cols-2 2xl:grid-cols-3">{pendientes.map(tarjeta)}</div>
         )}
 
         {historial && cerrados.length > 0 && (
           <div>
             <h2 className="text-xl font-black uppercase tracking-tighter mb-5">Ya resueltos</h2>
-            <div className="space-y-5">{cerrados.map(tarjeta)}</div>
+            <div className="grid gap-4 items-start md:grid-cols-2 2xl:grid-cols-3">{cerrados.map(tarjeta)}</div>
           </div>
         )}
       </div>
