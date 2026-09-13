@@ -4,6 +4,7 @@ import { authMiddleware } from '../../common/middlewares/authMiddleware';
 import { roleMiddleware } from '../../common/middlewares/roleMiddleware';
 import { validate } from '../../common/middlewares/validationMiddleware';
 import { z } from 'zod';
+import { uuid } from '../../common/utils/uuid';
 
 const router = Router();
 const orderController = new OrderController();
@@ -12,7 +13,7 @@ const createOrderSchema = z.object({
   body: z.object({
     items: z.array(
       z.object({
-        productId: z.string().uuid(),
+        productId: uuid('Producto inválido'),
         quantity: z.number().int().positive(),
         price: z.number().positive().optional() 
       })
