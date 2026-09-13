@@ -40,13 +40,13 @@ const LandingPage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState(false);
 
   const galleryImages = [
-    '/landing/img/1.jpeg',
-    '/landing/img/2.jpeg',
-    '/landing/img/3.jpeg',
-    '/landing/img/img1.jpg',
-    '/landing/img/img2.jpg',
-    '/landing/img/img3.jpg',
-    '/landing/img/img4.jpg'
+    '/landing/img/galeria-7.jpg',
+    '/landing/img/galeria-3.jpg',
+    '/landing/img/galeria-5.jpg',
+    '/landing/img/galeria-8.jpg',
+    '/landing/img/galeria-2.jpg',
+    '/landing/img/galeria-4.jpg',
+    '/landing/img/galeria-6.jpg'
   ];
 
   useEffect(() => {
@@ -230,7 +230,7 @@ const LandingPage: React.FC = () => {
               
               <div className="hero-image-container relative rounded-2xl overflow-hidden shadow-2xl shadow-[#FF6B00]/10 border border-white/10">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c20] via-transparent to-transparent z-10"></div>
-                <img src="/landing/img/dashboard.jpg" alt="ORDERIX Dashboard" decoding="async" fetchPriority="high" className="w-full h-auto relative z-0" />
+                <img src="/landing/img/galeria-7.jpg" alt="ORDERIX Dashboard" decoding="async" fetchPriority="high" className="w-full h-auto relative z-0" />
                 
                 <div className="absolute top-6 left-6 z-20 animate-float glass rounded-xl p-4 scale-75 lg:scale-100 origin-top-left">
                   <div className="flex items-center gap-3">
@@ -390,13 +390,25 @@ const LandingPage: React.FC = () => {
               <h2 className="font-display font-black text-4xl sm:text-5xl lg:text-7xl tracking-tighter mb-8 leading-none uppercase">Sin sorpresas.</h2>
               
               <div className="glass rounded-[2.5rem] p-8 lg:p-10 max-w-md mx-auto border border-[#FF6B00]/20 shadow-2xl relative z-10">
-                <div className="font-display font-black text-5xl sm:text-6xl lg:text-7xl text-[#FF6B00] mb-2 leading-none">$45.000</div>
-                <div className="text-gray-400 font-black uppercase tracking-[0.4em] text-[10px] mb-8">pesos / mes</div>
-                
+                <div className="font-display font-black text-5xl sm:text-6xl lg:text-7xl text-[#FF6B00] mb-2 leading-none">$50.000</div>
+                <div className="text-gray-400 font-black uppercase tracking-[0.4em] text-[10px] mb-3">pesos / mes</div>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-gray-300 mb-8">
+                  por sucursal
+                </div>
+
+                <p className="text-white font-black uppercase tracking-tight text-sm mb-4">Todas las funcionalidades incluidas</p>
+                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                  {['Ventas', 'Cocina', 'Mesas', 'Catálogo', 'Stock', 'Panel', 'Caja', 'Pedidos web', 'Delivery', 'Financiero'].map((panel, i) => (
+                    <span key={i} className="px-3 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/20 text-[#FF6B00] rounded-full text-[10px] font-black uppercase tracking-widest">
+                      {panel}
+                    </span>
+                  ))}
+                </div>
+
                 <ul className="space-y-4 text-left mb-10">
-                  {['Pedidos ilimitados', 'Control de stock real', 'Menú con fotos', 'Métricas de venta', 'Multi-sucursal', 'Soporte prioritario'].map((item, i) => (
+                  {['3 usuarios incluidos: Administrador, Cajero y Cocina', 'Pedidos ilimitados', 'Soporte prioritario'].map((item, i) => (
                     <li key={i} className="flex items-center gap-3 text-gray-300 font-bold uppercase tracking-tight text-[11px]">
-                      <CheckCircle size={16} className="text-green-400" />
+                      <CheckCircle size={16} className="text-green-400 shrink-0" />
                       {item}
                     </li>
                   ))}
