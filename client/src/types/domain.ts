@@ -16,6 +16,8 @@ export interface Category {
   image_url?: string | null;
   display_order?: number;
   is_active?: boolean;
+  /** Activa igual, pero no se muestra en la carta física del salón (sí en pedidos online). */
+  show_in_carta?: boolean;
 }
 
 export interface Product {
