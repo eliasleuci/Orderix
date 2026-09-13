@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Plus } from 'lucide-react';
 import { ProductoVidriera } from '../../../services/webshopService';
 import { ExtraElegido } from '../../../store/webCartStore';
@@ -21,7 +21,16 @@ const PersonalizarModal: React.FC<Props> = ({ producto, onCerrar, onAgregar }) =
   const [elegidas, setElegidas] = useState<Record<string, Set<string>>>({});
   const [notas, setNotas] = useState('');
 
-  const grupos = producto?.grupos ?? [];
+  // Mientras el modal se está yendo, `producto` ya es null pero la animación de
+  // salida sigue corriendo: sin esto la tarjeta se vaciaba de golpe y recién
+  // después se desvanecía, que se ve como un parpadeo.
+  const [ultimo, setUltimo] = useState<ProductoVidriera | null>(null);
+  useEffect(() => {
+    if (producto) setUltimo(producto);
+  }, [producto]);
+
+  const visible = producto ?? ultimo;
+  const grupos = visible?.grupos ?? [];
 
   const alternar = (grupoId: string, opcionId: string, maximo: number | null) => {
     setElegidas((prev) => {
@@ -68,11 +77,11 @@ const PersonalizarModal: React.FC<Props> = ({ producto, onCerrar, onAgregar }) =
   };
 
   return (
-    <Modal isOpen={Boolean(producto)} onClose={onCerrar} title={producto?.nombre ?? ''} maxWidth="sm">
-      {producto && (
+    <Modal isOpen={Boolean(producto)} onClose={onCerrar} title={visible?.nombre ?? ''} maxWidth="sm">
+      {visible && (
         <div className="space-y-5">
-          {producto.descripcion && (
-            <p className="text-text-secondary text-sm leading-relaxed">{producto.descripcion}</p>
+          {visible.descripcion && (
+            <p className="text-text-secondary text-sm leading-relaxed">{visible.descripcion}</p>
           )}
 
           {grupos.map((g) => (
@@ -132,7 +141,7 @@ const PersonalizarModal: React.FC<Props> = ({ producto, onCerrar, onAgregar }) =
             onClick={confirmar}
             leftIcon={<Plus size={18} />}
           >
-            {faltaElegir ? `Elegí ${faltaElegir.nombre.toLowerCase()}` : `Agregar — ${plata(producto.precio + extraTotal)}`}
+            {faltaElegir ? `Elegí ${faltaElegir.nombre.toLowerCase()}` : `Agregar — ${plata(visible.precio + extraTotal)}`}
           </Button>
         </div>
       )}

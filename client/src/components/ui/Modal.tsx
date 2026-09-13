@@ -47,7 +47,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={cn("w-full relative", maxWidthClasses[maxWidth], className)}
           >
-            <Card variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl w-full">
+            {/* initial={false} apaga la animación de entrada propia de Card:
+                si no, la tarjeta hacía su scaleIn al mismo tiempo que este
+                contenedor hacía el suyo, con curvas distintas, y el modal
+                parecía parpadear antes de asentarse. */}
+            <Card initial={false} variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl w-full">
               <header className="flex items-center justify-between mb-6 pb-4 border-b border-white/5 shrink-0">
                 <h2 className="text-2xl font-black uppercase tracking-tighter text-text-primary leading-none">
                   {title}
