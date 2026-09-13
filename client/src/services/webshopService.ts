@@ -278,6 +278,10 @@ export const webshopService = new WebshopService();
  *
  * El pedido ya quedó guardado antes de llegar acá: si el cliente nunca manda el
  * mensaje, el local igual lo tiene en pantalla. Esto sólo abre la conversación.
+ *
+ * Sin emoji a propósito: los que se usaban (📍 💵 🏦 📝) están fuera del plano
+ * básico de Unicode y en varios WhatsApp aparecían como un cuadradito roto. El
+ * texto plano se ve igual en cualquier teléfono.
  */
 export const mensajeDeWhatsapp = (pedido: PedidoWeb, local: string): string => {
   const plata = (n: number) => `$${n.toLocaleString('es-AR')}`;
@@ -291,14 +295,14 @@ export const mensajeDeWhatsapp = (pedido: PedidoWeb, local: string): string => {
     }),
     '',
     pedido.tipo === 'DELIVERY'
-      ? `📍 Envío a: ${pedido.direccion}${pedido.zona ? ` (${pedido.zona})` : ''}`
-      : '🛍️ Paso a retirarlo',
+      ? `Envío a: ${pedido.direccion}${pedido.zona ? ` (${pedido.zona})` : ''}`
+      : 'Paso a retirarlo',
   ];
 
   if (pedido.costoEnvio > 0) lineas.push(`Envío: ${plata(pedido.costoEnvio)}`);
   lineas.push(`*Total: ${plata(pedido.total)}*`);
-  lineas.push(pedido.formaDePago === 'CASH' ? '💵 Pago en efectivo' : '🏦 Pago por transferencia');
-  if (pedido.notas) lineas.push(`📝 ${pedido.notas}`);
+  lineas.push(pedido.formaDePago === 'CASH' ? 'Pago en efectivo' : 'Pago por transferencia');
+  if (pedido.notas) lineas.push(`Aclaración: ${pedido.notas}`);
 
   return lineas.join('\n');
 };
