@@ -1,4 +1,4 @@
-import { baseApi } from './api';
+import { baseApi, API_URL } from './api';
 import { supabase } from '../lib/supabase';
 import { ServiceResponse } from '../types/domain';
 
@@ -117,13 +117,34 @@ export type ResultadoConfirmar =
 
 const fallo = (e: any, porDefecto: string) => e?.response?.data?.message || porDefecto;
 
+/**
+ * El backend devuelve la foto de cada producto como una ruta suya
+ * ("/webshop/publico/..."), no como la imagen embebida. Acá se le antepone la
+ * base del backend, que en desarrollo vive en otro puerto.
+ */
+const absoluta = (ruta: string | null) =>
+  ruta?.startsWith('/webshop/') ? `${API_URL}${ruta}` : ruta;
+
+const conImagenesAbsolutas = (vidriera: Vidriera): Vidriera => ({
+  ...vidriera,
+  categorias: vidriera.categorias.map((c) => ({
+    ...c,
+    imagen: absoluta(c.imagen),
+    productos: c.productos.map((p) => ({ ...p, imagen: absoluta(p.imagen) })),
+  })),
+});
+
 class WebshopService {
-  async getVidriera(slug: string, sucursalId?: string): Promise<ServiceResponse<Vidriera>> {
+  async getVidriera(
+    slug: string,
+    sucursalId?: string,
+    modo: 'carta' | 'pedidos' = 'pedidos'
+  ): Promise<ServiceResponse<Vidriera>> {
     try {
       const { data } = await baseApi.get(`/webshop/publico/${encodeURIComponent(slug)}`, {
-        params: sucursalId ? { sucursal: sucursalId } : undefined,
+        params: { ...(sucursalId ? { sucursal: sucursalId } : {}), modo },
       });
-      return { data: data.data, error: null };
+      return { data: conImagenesAbsolutas(data.data), error: null };
     } catch (e) {
       return { data: null, error: fallo(e, 'No se pudo cargar la carta') };
     }

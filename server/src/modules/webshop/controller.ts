@@ -9,10 +9,37 @@ const sucursalDeQuery = (req: Request) =>
 export class WebshopController {
   getVidriera = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const data = await webshopService.getVidriera(req.params.slug as string, sucursalDeQuery(req));
+      const modo = req.query.modo === 'carta' ? 'carta' : 'pedidos';
+      const data = await webshopService.getVidriera(req.params.slug as string, sucursalDeQuery(req), modo);
       res.status(200).json({ status: 'success', data });
     } catch (error) {
       next(error);
+    }
+  };
+
+  getImagen = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tipo = req.params.tipo === 'categoria' ? 'categoria' : 'producto';
+      const img = await webshopService.getImagen(
+        req.params.slug as string,
+        sucursalDeQuery(req),
+        tipo,
+        req.params.id as string
+      );
+
+      if ('redirigirA' in img) return res.redirect(302, img.redirigirA);
+
+      // La URL lleva el hash del contenido, así que esta respuesta nunca deja
+      // de ser válida: si el dueño cambia la foto, cambia la URL.
+      res.setHeader('Content-Type', img.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      // helmet marca todo como same-origin: la foto de una carta pública tiene
+      // que poder cargarse igual desde el front, que en desarrollo corre en
+      // otro puerto.
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      return res.status(200).end(img.contenido);
+    } catch (error) {
+      return next(error);
     }
   };
 

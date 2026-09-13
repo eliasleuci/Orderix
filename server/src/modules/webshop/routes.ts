@@ -11,6 +11,7 @@ const webshopController = new WebshopController();
 // --- Público: lo abre un cliente desde el link, sin cuenta ni sesión. ---
 // El prefijo /publico evita que un slug choque con las rutas del panel.
 router.get('/publico/:slug', webshopController.getVidriera);
+router.get('/publico/:slug/imagen/:tipo/:id', webshopController.getImagen);
 router.post('/publico/:slug/pedido', validate(crearPedidoSchema), webshopController.crearPedido);
 
 // --- Panel ---

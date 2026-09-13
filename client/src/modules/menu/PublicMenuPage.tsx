@@ -168,7 +168,7 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
     let vigente = true;
 
     setLoading(true);
-    webshopService.getVidriera(slug, sucursalId).then(({ data, error }) => {
+    webshopService.getVidriera(slug, sucursalId, modoPedido ? 'pedidos' : 'carta').then(({ data, error }) => {
       if (!vigente) return;
       setCarta(data);
       setError(error);
@@ -176,7 +176,7 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
     });
 
     return () => { vigente = false; };
-  }, [slug, sucursalId]);
+  }, [slug, sucursalId, modoPedido]);
 
   // Entrar a otro local arranca con el carrito vacío: lo que había adentro no
   // existe en esta carta.

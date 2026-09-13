@@ -81,15 +81,24 @@ export class WebshopService {
   }
 
   /** Lo que necesita la página pública para mostrarse y cotizar. */
-  async getVidriera(slug: string, branchId?: string) {
+  async getVidriera(slug: string, branchId?: string, modo: 'carta' | 'pedidos' = 'pedidos') {
     const { tenant, sucursales, sucursal } = await this.resolverSucursal(slug, branchId);
 
-    const [config, envio, zonas, productos] = await Promise.all([
+    const [config, envio, zonas, productos, versiones, versionesCategoria] = await Promise.all([
       webshopRepository.findWebSettings(sucursal.id),
       webshopRepository.findDeliverySettings(sucursal.id),
       webshopRepository.findZonas(sucursal.id),
       webshopRepository.findMenuProducts(sucursal.id),
+      webshopRepository.findImageVersions(sucursal.id),
+      webshopRepository.findCategoryImageVersions(tenant.id),
     ]);
+
+    const versionPorProducto = new Map(versiones.map((v) => [v.id, v.v]));
+    const versionPorCategoria = new Map(versionesCategoria.map((v) => [v.id, v.v]));
+
+    const urlDeImagen = (tipo: 'producto' | 'categoria', id: string, version: string) =>
+      `/webshop/publico/${encodeURIComponent(slug)}/imagen/${tipo}/${id}` +
+      `?sucursal=${encodeURIComponent(sucursal.id)}&v=${version}`;
 
     const categorias = new Map<string, { id: string; nombre: string; imagen: string | null; orden: number; productos: unknown[] }>();
     const sinCategoria: unknown[] = [];
@@ -111,7 +120,11 @@ export class WebshopService {
         nombre: p.name,
         descripcion: p.description,
         precio: aNumero(p.price),
-        imagen: p.image,
+        // Una ruta del propio backend, no la imagen: el navegador la pide
+        // aparte, en paralelo y una sola vez (después queda en su caché).
+        imagen: versionPorProducto.has(p.id)
+          ? urlDeImagen('producto', p.id, versionPorProducto.get(p.id)!)
+          : null,
         ingredientes,
         // Sólo lo que hace falta para elegir y sumar: nada de ids de tenant ni
         // de fechas internas.
@@ -123,6 +136,13 @@ export class WebshopService {
           opciones: g.options.map((o) => ({ id: o.id, nombre: o.name, precio: aNumero(o.price) })),
         })),
       };
+
+      // Una categoría puede estar activa para pedidos online y sin embargo no
+      // mostrarse en la carta física del salón (show_in_carta): en ese modo el
+      // producto directamente no se muestra, no cae en "Otros".
+      if (p.category && p.category.isActive !== false && modo === 'carta' && !p.category.showInCarta) {
+        continue;
+      }
 
       // Pausada: no se ofrece en la vidriera, pero sigue existiendo para no
       // tener que reasignar sus productos a otra categoría.
@@ -136,7 +156,9 @@ export class WebshopService {
         categorias.set(p.category.id, {
           id: p.category.id,
           nombre: p.category.name,
-          imagen: p.category.imageUrl,
+          imagen: versionPorCategoria.has(p.category.id)
+            ? urlDeImagen('categoria', p.category.id, versionPorCategoria.get(p.category.id)!)
+            : null,
           orden: p.category.displayOrder,
           productos: [producto],
         });
@@ -181,6 +203,41 @@ export class WebshopService {
       },
       zonas: haceEnvios ? zonas.map((z) => ({ id: z.id, nombre: z.name, precio: aNumero(z.price) })) : [],
       categorias: [...categorias.values()].sort((a, b) => a.orden - b.orden),
+    };
+  }
+
+  /**
+   * La foto de un producto o de una categoría, decodificada. Se guardan como
+   * data URL en base64 dentro de la propia fila; servirlas por acá en vez de
+   * embeberlas en el JSON de la carta es lo que la volvió liviana.
+   */
+  async getImagen(
+    slug: string,
+    branchId: string | undefined,
+    tipo: 'producto' | 'categoria',
+    id: string
+  ): Promise<{ redirigirA: string } | { contentType: string; contenido: Buffer }> {
+    const { sucursal } = await this.resolverSucursal(slug, branchId);
+
+    const guardada =
+      tipo === 'producto'
+        ? (await webshopRepository.findProductImage(sucursal.id, id))?.image
+        : (await webshopRepository.findCategoryImage(id))?.imageUrl;
+
+    if (!guardada) throw new AppError('Imagen no encontrada', 404);
+
+    // Si algún día las fotos pasan a un bucket, el valor guardado va a ser una
+    // URL común y no hay nada que decodificar: se redirige y listo.
+    if (/^https?:\/\//i.test(guardada)) {
+      return { redirigirA: guardada };
+    }
+
+    const match = /^data:([^;,]+);base64,(.*)$/s.exec(guardada);
+    if (!match) throw new AppError('Imagen no encontrada', 404);
+
+    return {
+      contentType: match[1]!,
+      contenido: Buffer.from(match[2]!, 'base64'),
     };
   }
 

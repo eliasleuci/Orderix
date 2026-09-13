@@ -13,6 +13,7 @@ import Toast from '../../components/Toast';
 import QRCartaModal from './components/QRCartaModal';
 import ExtrasModal from './components/ExtrasModal';
 import CategoriasModal from './components/CategoriasModal';
+import { comprimirImagen } from '../../lib/imagenes';
 
 const CatalogPage: React.FC = () => {
   const { branchId, tenantId } = useAuthStore();
@@ -59,20 +60,20 @@ const CatalogPage: React.FC = () => {
     setToast({ message, type, visible: true });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('La imagen es demasiado grande (Máximo 2MB)', 'error');
+    // El tope es sobre el archivo que elige el dueño, no sobre lo que se
+    // guarda: una foto sacada con el celular pasa los 2 MB tranquilamente y
+    // después de achicarla queda en una fracción de eso.
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('La imagen es demasiado grande (Máximo 15MB)', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditingProduct(prev => prev ? { ...prev, image_url: reader.result as string } : null);
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await comprimirImagen(file);
+    setEditingProduct(prev => prev ? { ...prev, image_url: dataUrl } : null);
   };
 
   const handleOpenModal = (product?: Product) => {
@@ -333,14 +334,17 @@ const CatalogPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div>
+                    {/* min-w-0: sin esto la celda del grid se estira hasta la
+                        opción más larga del select (un nombre de categoría
+                        largo desbordaba el modal entero). */}
+                    <div className="min-w-0">
                       <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Categoría *</label>
-                      
+
                       {!showNewCategory ? (
-                        <div className="flex gap-2">
-                          <select 
+                        <div className="flex gap-2 min-w-0">
+                          <select
                             required={!showNewCategory}
-                            className="flex-1 bg-surface-base border border-white/10 rounded-2xl h-14 px-4 text-text-primary uppercase tracking-widest text-sm font-bold focus:outline-none focus:border-primary appearance-none"
+                            className="flex-1 min-w-0 truncate bg-surface-base border border-white/10 rounded-2xl h-14 px-4 text-text-primary uppercase tracking-widest text-sm font-bold focus:outline-none focus:border-primary appearance-none"
                             value={editingProduct.category_id || ''}
                             onChange={(e) => {
                               if (e.target.value === '__NEW__') {
@@ -391,9 +395,9 @@ const CatalogPage: React.FC = () => {
                         </p>
                       )}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="text-xs font-black text-text-muted uppercase tracking-widest mb-2 block">Estado *</label>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setEditingProduct({ ...editingProduct, is_active: !editingProduct.is_active })}
                         className={`w-full h-14 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 border transition-all ${

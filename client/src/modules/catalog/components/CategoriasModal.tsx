@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, ChevronUp, ChevronDown, Image as ImageIcon, EyeOff, Eye } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Image as ImageIcon, EyeOff, Eye, Utensils, UtensilsCrossed } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { productService } from '../../../services/productService';
 import { Category } from '../../../types/domain';
@@ -7,6 +7,7 @@ import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
+import { comprimirImagen } from '../../../lib/imagenes';
 
 interface Props {
   isOpen: boolean;
@@ -14,14 +15,6 @@ interface Props {
   onCambios: () => void;
   onAviso: (mensaje: string, tipo: 'success' | 'error') => void;
 }
-
-const leerComoDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 
 /**
  * Categorías con foto y orden, para que la vidriera del pedido web se vea como
@@ -65,10 +58,10 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
   };
 
   const subirFoto = async (cat: Category, file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
-      return onAviso('La imagen es demasiado grande (máximo 2MB)', 'error');
+    if (file.size > 15 * 1024 * 1024) {
+      return onAviso('La imagen es demasiado grande (máximo 15MB)', 'error');
     }
-    const dataUrl = await leerComoDataUrl(file);
+    const dataUrl = await comprimirImagen(file);
     const { error } = await productService.updateCategory(cat.id, { image_url: dataUrl });
     if (error) return onAviso(error, 'error');
     setHuboCambios(true);
@@ -85,6 +78,13 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
 
   const alternarPausa = async (cat: Category) => {
     const { error } = await productService.updateCategory(cat.id, { is_active: !cat.is_active });
+    if (error) return onAviso(error, 'error');
+    setHuboCambios(true);
+    cargar();
+  };
+
+  const alternarVisibleEnCarta = async (cat: Category) => {
+    const { error } = await productService.updateCategory(cat.id, { show_in_carta: !cat.show_in_carta });
     if (error) return onAviso(error, 'error');
     setHuboCambios(true);
     cargar();
@@ -122,7 +122,9 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
       <div className="space-y-5">
         <p className="text-sm text-text-secondary">
           El orden de acá abajo es el mismo con el que se muestran en el pedido web.
-          Pausada no se borra, sólo se oculta.
+          Pausada no se borra, sólo se oculta. El ícono de cubiertos controla si se
+          muestra en la carta del salón (la de los QR de mesa); una categoría puede
+          quedar sólo para pedidos online sin pausarla del todo.
         </p>
 
         <div className="flex gap-3">
@@ -193,6 +195,17 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                   className="flex-1 min-w-0 bg-transparent font-black tracking-tight text-sm focus:outline-none border-b border-transparent focus:border-primary/40 py-1"
                 />
 
+                <button
+                  onClick={() => alternarVisibleEnCarta(cat)}
+                  title={
+                    cat.show_in_carta === false
+                      ? 'No se muestra en la carta del salón (sí en pedidos online). Click para mostrarla.'
+                      : 'Se muestra en la carta del salón. Click para ocultarla ahí (sigue en pedidos online).'
+                  }
+                  className="p-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors shrink-0"
+                >
+                  {cat.show_in_carta === false ? <UtensilsCrossed size={16} /> : <Utensils size={16} />}
+                </button>
                 <button
                   onClick={() => alternarPausa(cat)}
                   title={cat.is_active === false ? 'Reactivar' : 'Pausar'}

@@ -6,8 +6,12 @@ const PRODUCTO_PUBLICO = {
   name: true,
   description: true,
   price: true,
-  image: true,
-  category: { select: { id: true, name: true, imageUrl: true, displayOrder: true, isActive: true } },
+  // La imagen NO se trae acá: está guardada como data URL en base64 y pesa
+  // cientos de KB por producto. Embebida en este JSON la carta llegaba a
+  // pesar 12 MB y en un celular tardaba una eternidad en abrir. Se sirve
+  // aparte, por /imagen/:productId, y acá sólo viaja su hash para versionar
+  // la caché (md5 lo calcula Postgres: el base64 nunca sale de la base).
+  category: { select: { id: true, name: true, displayOrder: true, isActive: true, showInCarta: true } },
   // Sólo el nombre del ingrediente. Las cantidades de la receta son información
   // de costos del local y no tienen por qué salir al público.
   recipe: { select: { ingredient: { select: { name: true, is_active: true } } } },
@@ -72,6 +76,46 @@ export class WebshopRepository {
       where: { branchId, isActive: true },
       select: PRODUCTO_PUBLICO,
       orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * Un hash corto de cada imagen, para colgárselo a la URL. Cambia sola cuando
+   * el dueño sube otra foto, así la respuesta puede cachearse para siempre sin
+   * que nadie quede viendo la imagen vieja.
+   */
+  async findImageVersions(branchId: string): Promise<Array<{ id: string; v: string }>> {
+    return prisma.$queryRaw`
+      SELECT id::text AS id, substring(md5(image_url), 1, 10) AS v
+        FROM products
+       WHERE branch_id = ${branchId}::uuid
+         AND is_active = true
+         AND image_url IS NOT NULL
+    `;
+  }
+
+  /** Lo mismo para las categorías, que se guardan por local y no por sucursal. */
+  async findCategoryImageVersions(tenantId: string): Promise<Array<{ id: string; v: string }>> {
+    return prisma.$queryRaw`
+      SELECT id::text AS id, substring(md5(image_url), 1, 10) AS v
+        FROM categories
+       WHERE tenant_id = ${tenantId}::uuid
+         AND image_url IS NOT NULL
+    `;
+  }
+
+  /** La imagen de un solo producto, ya acotada a la sucursal que la pide. */
+  async findProductImage(branchId: string, productId: string) {
+    return prisma.product.findFirst({
+      where: { id: productId, branchId, isActive: true },
+      select: { image: true },
+    });
+  }
+
+  async findCategoryImage(categoryId: string) {
+    return prisma.category.findFirst({
+      where: { id: categoryId },
+      select: { imageUrl: true },
     });
   }
 
