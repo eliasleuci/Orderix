@@ -187,7 +187,14 @@ SELECT count(*) AS items_con_json_null
   FROM web_order_items
  WHERE jsonb_typeof(modifiers) = 'null';
 
--- La función quedó blindada. Esperado: false / true / true.
+-- La función quedó blindada. Esperado: false / false / true.
+--
+-- Las tres en false salvo postgres es lo correcto acá, y no un error: a
+-- diferencia de create_order_secure -que el POS llama desde el navegador con la
+-- sesión del cajero y por eso necesita authenticated-, confirmar un pedido web
+-- entra SIEMPRE por Express con el rol postgres. La 022 le revoca el permiso a
+-- authenticated a propósito: nadie con una sesión de navegador tiene por qué
+-- poder confirmar un pedido salteándose el servidor.
 SELECT
     has_function_privilege('anon',          p.oid, 'EXECUTE') AS anon_puede,
     has_function_privilege('authenticated', p.oid, 'EXECUTE') AS authenticated_puede,
