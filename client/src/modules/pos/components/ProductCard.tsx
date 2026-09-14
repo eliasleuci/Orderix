@@ -34,7 +34,12 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) 
         {/* IMAGE / ICON */}
         <div className="aspect-square bg-surface-base rounded-2xl mb-3 flex items-center justify-center overflow-hidden border-b border-border-subtle relative">
           {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+            <img
+              src={product.thumbnail_url || product.image_url}
+              alt={product.name}
+              loading="lazy"
+              className="w-full h-full object-cover transition-transform group-hover:scale-110"
+            />
           ) : (
             <Utensils className="w-10 h-10 text-text-muted" />
           )}

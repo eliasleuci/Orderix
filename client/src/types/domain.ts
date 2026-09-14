@@ -29,6 +29,9 @@ export interface Product {
   description?: string;
   price: number;
   image_url?: string;
+  /** Versión chica de image_url para grillas (Catálogo/Venta). Puede no existir
+   *  en productos cargados antes de que se empezara a generar. */
+  thumbnail_url?: string | null;
   is_active: boolean;
   categories?: Category; // Nested from Supabase
 }

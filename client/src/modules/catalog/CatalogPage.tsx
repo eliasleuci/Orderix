@@ -13,7 +13,7 @@ import Toast from '../../components/Toast';
 import QRCartaModal from './components/QRCartaModal';
 import ExtrasModal from './components/ExtrasModal';
 import CategoriasModal from './components/CategoriasModal';
-import { comprimirImagen } from '../../lib/imagenes';
+import { comprimirImagenYMiniatura } from '../../lib/imagenes';
 
 const CatalogPage: React.FC = () => {
   const { branchId, tenantId } = useAuthStore();
@@ -72,8 +72,8 @@ const CatalogPage: React.FC = () => {
       return;
     }
 
-    const dataUrl = await comprimirImagen(file);
-    setEditingProduct(prev => prev ? { ...prev, image_url: dataUrl } : null);
+    const { imagen, miniatura } = await comprimirImagenYMiniatura(file);
+    setEditingProduct(prev => prev ? { ...prev, image_url: imagen, thumbnail_url: miniatura } : null);
   };
 
   const handleOpenModal = (product?: Product) => {
@@ -260,7 +260,12 @@ const CatalogPage: React.FC = () => {
                     
                     <div className="aspect-[4/3] rounded-2xl bg-surface-base/50 mb-4 flex items-center justify-center overflow-hidden relative border border-border-subtle">
                       {p.image_url ? (
-                        <img src={p.image_url} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <img
+                          src={p.thumbnail_url || p.image_url}
+                          alt={p.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
                       ) : (
                         <ImageIcon size={48} className="text-text-muted/20" />
                       )}
@@ -473,7 +478,7 @@ const CatalogPage: React.FC = () => {
                         {editingProduct.image_url && (
                           <button 
                             type="button"
-                            onClick={() => setEditingProduct({ ...editingProduct, image_url: '' })}
+                            onClick={() => setEditingProduct({ ...editingProduct, image_url: '', thumbnail_url: '' })}
                             className="text-[10px] text-danger uppercase tracking-widest font-black text-left hover:underline"
                           >
                             Quitar Imagen
