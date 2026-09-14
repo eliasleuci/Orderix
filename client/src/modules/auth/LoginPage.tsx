@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { authService } from '../../services/authService';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
@@ -11,15 +11,29 @@ import Card from '../../components/ui/Card';
 import Toast from '../../components/Toast';
 
 const LoginPage: React.FC = () => {
+  // Si ya hay una sesión persistida (ej: F5 parado en "seleccionar sucursal"),
+  // arrancamos directo en esa vista para no mostrar el form de login ni
+  // encima un instante.
+  const initialUser = useAuthStore.getState().user;
+  const initialBranchId = useAuthStore.getState().branchId;
+  const hasPersistedSession = !!initialUser && !initialBranchId;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(hasPersistedSession);
   const [error, setError] = useState('');
-  const [view, setView] = useState<'LOGIN' | 'BRANCH_SELECTION' | 'FORGOT'>('LOGIN');
+  const [view, setView] = useState<'LOGIN' | 'BRANCH_SELECTION' | 'FORGOT'>(
+    hasPersistedSession ? 'BRANCH_SELECTION' : 'LOGIN'
+  );
   const [resetSent, setResetSent] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
-  
+
   const { user, setUser, setBranchId, setTenantId, branchId } = useAuthStore();
+
+  // Evita que el mismo usuario dispare la carga de sucursales dos veces
+  // (una vez desde handleLogin y otra desde este efecto), lo que generaba
+  // el parpadeo entre skeleton y lista tras loguearse.
+  const branchesFetchedForUserId = useRef<string | null>(null);
 
   const loadBranches = async (tid: string) => {
     setLoading(true);
@@ -29,9 +43,10 @@ const LoginPage: React.FC = () => {
     setView('BRANCH_SELECTION');
   };
 
-  // If already logged in but no branch, go straight to selection
+  // Si ya está logueado pero sin sucursal elegida, ir directo a la selección
   useEffect(() => {
-    if (user && !branchId) {
+    if (user && !branchId && branchesFetchedForUserId.current !== user.id) {
+      branchesFetchedForUserId.current = user.id;
       authService.getProfile(user.id).then(({ data: profile }) => {
         if (profile?.tenant_id) {
           loadBranches(profile.tenant_id);
@@ -89,6 +104,9 @@ const LoginPage: React.FC = () => {
       const userRole = profile.role;
       const myTenantId = profile.tenant_id;
 
+      // Marcamos el usuario como "ya resuelto" antes de setUser para que el
+      // efecto de arriba no dispare una segunda carga de sucursales en paralelo.
+      branchesFetchedForUserId.current = data.user.id;
       setUser(data.user, data.session, userRole);
 
       if (userRole === 'SUPER_ADMIN') {
