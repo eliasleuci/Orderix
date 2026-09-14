@@ -31,7 +31,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         animate={ANIMATIONS.scaleIn.animate}
         transition={ANIMATIONS.scaleIn.transition}
         className={cn(
-          'rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-all duration-300',
+          'rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-colors duration-300',
           variantStyles[variant],
           paddingStyles[padding],
           className

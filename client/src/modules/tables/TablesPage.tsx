@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { tableService, Table, TableStatus, Mozo, ConsumoMesa } from '../../services/tableService';
 import MozosModal from './components/MozosModal';
@@ -17,6 +17,8 @@ import Toast from '../../components/Toast';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { useNavigate } from 'react-router-dom';
+
+const EMPTY_CONSUMO: ConsumoMesa = { total: 0, pedidos: [] };
 
 // --- TIMER HOOK ---
 const useTableTimer = (openedAt: string | null | undefined) => {
@@ -47,6 +49,21 @@ const useTableTimer = (openedAt: string | null | undefined) => {
   return elapsed;
 };
 
+// El tick de cada mesa ocupada vive acá aislado: si el timer estuviera en
+// TableCard, cada segundo re-renderizaría la card entera (y el motion.div
+// con `layout` de todas las demás), y con varias mesas abiertas eso satura
+// el hilo principal y se nota al navegar (ej. abrir "Más" en el celular).
+const ElapsedTimer: React.FC<{ openedAt: string | null | undefined }> = ({ openedAt }) => {
+  const elapsed = useTableTimer(openedAt);
+  if (!elapsed) return null;
+  return (
+    <div className="flex items-center gap-1.5 bg-danger/10 border border-danger/20 px-3 py-1.5 rounded-2xl">
+      <Clock size={12} className="text-danger" />
+      <span className="text-xs font-black text-danger tabular-nums">{elapsed}</span>
+    </div>
+  );
+};
+
 // --- TABLE CARD ---
 const TableCard: React.FC<{
   table: Table;
@@ -62,8 +79,7 @@ const TableCard: React.FC<{
   onAsignarMozo: (t: Table) => void;
   mozos: Mozo[];
   consumo: ConsumoMesa;
-}> = ({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, onVerConsumo, onAsignarMozo, mozos, consumo }) => {
-  const elapsed = useTableTimer(table.opened_at);
+}> = React.memo(({ table, tables, onOccupy, onReserve, onEdit, onDelete, onAddOrder, onLinkTable, onPayBill, onVerConsumo, onAsignarMozo, mozos, consumo }) => {
   const [showActions, setShowActions] = useState(false);
 
   // Consider table implicitly occupied if it has a parent
@@ -130,11 +146,8 @@ const TableCard: React.FC<{
             )}
           </div>
 
-          {status === 'OCCUPIED' && elapsed && !table.parent_table_id && (
-            <div className="flex items-center gap-1.5 bg-danger/10 border border-danger/20 px-3 py-1.5 rounded-2xl">
-              <Clock size={12} className="text-danger" />
-              <span className="text-xs font-black text-danger tabular-nums">{elapsed}</span>
-            </div>
+          {status === 'OCCUPIED' && !table.parent_table_id && (
+            <ElapsedTimer openedAt={table.opened_at} />
           )}
         </div>
 
@@ -281,7 +294,8 @@ const TableCard: React.FC<{
       </Card>
     </motion.div>
   );
-};
+});
+TableCard.displayName = 'TableCard';
 
 // --- MODAL: OCUPAR / RESERVAR / EDITAR ---
 interface ActionModalProps {
@@ -670,20 +684,31 @@ const TablesPage: React.FC = () => {
   useEffect(() => { loadMozos(); }, [loadMozos]);
 
   // Realtime subscription
+  const reloadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!branchId) return;
+    // En un local activo, cada ítem agregado a un pedido dispara un evento de
+    // "orders" por separado: sin agrupar esas ráfagas, cada una recargaba
+    // (dos consultas, una con join) al toque, saturando el hilo principal.
+    const reloadDebounced = () => {
+      if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
+      reloadTimeoutRef.current = setTimeout(loadTables, 400);
+    };
     const channel = supabase
       .channel(`tables-${branchId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` },
-        () => loadTables()
+        reloadDebounced
       )
       // También los pedidos: sin esto, lo que lleva consumido una mesa quedaba
       // congelado hasta que algo tocara la fila de la mesa.
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` },
-        () => loadTables()
+        reloadDebounced
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
+      supabase.removeChannel(channel);
+    };
   }, [branchId, loadTables]);
 
   const handleConfirm = async (data: Partial<Table>) => {
@@ -721,18 +746,30 @@ const TablesPage: React.FC = () => {
   };
 
   /**
-   * Lo que lleva consumido una mesa. Si tiene mesas unidas, suma las de ellas:
-   * la cuenta es una sola y así se cobra.
+   * Lo que lleva consumido cada mesa. Si tiene mesas unidas, suma las de
+   * ellas: la cuenta es una sola y así se cobra.
+   * Precalculado una sola vez por mesa (en vez de una función invocada en
+   * cada render del grid) para que TableCard, memoizado, no vuelva a
+   * renderizar todas las cards cuando cambia algo que no afecta su consumo.
    */
-  const consumoDeMesa = useCallback((mesa: Table): ConsumoMesa => {
-    const hijas = tables.filter((t) => t.parent_table_id === mesa.id);
-    const propias = [consumos[mesa.id], ...hijas.map((h) => consumos[h.id])].filter(Boolean) as ConsumoMesa[];
-
-    return {
-      total: propias.reduce((a, c) => a + c.total, 0),
-      pedidos: propias.flatMap((c) => c.pedidos),
-    };
+  const consumoPorMesa = useMemo(() => {
+    const vacio: ConsumoMesa = { total: 0, pedidos: [] };
+    const map: Record<string, ConsumoMesa> = {};
+    for (const mesa of tables) {
+      const hijas = tables.filter((t) => t.parent_table_id === mesa.id);
+      const propias = [consumos[mesa.id], ...hijas.map((h) => consumos[h.id])].filter(Boolean) as ConsumoMesa[];
+      map[mesa.id] = propias.length === 0 ? vacio : {
+        total: propias.reduce((a, c) => a + c.total, 0),
+        pedidos: propias.flatMap((c) => c.pedidos),
+      };
+    }
+    return map;
   }, [tables, consumos]);
+
+  const consumoDeMesa = useCallback(
+    (mesa: Table): ConsumoMesa => consumoPorMesa[mesa.id] || { total: 0, pedidos: [] },
+    [consumoPorMesa]
+  );
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta mesa?')) return;
@@ -862,7 +899,7 @@ const TablesPage: React.FC = () => {
                 onVerConsumo={setConsumoAbierto}
                 onAsignarMozo={setAsignandoMozo}
                 mozos={mozos}
-                consumo={consumoDeMesa(table as Table)}
+                consumo={consumoPorMesa[table.id] || EMPTY_CONSUMO}
               />
             ))}
           </AnimatePresence>

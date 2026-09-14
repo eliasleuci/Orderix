@@ -315,25 +315,25 @@ const DashboardPage: React.FC = () => {
             Limpiar Pedidos
           </Button>
 
-          <div className="flex items-center gap-3 bg-surface-elevated/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5">
-          <Button 
-            variant="ghost" 
-            size="md" 
+          <div className="flex items-center gap-3 bg-surface-elevated/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5 overflow-x-auto max-w-full">
+          <Button
+            variant="ghost"
+            size="md"
             onClick={() => setDateFilter('hoy')}
-            className={dateFilter === 'hoy' ? "bg-white/5 text-text-primary" : "text-text-muted hover:text-text-secondary"}
+            className={cn('shrink-0 whitespace-nowrap', dateFilter === 'hoy' ? "bg-white/5 text-text-primary" : "text-text-muted hover:text-text-secondary")}
           >
             Hoy
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="md"
             onClick={() => setDateFilter('ayer')}
-            className={dateFilter === 'ayer' ? "bg-white/5 text-text-primary" : "text-text-muted hover:text-text-secondary"}
+            className={cn('shrink-0 whitespace-nowrap', dateFilter === 'ayer' ? "bg-white/5 text-text-primary" : "text-text-muted hover:text-text-secondary")}
           >
             Ayer
           </Button>
-          <div className="w-px h-6 bg-white/10 mx-2" />
-          <div className="relative flex items-center">
+          <div className="w-px h-6 bg-white/10 mx-2 shrink-0" />
+          <div className="relative flex items-center shrink-0">
             <input
               type="date"
               id="customDatePicker"
@@ -357,7 +357,7 @@ const DashboardPage: React.FC = () => {
                 }
               }}
               leftIcon={<Calendar size={18} />}
-              className={customDate && dateFilter === 'personalizado' ? 'border border-primary z-20' : 'z-20'}
+              className={cn('shrink-0 whitespace-nowrap z-20', customDate && dateFilter === 'personalizado' && 'border border-primary')}
             >
               {dateFilter === 'personalizado' && customDate 
                 ? customDate.split('-').reverse().join('/') 
@@ -399,14 +399,14 @@ const DashboardPage: React.FC = () => {
 
               <div className="space-y-4">
                 {stats.recentOrders.map((order: Order) => (
-                  <div key={order.id} className="group flex flex-col p-5 rounded-[2rem] bg-surface-base/50 border border-white/5 hover:border-primary/30 transition-all cursor-default">
+                  <div key={order.id} className="group flex flex-col p-4 sm:p-5 rounded-[2rem] bg-surface-base/50 border border-white/5 hover:border-primary/30 transition-all cursor-default overflow-hidden">
                     {/* En el celular el nombre del cliente empujaba todo hacia
                         afuera y el tachito quedaba cortado contra el borde. El
                         bloque de la izquierda ahora se encoge y recorta el
                         nombre; el de la derecha nunca se achica. */}
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-                        <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xs text-text-muted border border-white/5 group-hover:text-primary transition-colors shrink-0">
+                      <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+                        <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xs text-text-muted border border-white/5 group-hover:text-primary transition-colors shrink-0">
                           #{(order.id || '').substring(0, 4).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -419,7 +419,7 @@ const DashboardPage: React.FC = () => {
                             </span>
                             <div className="w-1 h-1 bg-white/10 rounded-full" />
                             <div className="flex gap-2">
-                              {order.status === 'READY' ? <Badge variant="success">Listo</Badge> : 
+                              {order.status === 'READY' ? <Badge variant="success">Listo</Badge> :
                                order.status === 'PREPARING' ? <Badge variant="warning">En Cocina</Badge> :
                                order.status === 'DELIVERED' ? <Badge variant="neutral">Entregado</Badge> :
                                <Badge variant="neutral">Pendiente</Badge>}
@@ -427,20 +427,21 @@ const DashboardPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-4 text-right shrink-0">
+                      <div className="flex items-center gap-1.5 sm:gap-4 text-right shrink-0">
                         <div className="space-y-1">
-                          <div className="text-xl font-black text-text-primary tracking-tighter">${order.total}</div>
+                          <div className="text-base sm:text-xl font-black text-text-primary tracking-tighter">${order.total}</div>
                           <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest leading-none">{order.payment_method || 'Efectivo'}</div>
                         </div>
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setOrderToDelete(order);
                             setIsConfirmDeleteSingleOpen(true);
                           }}
-                          className="p-3 rounded-xl bg-danger/5 text-danger/40 hover:text-danger hover:bg-danger/10 transition-all border border-transparent hover:border-danger/20"
+                          className="p-2.5 sm:p-3 rounded-xl bg-danger/5 text-danger/40 hover:text-danger hover:bg-danger/10 transition-all border border-transparent hover:border-danger/20 shrink-0"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} className="sm:hidden" />
+                          <Trash2 size={18} className="hidden sm:block" />
                         </button>
                       </div>
                     </div>
