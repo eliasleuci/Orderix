@@ -587,7 +587,7 @@ const StockPage: React.FC = () => {
       <AnimatePresence>
         {isEditModalOpen && editingIngredient && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60" onClick={() => setIsEditModalOpen(false)} />
             
             <motion.div {...ANIMATIONS.scaleIn} className="bg-surface-elevated w-full max-w-md rounded-[2rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden">
               <header className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
@@ -652,7 +652,7 @@ const StockPage: React.FC = () => {
       <AnimatePresence>
         {isCreateModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCreateModalOpen(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60" onClick={() => setIsCreateModalOpen(false)} />
             
             <motion.div {...ANIMATIONS.scaleIn} className="bg-surface-elevated w-full max-w-md rounded-[2rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden">
               <header className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">

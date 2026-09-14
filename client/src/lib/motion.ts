@@ -1,43 +1,44 @@
 import { Target, TargetAndTransition, Transition } from "framer-motion";
 
 /**
- * Centralized Framer Motion Presets
- * All durations < 200ms as per production requirements.
+ * Presets de animación, centralizados.
+ *
+ * Las animaciones de entrada y salida están desactivadas a propósito: en los
+ * equipos donde corre esto (celulares y terminales del local) cada apertura de
+ * ventana se sentía trabada, y el efecto era puramente estético. Ahora todo
+ * aparece de una. Se mantiene la forma de los presets para no tener que tocar
+ * las decenas de pantallas que los usan: siguen siendo válidos, pero no animan.
+ *
+ * Si alguna vez se quieren devolver, alcanza con reponer las duraciones acá:
+ * el resto de la app no necesita cambios.
  */
 
+const INSTANTANEO = { duration: 0 } as Transition;
+
 export const TRANSITIONS = {
-  snappy: {
-    type: "spring",
-    stiffness: 400,
-    damping: 30,
-  } as Transition,
-  fade: {
-    duration: 0.15,
-    ease: "easeOut",
-  } as Transition,
-  spring: {
-    type: "spring",
-    stiffness: 300,
-    damping: 20,
-  } as Transition
+  snappy: INSTANTANEO,
+  fade: INSTANTANEO,
+  spring: INSTANTANEO,
 };
 
 export const ANIMATIONS = {
+  // El feedback al tocar sí se mantiene: es lo que confirma que el botón
+  // recibió el toque, y no tiene nada que ver con la demora al abrir ventanas.
   tap: { scale: 0.98 } as Target,
   hover: { scale: 1.02 } as Target,
   fadeIn: {
-    initial: { opacity: 0 } as TargetAndTransition,
-    animate: { opacity: 1 } as TargetAndTransition,
-    transition: TRANSITIONS.fade,
+    initial: false,
+    animate: {} as TargetAndTransition,
+    transition: INSTANTANEO,
   },
   fadeInUp: {
-    initial: { opacity: 0, y: 10 } as TargetAndTransition,
-    animate: { opacity: 1, y: 0 } as TargetAndTransition,
-    transition: TRANSITIONS.snappy,
+    initial: false,
+    animate: {} as TargetAndTransition,
+    transition: INSTANTANEO,
   },
   scaleIn: {
-    initial: { opacity: 0, scale: 0.95 } as TargetAndTransition,
-    animate: { opacity: 1, scale: 1 } as TargetAndTransition,
-    transition: TRANSITIONS.snappy,
+    initial: false,
+    animate: {} as TargetAndTransition,
+    transition: INSTANTANEO,
   }
 };

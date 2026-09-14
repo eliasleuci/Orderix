@@ -117,7 +117,7 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={paso === 'enviado' ? undefined : onCerrar}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70"
           />
 
           <motion.div

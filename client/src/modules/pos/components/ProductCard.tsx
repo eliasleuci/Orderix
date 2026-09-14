@@ -28,7 +28,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) 
         padding="none"
         className={cn(
           "w-full border-border-subtle shadow-xl hover:shadow-primary/10 hover:border-primary/30 transition-all",
-          "bg-surface-elevated/80 backdrop-blur-md"
+          "bg-surface-elevated/80"
         )}
       >
         {/* IMAGE / ICON */}

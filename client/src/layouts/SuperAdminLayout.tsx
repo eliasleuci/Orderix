@@ -27,7 +27,7 @@ const SuperAdminLayout: React.FC = () => {
       <motion.aside 
         initial={{ x: -300 }}
         animate={{ x: 0 }}
-        className="w-72 bg-white/5 border-r border-white/10 flex flex-col backdrop-blur-2xl"
+        className="w-72 bg-white/5 border-r border-white/10 flex flex-col"
       >
         <div className="p-8 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">

@@ -1,5 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
@@ -203,9 +204,15 @@ const AppContent = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    // duration: 0 es la transición por defecto de toda la app: cualquier
+    // animación de entrada/salida que no fije la suya propia ocurre al
+    // instante. Se quitaron a pedido, porque eran sólo estéticas y en los
+    // equipos del local hacían sentir lenta cada apertura de ventana.
+    <MotionConfig transition={{ duration: 0 }}>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </MotionConfig>
   );
 }
 

@@ -315,7 +315,7 @@ const DashboardPage: React.FC = () => {
             Limpiar Pedidos
           </Button>
 
-          <div className="flex items-center gap-3 bg-surface-elevated/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/5 overflow-x-auto max-w-full">
+          <div className="flex items-center gap-3 bg-surface-elevated/50 p-1.5 rounded-2xl border border-white/5 overflow-x-auto max-w-full">
           <Button
             variant="ghost"
             size="md"

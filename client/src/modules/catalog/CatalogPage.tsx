@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { productService } from '../../services/productService';
 import { Product, Category } from '../../types/domain';
-import { BookOpen, Plus, Search, Edit3, Trash2, Image as ImageIcon, CheckCircle, XCircle, Tag, QrCode, SlidersHorizontal } from 'lucide-react';
+import { BookOpen, Plus, Search, Image as ImageIcon, CheckCircle, XCircle, Tag, QrCode, SlidersHorizontal } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
 import Toast from '../../components/Toast';
 import QRCartaModal from './components/QRCartaModal';
 import ExtrasModal from './components/ExtrasModal';
 import CategoriasModal from './components/CategoriasModal';
+import ProductGrid from './components/ProductGrid';
 import { comprimirImagenYMiniatura } from '../../lib/imagenes';
 
 const CatalogPage: React.FC = () => {
@@ -56,9 +55,9 @@ const CatalogPage: React.FC = () => {
     fetchData();
   }, [branchId]);
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type, visible: true });
-  };
+  }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,21 +75,21 @@ const CatalogPage: React.FC = () => {
     setEditingProduct(prev => prev ? { ...prev, image_url: imagen, thumbnail_url: miniatura } : null);
   };
 
-  const handleOpenModal = (product?: Product) => {
+  const handleOpenModal = useCallback((product?: Product) => {
     if (product) {
       setEditingProduct({ ...product });
     } else {
-      setEditingProduct({ 
+      setEditingProduct({
         tenant_id: tenantId || '',
-        branch_id: branchId || '', 
-        is_active: true, 
-        price: 0 
+        branch_id: branchId || '',
+        is_active: true,
+        price: 0
       });
     }
     setShowNewCategory(false);
     setNewCategoryName('');
     setIsModalOpen(true);
-  };
+  }, [tenantId, branchId]);
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -142,9 +141,9 @@ const CatalogPage: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (id: string) => {
+  const handleDeleteProduct = useCallback(async (id: string) => {
     if (!confirm('¿Estás seguro de eliminar este producto de forma permanente?')) return;
-    
+
     const { error } = await productService.deleteProduct(id);
     if (error) {
       showToast(error, 'error');
@@ -152,7 +151,7 @@ const CatalogPage: React.FC = () => {
       setProducts(prev => prev.filter(p => p.id !== id));
       showToast('Producto eliminado.', 'success');
     }
-  };
+  }, [showToast]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -253,59 +252,7 @@ const CatalogPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pr-2 scroll-smooth pb-12">
-            <AnimatePresence mode="popLayout">
-              {filteredProducts.map((p) => (
-                <motion.div key={p.id} layout {...ANIMATIONS.scaleIn}>
-                  <Card variant="glass" padding="normal" className={`relative flex flex-col border ${p.is_active ? 'border-primary/10 hover:border-primary/30' : 'border-danger/20 opacity-70'} transition-all duration-300 group shadow-sm hover:shadow-xl`}>
-                    
-                    <div className="aspect-[4/3] rounded-2xl bg-surface-base/50 mb-4 flex items-center justify-center overflow-hidden relative border border-border-subtle">
-                      {p.image_url ? (
-                        <img
-                          src={p.thumbnail_url || p.image_url}
-                          alt={p.name}
-                          loading="lazy"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <ImageIcon size={48} className="text-text-muted/20" />
-                      )}
-                      <div className="absolute top-4 left-4">
-                        <Badge variant={p.is_active ? "success" : "danger"}>
-                          {p.is_active ? "Activo" : "Pausado"}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 min-h-[80px]">
-                      <h4 className="font-black text-xl tracking-tight uppercase leading-tight mb-2 text-text-primary">{p.name}</h4>
-                      <p className="text-text-muted text-xs line-clamp-2 font-medium">
-                        {p.description || "Sin descripción establecida."}
-                      </p>
-                    </div>
-
-                    <div className="flex items-end justify-between mt-6">
-                      <span className="text-2xl font-black text-primary tracking-tighter">${p.price}</span>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
-                        <button 
-                          onClick={() => handleOpenModal(p)}
-                          className="w-10 h-10 bg-primary/10 hover:bg-primary/20 rounded-xl flex items-center justify-center text-primary transition-colors"
-                          title="Editar"
-                        >
-                          <Edit3 size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteProduct(p.id)}
-                          className="w-10 h-10 bg-danger/10 hover:bg-danger/20 rounded-xl flex items-center justify-center text-danger transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            <ProductGrid products={filteredProducts} onEdit={handleOpenModal} onDelete={handleDeleteProduct} />
 
             {filteredProducts.length === 0 && (
               <div className="col-span-full py-20 flex flex-col items-center justify-center text-text-muted opacity-30">
@@ -321,7 +268,7 @@ const CatalogPage: React.FC = () => {
       <AnimatePresence>
         {isModalOpen && editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60" onClick={() => setIsModalOpen(false)} />
             
             <motion.div {...ANIMATIONS.scaleIn} className="bg-surface-elevated w-full max-w-2xl rounded-[2.5rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
               <header className="p-5 lg:p-8 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">

@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { ANIMATIONS } from '../../lib/motion';
 
 interface CardProps extends HTMLMotionProps<'div'> {
   variant?: 'solid' | 'glass';
@@ -15,7 +14,14 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     
     const variantStyles = {
       solid: 'bg-surface-elevated border-border-subtle',
-      glass: 'bg-surface-glass backdrop-blur-xl border-border-subtle glass',
+      // Sin backdrop-blur a propósito. Detrás de estas tarjetas hay un color
+      // plano (--color-surface-base), así que desenfocarlo no cambia un pixel,
+      // pero obliga al navegador a recomponer una capa de desenfoque por
+      // tarjeta en cada frame. Con una grilla de productos son decenas de
+      // capas, y era lo que trababa las animaciones en toda la app (medido:
+      // 45fps con blur contra 60fps sin blur al abrir un modal sobre la
+      // grilla). El fondo translúcido se mantiene: la apariencia no cambia.
+      glass: 'bg-surface-glass border-border-subtle',
     };
 
     const paddingStyles = {
@@ -25,11 +31,12 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     };
 
     return (
+      // Sin animación de entrada: una pantalla como Catálogo o Venta monta
+      // decenas de Cards juntas, y animarlas todas era lo que hacía que abrir
+      // cualquier cosa se sintiera lento. Aparecen directamente.
       <motion.div
         ref={ref}
-        initial={ANIMATIONS.scaleIn.initial}
-        animate={ANIMATIONS.scaleIn.animate}
-        transition={ANIMATIONS.scaleIn.transition}
+        initial={false}
         className={cn(
           'rounded-[2.5rem] border shadow-2xl overflow-hidden flex flex-col transition-colors duration-300',
           variantStyles[variant],

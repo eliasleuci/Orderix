@@ -112,7 +112,7 @@ const TableCard: React.FC<{
   }[status];
 
   return (
-    <motion.div layout {...ANIMATIONS.scaleIn} exit={{ opacity: 0, scale: 0.85 }}>
+    <motion.div>
       <Card
         variant="solid"
         padding="none"
@@ -327,7 +327,7 @@ const ActionModal: React.FC<ActionModalProps> = ({ isOpen, mode, table, mozos, o
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60"
         onClick={onClose}
       />
       <motion.div
@@ -479,7 +479,7 @@ const PayBillModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/60" onClick={onClose} />
       <motion.div {...ANIMATIONS.scaleIn} className="bg-surface-elevated w-full max-w-md rounded-[2.5rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
         <header className="p-6 border-b border-white/5 flex items-center justify-between shrink-0 bg-success/10">
           <h2 className="text-xl font-black uppercase tracking-tighter text-success flex items-center gap-2">
@@ -588,7 +588,7 @@ const LinkModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/60" onClick={onClose} />
       <motion.div {...ANIMATIONS.scaleIn} className="bg-surface-elevated w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-2xl relative z-10 overflow-hidden">
         <header className="p-6 border-b border-white/5 flex items-center justify-between">
           <h2 className="text-xl font-black uppercase tracking-tighter">Vincular Mesa</h2>
@@ -914,7 +914,7 @@ const TablesPage: React.FC = () => {
           siempre gane. */}
       {tables.length > 0 && (
         <footer className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-40">
-          <div className="bg-surface-elevated shadow-2xl px-6 py-3 rounded-full border border-white/5 backdrop-blur-md flex items-center gap-6">
+          <div className="bg-surface-elevated shadow-2xl px-6 py-3 rounded-full border border-white/5 flex items-center gap-6">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success" />
               <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">{counts.free} Libres</span>

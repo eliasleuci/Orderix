@@ -189,7 +189,7 @@ const KitchenPage: React.FC = () => {
               </button>
             </div>
           )}
-          <div className="flex items-center gap-4 bg-surface-elevated/50 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/5 shadow-xl">
+          <div className="flex items-center gap-4 bg-surface-elevated/50 px-6 py-4 rounded-3xl border border-white/5 shadow-xl">
             <div className="flex items-center gap-3">
               <div className={`w-2.5 h-2.5 rounded-full animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)] ${isConnected ? 'bg-success' : 'bg-warning'}`} />
               <span className="text-xs font-black text-text-primary uppercase tracking-widest">
@@ -245,7 +245,7 @@ const KitchenPage: React.FC = () => {
       {/* FOOTER STATS SLIDE-IN (OPCIONAL) */}
       {/* En celular se levanta para no quedar debajo de la barra de navegación. */}
       <footer className="fixed bottom-[88px] lg:bottom-8 left-1/2 -translate-x-1/2 z-40">
-        <div className="bg-surface-elevated shadow-2xl px-6 py-3 rounded-full border border-white/5 backdrop-blur-md flex items-center gap-6">
+        <div className="bg-surface-elevated shadow-2xl px-6 py-3 rounded-full border border-white/5 flex items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black text-text-muted uppercase tracking-widest leading-none">Activos:</span>
             <span className="text-lg font-black text-text-primary leading-none">{activeOrders.length}</span>

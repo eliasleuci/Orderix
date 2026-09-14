@@ -62,7 +62,7 @@ const MobileNav: React.FC = () => {
   return (
     <>
       <nav
-        className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-surface-base/95 backdrop-blur-lg border-t border-border-subtle"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-surface-base/95 border-t border-border-subtle"
         // Deja libre la barra de gestos del teléfono para que no tape los botones.
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >

@@ -191,7 +191,10 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, onClose, on
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          // Sin blur: animarlo sobre la grilla de productos (llena de tarjetas
+          // "glass", cada una con su propio blur) es lo que hacía sentir
+          // tildada la apertura de este modal.
+          className="absolute inset-0 bg-black/60"
           onClick={onClose}
         />
 

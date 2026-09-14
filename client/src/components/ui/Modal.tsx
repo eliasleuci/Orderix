@@ -32,26 +32,22 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* BACKDROP */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={false}
             onClick={onClose}
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            // Sin blur: animar un backdrop-filter de pantalla completa sobre
+            // paneles "glass" (con su propio blur) es de lo más caro que puede
+            // pintar un navegador por frame, y es lo que hacía que abrir
+            // cualquier modal se sintiera tildado. El oscurecido solo alcanza
+            // para marcar que hay un modal encima.
+            className="absolute inset-0 bg-slate-950/80"
           />
 
           {/* CONTENT */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={false}
             className={cn("w-full relative", maxWidthClasses[maxWidth], className)}
           >
-            {/* initial={false} apaga la animación de entrada propia de Card:
-                si no, la tarjeta hacía su scaleIn al mismo tiempo que este
-                contenedor hacía el suyo, con curvas distintas, y el modal
-                parecía parpadear antes de asentarse. */}
-            <Card initial={false} variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl w-full">
+            <Card variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl w-full">
               <header className="flex items-center justify-between mb-6 pb-4 border-b border-white/5 shrink-0">
                 <h2 className="text-2xl font-black uppercase tracking-tighter text-text-primary leading-none">
                   {title}

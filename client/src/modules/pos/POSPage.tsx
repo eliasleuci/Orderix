@@ -554,7 +554,7 @@ const POSPage: React.FC = () => {
           "bg-surface-elevated shadow-[-20px_0_100px_rgba(0,0,0,0.5)] z-[70] flex flex-col border-l border-white/5"
         )}
       >
-        <div className="relative p-6 pt-8 lg:pt-6 border-b border-white/5 flex items-center justify-between bg-surface-elevated/50 backdrop-blur-md sticky top-0 z-30">
+        <div className="relative p-6 pt-8 lg:pt-6 border-b border-white/5 flex items-center justify-between bg-surface-elevated/50 sticky top-0 z-30">
           <button
             onClick={() => setCarritoAbierto(false)}
             className="lg:hidden absolute top-2 left-1/2 -translate-x-1/2 p-1.5 text-text-muted"
