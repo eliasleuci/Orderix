@@ -14,6 +14,7 @@ export interface Category {
   id: string;
   name: string;
   image_url?: string | null;
+  thumbnail_url?: string | null;
   display_order?: number;
   is_active?: boolean;
   /** Activa igual, pero no se muestra en la carta física del salón (sí en pedidos online). */

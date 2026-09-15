@@ -7,7 +7,7 @@ import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
-import { comprimirImagen } from '../../../lib/imagenes';
+import { comprimirImagenYMiniatura } from '../../../lib/imagenes';
 
 interface Props {
   isOpen: boolean;
@@ -61,8 +61,8 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
     if (file.size > 15 * 1024 * 1024) {
       return onAviso('La imagen es demasiado grande (máximo 15MB)', 'error');
     }
-    const dataUrl = await comprimirImagen(file);
-    const { error } = await productService.updateCategory(cat.id, { image_url: dataUrl });
+    const { imagen, miniatura } = await comprimirImagenYMiniatura(file);
+    const { error } = await productService.updateCategory(cat.id, { image_url: imagen, thumbnail_url: miniatura });
     if (error) return onAviso(error, 'error');
     setHuboCambios(true);
     cargar();
@@ -187,7 +187,7 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                 >
                   {cat.image_url ? (
                     <>
-                      <img src={cat.image_url} alt="" className="w-full h-full object-cover" />
+                      <img src={cat.thumbnail_url || cat.image_url} alt="" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <ImagePlus size={16} className="text-white" />
                       </div>

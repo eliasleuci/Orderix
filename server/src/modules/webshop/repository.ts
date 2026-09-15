@@ -104,19 +104,35 @@ export class WebshopRepository {
     `;
   }
 
-  /** La imagen de un solo producto, ya acotada a la sucursal que la pide. */
+  /**
+   * La imagen de un solo producto, ya acotada a la sucursal que la pide.
+   * Prioriza la miniatura de 300px sobre la original (hasta 1400px): acá se
+   * la muestra siempre chica (80x80), así que pedirla completa era puro peso
+   * de más en celulares. Se cae a la original si el producto todavía no
+   * tiene miniatura generada. thumbnail_url no está en el schema de Prisma
+   * (se escribe directo desde el cliente vía Supabase), de ahí el raw query.
+   */
   async findProductImage(branchId: string, productId: string) {
-    return prisma.product.findFirst({
-      where: { id: productId, branchId, isActive: true },
-      select: { image: true },
-    });
+    const filas = await prisma.$queryRaw<Array<{ image: string | null }>>`
+      SELECT COALESCE(thumbnail_url, image_url) AS image
+        FROM products
+       WHERE id = ${productId}::uuid
+         AND branch_id = ${branchId}::uuid
+         AND is_active = true
+       LIMIT 1
+    `;
+    return filas[0] ?? null;
   }
 
+  /** Igual que findProductImage: prioriza la miniatura sobre la foto completa. */
   async findCategoryImage(categoryId: string) {
-    return prisma.category.findFirst({
-      where: { id: categoryId },
-      select: { imageUrl: true },
-    });
+    const filas = await prisma.$queryRaw<Array<{ imageUrl: string | null }>>`
+      SELECT COALESCE(thumbnail_url, image_url) AS "imageUrl"
+        FROM categories
+       WHERE id = ${categoryId}::uuid
+       LIMIT 1
+    `;
+    return filas[0] ?? null;
   }
 
   /**
