@@ -18,6 +18,7 @@
     "preelectron:build": "tsc -p electron/tsconfig.json && node -e \"const fs=require('fs');fs.renameSync('dist-electron/main.js','dist-electron/main.cjs');fs.renameSync('dist-electron/preload.js','dist-electron/preload.cjs');\""
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.8.1",
     "clsx": "^2.1.1",

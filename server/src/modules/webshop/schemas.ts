@@ -26,6 +26,10 @@ export const crearPedidoSchema = z.object({
     customerName: z.string().trim().min(2, 'Poné tu nombre').max(80),
     customerPhone: telefono,
     customerAddress: z.string().trim().max(300).optional().nullable(),
+    // El pin del mapa es opcional a propósito: el cliente puede no dar permiso
+    // de ubicación y seguir pidiendo sólo con la dirección escrita.
+    customerLat: z.number().min(-90).max(90).optional().nullable(),
+    customerLng: z.number().min(-180).max(180).optional().nullable(),
     orderType: z.enum(['DELIVERY', 'TAKEAWAY']),
     paymentMethod: z.enum(['CASH', 'TRANSFER']),
     deliveryZoneId: uuid('Zona de envío inválida').optional().nullable(),

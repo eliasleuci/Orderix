@@ -21,6 +21,8 @@ export interface PedidoEntrante {
   customerName: string;
   customerPhone: string;
   customerAddress?: string | null;
+  customerLat?: number | null;
+  customerLng?: number | null;
   orderType: 'DELIVERY' | 'TAKEAWAY';
   paymentMethod: 'CASH' | 'TRANSFER';
   deliveryZoneId?: string | null;
@@ -35,6 +37,7 @@ const serializarPedido = (p: any) => ({
   cliente: p.customerName,
   telefono: p.customerPhone,
   direccion: p.customerAddress,
+  ubicacion: p.customerLat != null && p.customerLng != null ? { lat: p.customerLat, lng: p.customerLng } : null,
   tipo: p.orderType,
   formaDePago: p.paymentMethod,
   zona: p.deliveryZone?.name ?? null,
@@ -361,6 +364,8 @@ export class WebshopService {
           customerName: entrada.customerName.trim(),
           customerPhone: entrada.customerPhone,
           customerAddress: entrada.customerAddress?.trim() || null,
+          customerLat: entrada.customerLat ?? null,
+          customerLng: entrada.customerLng ?? null,
           orderType: entrada.orderType,
           paymentMethod: entrada.paymentMethod,
           notes: entrada.notes?.trim() || null,

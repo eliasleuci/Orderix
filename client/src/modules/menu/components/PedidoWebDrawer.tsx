@@ -9,6 +9,7 @@ import {
   Vidriera,
   PedidoWeb,
 } from '../../../services/webshopService';
+import MapaDireccion from './MapaDireccion';
 
 interface Props {
   abierto: boolean;
@@ -36,6 +37,7 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
     config.permiteEnvio ? 'DELIVERY' : 'TAKEAWAY'
   );
   const [direccion, setDireccion] = useState('');
+  const [coordenadas, setCoordenadas] = useState<{ lat: number; lng: number } | null>(null);
   const [referencia, setReferencia] = useState('');
   const [zonaId, setZonaId] = useState('');
   const [pago, setPago] = useState<'CASH' | 'TRANSFER'>(config.aceptaEfectivo ? 'CASH' : 'TRANSFER');
@@ -70,6 +72,8 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
       customerAddress: tipo === 'DELIVERY'
         ? `${direccion.trim()}${referencia.trim() ? ` (${referencia.trim()})` : ''}`
         : null,
+      customerLat: tipo === 'DELIVERY' ? coordenadas?.lat ?? null : null,
+      customerLng: tipo === 'DELIVERY' ? coordenadas?.lng ?? null : null,
       orderType: tipo,
       paymentMethod: pago,
       deliveryZoneId: tipo === 'DELIVERY' ? zonaId : null,
@@ -233,11 +237,11 @@ const PedidoWebDrawer: React.FC<Props> = ({ abierto, onCerrar, vidriera, slug })
 
                   {tipo === 'DELIVERY' && (
                     <>
-                      <input
-                        className={campo}
-                        placeholder="Calle y número"
-                        value={direccion}
-                        onChange={(e) => setDireccion(e.target.value)}
+                      <MapaDireccion
+                        direccion={direccion}
+                        onDireccionChange={setDireccion}
+                        coordenadas={coordenadas}
+                        onCoordenadasChange={setCoordenadas}
                       />
                       <select value={zonaId} onChange={(e) => setZonaId(e.target.value)} className={`${campo} appearance-none`}>
                         <option value="">Elegí tu barrio o zona...</option>

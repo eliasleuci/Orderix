@@ -231,7 +231,20 @@ const WebOrdersPage: React.FC = () => {
             {p.direccion && (
               <p className="text-xs text-text-secondary mt-1 flex items-center gap-1.5">
                 <MapPin size={11} className="shrink-0" />
-                {p.direccion}{p.zona ? ` · ${p.zona}` : ''}
+                <span className="truncate">{p.direccion}{p.zona ? ` · ${p.zona}` : ''}</span>
+                <a
+                  href={
+                    p.ubicacion
+                      ? `https://www.google.com/maps?q=${p.ubicacion.lat},${p.ubicacion.lng}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.direccion)}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-primary font-bold underline underline-offset-2 shrink-0"
+                >
+                  Ver ubicación
+                </a>
               </p>
             )}
           </div>

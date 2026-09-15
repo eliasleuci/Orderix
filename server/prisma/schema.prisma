@@ -437,6 +437,10 @@ model WebOrder {
   customerName    String    @map("customer_name")
   customerPhone   String    @map("customer_phone")
   customerAddress String?   @map("customer_address")
+  /// Pin que el cliente marcó en el mapa al pedir. Opcional: sigue entrando
+  /// el pedido si no dio permiso de ubicación o no lo tocó.
+  customerLat     Float?    @map("customer_lat")
+  customerLng     Float?    @map("customer_lng")
   orderType       String    @map("order_type")
   paymentMethod   String    @map("payment_method")
   notes           String?

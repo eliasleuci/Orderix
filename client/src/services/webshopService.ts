@@ -79,6 +79,7 @@ export interface PedidoWeb {
   cliente: string;
   telefono: string;
   direccion: string | null;
+  ubicacion: { lat: number; lng: number } | null;
   tipo: 'DELIVERY' | 'TAKEAWAY';
   formaDePago: 'CASH' | 'TRANSFER';
   zona: string | null;
@@ -98,6 +99,8 @@ export interface NuevoPedido {
   customerName: string;
   customerPhone: string;
   customerAddress?: string | null;
+  customerLat?: number | null;
+  customerLng?: number | null;
   orderType: 'DELIVERY' | 'TAKEAWAY';
   paymentMethod: 'CASH' | 'TRANSFER';
   deliveryZoneId?: string | null;
@@ -298,6 +301,10 @@ export const mensajeDeWhatsapp = (pedido: PedidoWeb, local: string): string => {
       ? `Envío a: ${pedido.direccion}${pedido.zona ? ` (${pedido.zona})` : ''}`
       : 'Paso a retirarlo',
   ];
+
+  if (pedido.tipo === 'DELIVERY' && pedido.ubicacion) {
+    lineas.push(`Ubicación: https://www.google.com/maps?q=${pedido.ubicacion.lat},${pedido.ubicacion.lng}`);
+  }
 
   if (pedido.costoEnvio > 0) lineas.push(`Envío: ${plata(pedido.costoEnvio)}`);
   lineas.push(`*Total: ${plata(pedido.total)}*`);
