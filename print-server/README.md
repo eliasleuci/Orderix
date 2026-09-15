@@ -10,12 +10,42 @@ impresora está conectada ahí. El navegador le habla por `http://localhost:3001
 
 Esto se hace una sola vez, en la máquina donde va a estar la impresora.
 
+### Instalación automática (recomendada)
+
+1. Copiar esta carpeta (`print-server`) a la computadora del cliente, de
+   donde sea — pendrive, Descargas, Escritorio. No hace falta copiar todo
+   el sistema, sólo esta carpeta.
+2. Doble clic en **`INSTALAR.bat`**.
+3. Aceptar el cartel de permisos de administrador (Windows lo va a pedir).
+4. Responder la pregunta sobre la impresora cuando aparezca (red, USB, o
+   "todavía no la tengo" para dejarlo en modo simulación).
+
+Eso es todo. El script solo:
+
+- instala Node.js si hace falta,
+- copia los archivos a la ubicación fija `C:\Orderix\print-server`,
+- instala las dependencias,
+- configura la impresora según lo que respondas,
+- lo deja como servicio de Windows (arranca solo, incluso sin iniciar
+  sesión, y Windows lo vuelve a levantar si se cae),
+- y verifica al final que haya quedado funcionando.
+
+Se puede volver a correr sin problema (por ejemplo si algo quedó a medias):
+detecta lo que ya está hecho y no lo repite.
+
+Después de eso, el POS en `https://www.orderix.store` va a encontrar la
+impresora sin ninguna configuración extra del lado del sistema.
+
+### Instalación manual
+
+Si `INSTALAR.bat` no funciona en alguna máquina (por ejemplo, políticas de
+la empresa que bloquean scripts), se puede hacer paso a paso:
+
 1. **Instalar Node.js.** Bajarlo de [nodejs.org](https://nodejs.org) (la versión
    LTS) e instalarlo con las opciones por defecto.
 
 2. **Copiar la carpeta `print-server`** a esa computadora, por ejemplo a
-   `C:\Orderix\print-server`. Se puede llevar en un pendrive: no hace falta
-   copiar todo el sistema, sólo esta carpeta.
+   `C:\Orderix\print-server`.
 
 3. **Instalar las dependencias.** Abrir la carpeta, clic derecho en un espacio
    vacío → *Abrir en Terminal*, y ejecutar:
@@ -25,10 +55,7 @@ Esto se hace una sola vez, en la máquina donde va a estar la impresora.
    ```
 
 4. **Configurar la impresora** (ver la sección más abajo) y dejarlo arrancando
-   solo con Windows.
-
-Después de eso, el POS en `https://www.orderix.store` va a encontrar la
-impresora sin ninguna configuración extra del lado del sistema.
+   solo con Windows (ver "Que arranque solo con Windows" más abajo).
 
 ## Poner en marcha
 
