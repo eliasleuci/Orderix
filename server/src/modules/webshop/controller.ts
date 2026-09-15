@@ -11,6 +11,10 @@ export class WebshopController {
     try {
       const modo = req.query.modo === 'carta' ? 'carta' : 'pedidos';
       const data = await webshopService.getVidriera(req.params.slug as string, sucursalDeQuery(req), modo);
+      // Corta, y con stale-while-revalidate: el menú no cambia segundo a
+      // segundo, así que un cliente reabriendo la carta (o un CDN por delante)
+      // puede servir esto sin volver a pegarle a la base cada vez.
+      res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=300');
       res.status(200).json({ status: 'success', data });
     } catch (error) {
       next(error);

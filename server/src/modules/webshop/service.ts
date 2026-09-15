@@ -218,11 +218,17 @@ export class WebshopService {
     tipo: 'producto' | 'categoria',
     id: string
   ): Promise<{ redirigirA: string } | { contentType: string; contenido: Buffer }> {
-    const { sucursal } = await this.resolverSucursal(slug, branchId);
+    // La carta pública pide una imagen por cada producto y categoría (ver
+    // comentario más abajo), así que acá se evita a propósito el resolverSucursal
+    // completo (tenant + lista de sucursales en dos consultas): con la carta ya
+    // resuelta antes, alcanza con un solo viaje a la base para confirmar a qué
+    // sucursal de este local corresponde la imagen.
+    const sucursalId = await webshopRepository.findBranchIdParaImagen(slug, branchId);
+    if (!sucursalId) throw new AppError('Local no encontrado', 404);
 
     const guardada =
       tipo === 'producto'
-        ? (await webshopRepository.findProductImage(sucursal.id, id))?.image
+        ? (await webshopRepository.findProductImage(sucursalId, id))?.image
         : (await webshopRepository.findCategoryImage(id))?.imageUrl;
 
     if (!guardada) throw new AppError('Imagen no encontrada', 404);

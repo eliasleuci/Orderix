@@ -79,35 +79,10 @@ const AppContent = () => {
     return () => subscription.unsubscribe();
   }, [setUser]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-surface-base flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  const isLandingRoute = location.pathname === '/';
-  const isKitchenRoute = location.pathname === '/kitchen';
-  // Ocultamos el sidebar si es Kitchen (y rol cocina/sin usuario) o si es la Landing Page
-  const shouldHideSidebar = (isKitchenRoute && (role === 'KITCHEN' || !user)) || isLandingRoute;
-  
-  // /reset-password se resuelve ANTES de mirar el rol: el link del mail deja una
-  // sesion iniciada, y si dejaramos que el ruteo por rol actue primero, mandaria
-  // al panel (o al login) en vez de dejar definir la contrasena nueva.
-  if (location.pathname === '/reset-password') {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-        </Routes>
-      </Suspense>
-    );
-  }
-
   // Carta y pedidos se resuelven antes que cualquier chequeo de sesión: los abre
-  // un comensal sin cuenta. Si cayeran en el ruteo de abajo, sin usuario la
-  // mandaría al login y con usuario al panel de su rol.
+  // un comensal sin cuenta. Van ANTES del gate de "loading" también, para que un
+  // celular no espere a que Supabase Auth resuelva la sesión (irrelevante acá)
+  // antes de poder ni empezar a pedir la carta.
   //
   // Son dos rutas separadas y no una sola con la venta condicionada por config:
   // el QR de las mesas apunta a /carta y tiene que quedar SIEMPRE de sólo
@@ -120,6 +95,32 @@ const AppContent = () => {
         <Routes>
           <Route path="/carta/:slug" element={<PublicMenuPage modoPedido={false} />} />
           <Route path="/pedir/:slug" element={<PublicMenuPage modoPedido={true} />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface-base flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const isLandingRoute = location.pathname === '/';
+  const isKitchenRoute = location.pathname === '/kitchen';
+  // Ocultamos el sidebar si es Kitchen (y rol cocina/sin usuario) o si es la Landing Page
+  const shouldHideSidebar = (isKitchenRoute && (role === 'KITCHEN' || !user)) || isLandingRoute;
+
+  // /reset-password se resuelve ANTES de mirar el rol: el link del mail deja una
+  // sesion iniciada, y si dejaramos que el ruteo por rol actue primero, mandaria
+  // al panel (o al login) en vez de dejar definir la contrasena nueva.
+  if (location.pathname === '/reset-password') {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Routes>
       </Suspense>
     );

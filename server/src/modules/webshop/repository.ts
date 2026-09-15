@@ -54,6 +54,27 @@ export class WebshopRepository {
     });
   }
 
+  /**
+   * Igual que resolver tenant + sucursales para una imagen, pero en un solo
+   * viaje a la base en vez de dos secuenciales. La carta pública dispara una
+   * de estas por cada foto (N+1 a propósito, ver comentario en el service), así
+   * que ese segundo round-trip se paga N veces por carga y es lo que más se
+   * nota en celulares con latencia alta.
+   */
+  async findBranchIdParaImagen(slug: string, branchId?: string): Promise<string | null> {
+    const filas = await basePrisma.$queryRaw<Array<{ id: string }>>`
+      SELECT b.id::text AS id
+        FROM branches b
+        JOIN tenants t ON t.id = b.tenant_id
+       WHERE t.slug = ${slug}
+         AND t.is_active = true
+         AND b.is_active = true
+       ORDER BY (b.id::text = ${branchId ?? null}) DESC, b.name ASC
+       LIMIT 1
+    `;
+    return filas[0]?.id ?? null;
+  }
+
   async findWebSettings(branchId: string) {
     return prisma.webSettings.findFirst({ where: { branchId } });
   }
