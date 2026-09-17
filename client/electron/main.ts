@@ -62,7 +62,9 @@ function createWindow() {
   } else {
     // En producción, el path es relativo a la ubicación del main.cjs en dist-electron/
     const indexPath = path.join(__dirname, '../dist/index.html');
-    win.loadFile(indexPath);
+    // La ruta "/" es la landing pública de la web; la app instalada no la
+    // necesita y va directo al login (o al panel si ya hay sesión guardada).
+    win.loadFile(indexPath, { hash: '/login' });
   }
 }
 

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { useThemeStore } from '../store/themeStore';
-import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package, KeyRound, Wallet, Bike, Globe } from 'lucide-react';
+import { useThemeStore, UI_SCALE_STEPS } from '../store/themeStore';
+import { LayoutDashboard, Utensils, ChefHat, LogOut, Store, BookOpen, Sun, Moon, UtensilsCrossed, DollarSign, Package, KeyRound, Wallet, Bike, Globe, Minus, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { puedeVer } from '../lib/permisos';
@@ -13,7 +13,8 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { signOut, role } = useAuthStore();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme, toggleTheme, uiScale, setUiScale } = useThemeStore();
+  const scaleIndex = UI_SCALE_STEPS.indexOf(uiScale);
   const [cambiarClave, setCambiarClave] = useState(false);
   const [aviso, setAviso] = useState('');
 
@@ -84,6 +85,26 @@ const Sidebar: React.FC = () => {
 
       {/* ACTIONS */}
       <div className="flex flex-col gap-1.5 shrink-0 pt-4 mt-2 border-t border-border-subtle w-full items-center">
+        {/* TAMAÑO DE INTERFAZ */}
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setUiScale(UI_SCALE_STEPS[Math.max(0, scaleIndex - 1)])}
+            disabled={scaleIndex === 0}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+            title="Achicar interfaz"
+          >
+            <Minus size={16} />
+          </button>
+          <button
+            onClick={() => setUiScale(UI_SCALE_STEPS[Math.min(UI_SCALE_STEPS.length - 1, scaleIndex + 1)])}
+            disabled={scaleIndex === UI_SCALE_STEPS.length - 1}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-text-muted hover:bg-primary/10 hover:text-primary transition-all border border-transparent hover:border-primary/20 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted"
+            title="Agrandar interfaz"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
         {/* THEME TOGGLE */}
         <button 
           onClick={toggleTheme}

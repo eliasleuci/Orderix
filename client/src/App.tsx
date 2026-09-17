@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
@@ -54,7 +54,7 @@ const HashRedirectHandler = () => {
 // Componente para manejar el Layout condicional
 const AppContent = () => {
   const { user, branchId, loading, setUser, role } = useAuthStore();
-  const { theme } = useThemeStore();
+  const { theme, uiScale } = useThemeStore();
   const location = useLocation();
 
   useEffect(() => {
@@ -66,6 +66,13 @@ const AppContent = () => {
       root.classList.remove('light');
     }
   }, [theme]);
+
+  useEffect(() => {
+    // Tamaño de interfaz elegido por el usuario (ver themeStore). Al ser el
+    // font-size raíz, escala todo lo que está en rem sin pisar el zoom nativo
+    // del navegador/SO, que sigue funcionando igual encima de esto.
+    window.document.documentElement.style.fontSize = `${16 * uiScale}px`;
+  }, [uiScale]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -204,15 +211,22 @@ const AppContent = () => {
 };
 
 function App() {
+  // La app instalada (Electron) carga el index.html por file://, donde
+  // BrowserRouter no puede resolver rutas tipo "/pos" (no hay servidor
+  // que las reescriba) y queda en pantalla negra. HashRouter (#/pos)
+  // funciona sin servidor, así que se usa solo ahí; la web sigue con
+  // BrowserRouter para mantener las URLs limpias.
+  const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
+
   return (
     // duration: 0 es la transición por defecto de toda la app: cualquier
     // animación de entrada/salida que no fije la suya propia ocurre al
     // instante. Se quitaron a pedido, porque eran sólo estéticas y en los
     // equipos del local hacían sentir lenta cada apertura de ventana.
     <MotionConfig transition={{ duration: 0 }}>
-      <BrowserRouter>
+      <Router>
         <AppContent />
-      </BrowserRouter>
+      </Router>
     </MotionConfig>
   );
 }
