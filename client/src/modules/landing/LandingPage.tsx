@@ -7,8 +7,9 @@ import {
   Wifi, 
   X, 
   Maximize2, 
-  ChevronLeft, 
-  ChevronRight, 
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
   CheckCircle,
   Menu,
   Instagram,
@@ -38,6 +39,42 @@ const LandingPage: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [formSuccess, setFormSuccess] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
+  const faqs = [
+    {
+      q: '¿Necesito instalar algo o es todo por internet?',
+      a: 'Las dos formas conviven: podés manejar todo desde el navegador (celular, tablet, notebook) sin instalar nada, ideal para controlar el negocio a distancia. Para el local, donde suele haber impresora térmica por USB, hay una versión instalable para Windows que además imprime directo sin depender de un programa aparte.',
+    },
+    {
+      q: '¿Cómo llegan los pedidos que hacen mis clientes?',
+      a: 'Le compartís un link o QR con tu carta. El cliente pide desde ahí (con ubicación en mapa si es delivery), y el pedido entra directo a la pantalla de cocina y caja sin que nadie tenga que tipearlo a mano.',
+    },
+    {
+      q: '¿Tengo que capacitar mucho al personal?',
+      a: 'No. La interfaz está pensada por rol: el mozo o cajero ve solo lo suyo, cocina ve solo la pantalla de pedidos. No hay menús de más que confundan, la curva de aprendizaje es de minutos.',
+    },
+    {
+      q: '¿Funciona en varias sucursales?',
+      a: 'Sí. El sistema soporta múltiples locales bajo la misma cuenta, cada uno con su propia caja, stock y equipo, y podés controlarlos todos desde un mismo panel.',
+    },
+    {
+      q: '¿Mis datos son míos?',
+      a: 'Sí, son tuyos. Podés pedir un export de tu información cuando quieras y no depende de que sigas usando el sistema para acceder a tu historial de ventas.',
+    },
+    {
+      q: '¿Cuánto cuesta?',
+      a: '$50.000 por mes por sucursal, con todas las funcionalidades incluidas (ventas, cocina, mesas, catálogo, stock, caja, pedidos web, delivery y financiero) y 3 usuarios incluidos.',
+    },
+    {
+      q: '¿Qué pasa si tengo un problema o una duda?',
+      a: 'Soporte prioritario por WhatsApp, directo con nosotros, no con un bot ni un ticket que tarda días.',
+    },
+    {
+      q: '¿Recibo actualizaciones y mejoras solo?',
+      a: 'Sí. La versión web siempre está al día sola. La versión instalada del local también recibe actualizaciones automáticas, no hay que reinstalar nada a mano.',
+    },
+  ];
 
   const galleryImages = [
     '/landing/img/galeria-1.jpg',
@@ -140,8 +177,9 @@ const LandingPage: React.FC = () => {
               <a href="#modulos" className="text-gray-400 hover:text-white transition-colors font-medium text-sm tracking-wide">Módulos</a>
               <a href="#galeria" className="text-gray-400 hover:text-white transition-colors font-medium text-sm tracking-wide">Galería</a>
               <a href="#precios" className="text-gray-400 hover:text-white transition-colors font-medium text-sm tracking-wide">Precios</a>
+              <a href="#faq" className="text-gray-400 hover:text-white transition-colors font-medium text-sm tracking-wide">Preguntas</a>
             </div>
-            
+
             <div className="flex items-center gap-4 shrink-0 pl-3">
               <Link to="/login" className="text-gray-400 hover:text-white transition-colors font-bold text-[10px] uppercase tracking-[0.2em] mr-2">
                 Ingresar
@@ -168,6 +206,7 @@ const LandingPage: React.FC = () => {
             <a href="#modulos" onClick={() => setIsMenuOpen(false)} className="block text-gray-400 hover:text-white py-2 font-medium">Módulos</a>
             <a href="#galeria" onClick={() => setIsMenuOpen(false)} className="block text-gray-400 hover:text-white py-2 font-medium">Galería</a>
             <a href="#precios" onClick={() => setIsMenuOpen(false)} className="block text-gray-400 hover:text-white py-2 font-medium">Precios</a>
+            <a href="#faq" onClick={() => setIsMenuOpen(false)} className="block text-gray-400 hover:text-white py-2 font-medium">Preguntas</a>
             <Link to="/login" onClick={() => setIsMenuOpen(false)} className="block text-gray-400 hover:text-white py-2 font-medium">Ingresar</Link>
             <button onClick={() => { setIsDemoModalOpen(true); setIsMenuOpen(false); }} className="w-full text-center py-3 bg-[#FF6B00] text-white font-semibold rounded-full mt-4 border-0">Solicitar Demo</button>
           </div>
@@ -427,6 +466,46 @@ const LandingPage: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="py-24 lg:py-32 relative scroll-mt-20">
+        <div className="max-w-3xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fadeUp">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#FF6B00]/10 border border-[#FF6B00]/20 text-[#FF6B00] font-mono text-[10px] font-black uppercase tracking-widest rounded-full mb-6">
+              DUDAS FRECUENTES
+            </span>
+            <h2 className="font-display font-black text-4xl lg:text-7xl tracking-tighter mb-4 leading-tight uppercase">Preguntas.</h2>
+          </div>
+
+          <div className="space-y-3">
+            {faqs.map((item, i) => {
+              const isOpen = openFaq === i;
+              return (
+                <div key={i} className="glass-card rounded-2xl overflow-hidden border-white/5">
+                  <button
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    className="w-full flex items-center justify-between gap-4 p-6 text-left border-0 bg-transparent cursor-pointer"
+                  >
+                    <span className="font-display font-bold text-base lg:text-lg tracking-tight">{item.q}</span>
+                    <ChevronDown
+                      size={20}
+                      className={`text-[#FF6B00] shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  <div
+                    className="grid transition-all duration-300 ease-in-out"
+                    style={{ gridTemplateRows: isOpen ? '1fr' : '0fr' }}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="text-gray-400 leading-relaxed px-6 pb-6">{item.a}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
