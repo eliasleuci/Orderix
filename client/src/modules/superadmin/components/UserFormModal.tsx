@@ -149,11 +149,11 @@ const UserFormModal: React.FC<Props> = ({ isOpen, onClose, onSubmit, branches, u
           </select>
         </Field>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button type="submit" isLoading={isLoading}>
+          <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
             {editando ? 'Guardar' : 'Crear usuario'}
           </Button>
         </div>

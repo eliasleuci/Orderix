@@ -120,7 +120,7 @@ export default function TenantsPage() {
             Todos los negocios que usan Orderix
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} leftIcon={<Plus size={18} />}>
+        <Button onClick={() => setIsCreateOpen(true)} leftIcon={<Plus size={18} />} className="w-full sm:w-auto">
           Nuevo cliente
         </Button>
       </div>

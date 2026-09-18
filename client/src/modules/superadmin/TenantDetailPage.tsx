@@ -204,11 +204,15 @@ export default function TenantDetailPage() {
       {/* ---------- SUCURSALES ---------- */}
       {tab === 'sucursales' && (
         <Card variant="solid" padding="none">
-          <div className="p-5 flex items-center justify-between border-b border-white/5">
+          <div className="p-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
             <p className="text-white/50 text-sm">
               Cada sucursal tiene su propia dirección y contacto
             </p>
-            <Button onClick={() => setBranchModal({ open: true, branch: null })} leftIcon={<Plus size={16} />}>
+            <Button
+              onClick={() => setBranchModal({ open: true, branch: null })}
+              leftIcon={<Plus size={16} />}
+              className="w-full sm:w-auto"
+            >
               Nueva sucursal
             </Button>
           </div>
@@ -299,12 +303,13 @@ export default function TenantDetailPage() {
       {/* ---------- USUARIOS ---------- */}
       {tab === 'usuarios' && (
         <Card variant="solid" padding="none">
-          <div className="p-5 flex items-center justify-between border-b border-white/5">
+          <div className="p-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
             <p className="text-white/50 text-sm">Quién puede entrar y con qué permisos</p>
             <Button
               onClick={() => setUserModal({ open: true, user: null })}
               leftIcon={<Plus size={16} />}
               disabled={branches.length === 0}
+              className="w-full sm:w-auto"
             >
               Nuevo usuario
             </Button>
@@ -317,7 +322,8 @@ export default function TenantDetailPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
+          {/* Tabla en desktop / tablet */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white/5 text-xs uppercase tracking-widest font-bold text-white/50">
@@ -389,6 +395,75 @@ export default function TenantDetailPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Lista en celular */}
+          <div className="md:hidden divide-y divide-white/5">
+            {users.length === 0 ? (
+              <p className="p-8 text-center text-white/40 font-medium text-sm">Este cliente no tiene usuarios</p>
+            ) : (
+              users.map((u) => (
+                <div key={u.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-bold text-white truncate">{u.email}</p>
+                      {u.name && <p className="text-white/40 text-xs mt-0.5 truncate">{u.name}</p>}
+                    </div>
+                    <Badge variant={u.role === 'ADMIN' ? 'primary' : 'neutral'} className="shrink-0">
+                      {ROLE_LABELS[u.role ?? ''] ?? u.role}
+                    </Badge>
+                  </div>
+
+                  {u.tieneCuenta === false && (
+                    <Badge variant="warning" size="sm">Sin cuenta de acceso</Badge>
+                  )}
+
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
+                    <span>{u.branchName ?? 'Sin sucursal'}</span>
+                    <span>Último ingreso: {fecha(u.lastSignInAt)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/5">
+                    <Button
+                      variant="ghost"
+                      className="px-4"
+                      onClick={() => setUserModal({ open: true, user: u })}
+                      aria-label="Editar usuario"
+                    >
+                      <Pencil size={15} className="text-white/50" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="px-4"
+                      onClick={() => {
+                        const nueva = window.prompt(`Nueva contraseña para ${u.email} (mínimo 8 caracteres)`);
+                        if (!nueva) return;
+                        accion(() => superadminService.setUserPassword(u.id, nueva), 'Contraseña actualizada');
+                      }}
+                      aria-label="Cambiar contraseña"
+                    >
+                      <KeyRound size={15} className="text-white/50" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="px-4"
+                      onClick={() =>
+                        setConfirm({
+                          title: `Dar de baja a ${u.email}`,
+                          message: 'Se elimina su cuenta y pierde el acceso de inmediato. No se puede deshacer.',
+                          onOk: async () => {
+                            await accion(() => superadminService.deleteUser(u.id), 'Usuario dado de baja');
+                          },
+                        })
+                      }
+                      aria-label="Dar de baja"
+                    >
+                      <Trash2 size={15} className="text-rose-400" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </Card>
       )}
 
@@ -418,9 +493,9 @@ export default function TenantDetailPage() {
           </div>
 
           <Card variant="solid" padding="none">
-            <div className="p-5 flex items-center justify-between border-b border-white/5">
+            <div className="p-5 flex flex-wrap items-center justify-between gap-3 border-b border-white/5">
               <p className="text-white/50 text-sm">Historial de pagos</p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="secondary"
                   onClick={() =>

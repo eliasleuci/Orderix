@@ -29,7 +29,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
           {/* BACKDROP */}
           <motion.div
             initial={false}
@@ -45,22 +45,26 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
           {/* CONTENT */}
           <motion.div
             initial={false}
-            className={cn("w-full relative", maxWidthClasses[maxWidth], className)}
+            className={cn("w-full relative max-h-[92vh] flex flex-col", maxWidthClasses[maxWidth], className)}
           >
-            <Card variant="solid" padding="large" className="bg-surface-elevated border-white/5 shadow-2xl w-full">
-              <header className="flex items-center justify-between mb-6 pb-4 border-b border-white/5 shrink-0">
-                <h2 className="text-2xl font-black uppercase tracking-tighter text-text-primary leading-none">
+            <Card
+              variant="solid"
+              padding="large"
+              className="bg-surface-elevated border-white/5 shadow-2xl w-full rounded-[1.75rem] sm:rounded-[2.5rem] p-5 sm:p-6 max-h-[92vh]"
+            >
+              <header className="flex items-center justify-between gap-3 mb-5 sm:mb-6 pb-4 border-b border-white/5 shrink-0">
+                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-text-primary leading-none">
                   {title}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl bg-white/5 text-text-muted hover:text-primary transition-colors border border-white/5"
+                  className="p-2 rounded-xl bg-white/5 text-text-muted hover:text-primary transition-colors border border-white/5 shrink-0"
                 >
                   <X size={20} />
                 </button>
               </header>
 
-              <div className="relative max-h-[65vh] overflow-y-auto scrollbar-none">
+              <div className="relative max-h-[70vh] overflow-y-auto scrollbar-none">
                 {children}
               </div>
             </Card>
