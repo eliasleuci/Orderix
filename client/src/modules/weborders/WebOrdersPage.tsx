@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { webshopService, PedidoWeb, linkDeWhatsapp } from '../../services/webshopService';
 import { printService } from '../../lib/printService';
+import { formatTicketNumber } from '../../lib/utils';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -122,14 +123,15 @@ const WebOrdersPage: React.FC = () => {
 
     setCambioDePrecio(null);
     const faltantes = data.advertencias ?? [];
+    const orden = formatTicketNumber(data.ticketNumber);
     setToast({
       message: faltantes.length > 0
-        ? `Pedido #${pedido.codigo} confirmado. Sin stock: ${faltantes.map((a: any) => a.ingrediente).join(', ')}`
-        : `Pedido #${pedido.codigo} confirmado y mandado a cocina`,
+        ? `Orden #${orden} (web #${pedido.codigo}) confirmada. Sin stock: ${faltantes.map((a: any) => a.ingrediente).join(', ')}`
+        : `Orden #${orden} (web #${pedido.codigo}) confirmada y mandada a cocina`,
       type: faltantes.length > 0 ? 'error' : 'success',
     });
 
-    imprimirTickets(pedido);
+    imprimirTickets(pedido, data.ticketNumber);
     cargar();
   };
 
@@ -137,10 +139,10 @@ const WebOrdersPage: React.FC = () => {
   // venta del mostrador. Se dispara sin esperarlo y nunca frena la pantalla: el
   // pedido ya está tomado y en cocina, así que un problema con la impresora no
   // puede trabar la caja. Si falla, se avisa aparte, sin pisar el "confirmado".
-  const imprimirTickets = (p: PedidoWeb) => {
+  const imprimirTickets = (p: PedidoWeb, ticketNumber: number | null) => {
     printService
       .printBoth({
-        ticketNumber: p.codigo,
+        ticketNumber: ticketNumber as number,
         negocio: nombreNegocio,
         sucursal: nombreSucursal,
         customerName: p.cliente || undefined,
@@ -160,7 +162,7 @@ const WebOrdersPage: React.FC = () => {
       .then((r) => {
         if (r?.error || r?.success === false) {
           setToast({
-            message: `Pedido #${p.codigo} confirmado, pero no se pudo imprimir. Revisá que el servidor de impresión esté abierto.`,
+            message: `Orden #${formatTicketNumber(ticketNumber)} confirmada, pero no se pudo imprimir. Revisá que el servidor de impresión esté abierto.`,
             type: 'error',
           });
         }
@@ -209,7 +211,12 @@ const WebOrdersPage: React.FC = () => {
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 mb-1">
-              <span className="text-xl font-black tracking-tighter">#{p.codigo}</span>
+              <span className="text-xl font-black tracking-tighter">
+                {p.ticketNumber != null ? `Orden #${formatTicketNumber(p.ticketNumber)}` : `Web #${p.codigo}`}
+              </span>
+              {p.ticketNumber != null && (
+                <span className="text-[10px] font-bold text-text-muted">web #{p.codigo}</span>
+              )}
               <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
                 p.tipo === 'DELIVERY'
                   ? 'text-warning border-warning/30 bg-warning/10'

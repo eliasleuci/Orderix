@@ -49,6 +49,7 @@ const serializarPedido = (p: any) => ({
   confirmadoEn: p.confirmedAt,
   motivoRechazo: p.rejectedReason,
   orderId: p.orderId,
+  ticketNumber: p.order?.orderNumber ?? null,
   items: (p.items ?? []).map((i: any) => ({
     id: i.id,
     nombre: i.productName,
@@ -439,6 +440,7 @@ export class WebshopService {
     return {
       estado: 'confirmado' as const,
       orderId: res.order_id,
+      ticketNumber: res.ticket_number ?? null,
       total: aNumero(res.total),
       advertencias: res.advertencias ?? [],
     };

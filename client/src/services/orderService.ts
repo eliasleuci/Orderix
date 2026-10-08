@@ -20,10 +20,23 @@ class OrderService implements IOrderService {
       p_delivery_km: params.deliveryKm ?? null,
     });
 
+    // La función de la base no devuelve el correlativo: se lee del pedido recién
+    // creado para que el ticket impreso lleve el mismo número que ven cocina y caja.
+    let ticketNumber: number | null = null;
+    if (data?.status === 'success' && data.order_id) {
+      const { data: fila } = await supabase
+        .from('orders')
+        .select('ticket_number')
+        .eq('id', data.order_id)
+        .single();
+      ticketNumber = fila?.ticket_number ?? null;
+    }
+
     return {
       data: data
         ? {
             order_id: data.order_id,
+            ticket_number: ticketNumber,
             status: data.status,
             message: data.message,
             // Ingredientes que quedaron en negativo. La venta se registra igual;

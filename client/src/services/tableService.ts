@@ -238,7 +238,7 @@ class TableService {
   async getConsumoAbierto(branchId: string): Promise<ServiceResponse<Record<string, ConsumoMesa>>> {
     const { data, error } = await supabase
       .from('orders')
-      .select('id, table_id, total, created_at, order_items(id, quantity, unit_price, notes, products(name))')
+      .select('id, ticket_number, table_id, total, created_at, order_items(id, quantity, unit_price, notes, products(name))')
       .eq('branch_id', branchId)
       .eq('payment_method', 'UNPAID')
       .not('table_id', 'is', null)

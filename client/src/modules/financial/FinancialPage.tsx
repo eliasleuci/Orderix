@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { orderService } from '../../services/orderService';
 import { useAuthStore } from '../../store/authStore';
+import { formatTicketNumber } from '../../lib/utils';
 import { 
   LayoutDashboard,
   Calendar,
@@ -611,7 +612,7 @@ const FinancialPage: React.FC = () => {
                                   className="flex items-center gap-4 rounded-2xl border border-white/5 bg-surface-base px-4 py-3"
                                 >
                                   <span className="font-black text-text-muted text-xs shrink-0 w-12">
-                                    #{o.ticket_number ?? '—'}
+                                    #{formatTicketNumber(o.ticket_number)}
                                   </span>
 
                                   <div className="flex-1 min-w-0">
@@ -781,7 +782,7 @@ const FinancialPage: React.FC = () => {
                                     className="flex items-center gap-4 rounded-2xl border border-white/5 bg-surface-base px-4 py-3"
                                   >
                                     <span className="font-black text-text-muted text-xs shrink-0 w-12">
-                                      #{o.ticket_number ?? '—'}
+                                      #{formatTicketNumber(o.ticket_number)}
                                     </span>
 
                                     <div className="flex-1 min-w-0">

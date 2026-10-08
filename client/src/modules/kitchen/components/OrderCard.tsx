@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Clock, CheckCircle, Zap, ChefHat, PackageCheck, Timer, Utensils, Truck, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cn } from '../../../lib/utils';
+import { cn, formatTicketNumber } from '../../../lib/utils';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Badge from '../../../components/ui/Badge';
@@ -152,7 +152,7 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, onStatusChange 
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-2xl font-black text-text-primary tracking-tighter uppercase leading-none shrink-0">
-                #{(order.id || '').substring(0, 4).toUpperCase()}
+                #{formatTicketNumber(order.ticket_number)}
               </span>
               {isNew && <Badge variant="warning" size="sm" className="animate-bounce shrink-0">NUEVO</Badge>}
             </div>

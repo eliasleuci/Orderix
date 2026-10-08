@@ -15,7 +15,7 @@ import {
 import { printService } from '../../lib/printService';
 import { MEDIOS_DE_PAGO, MedioPago } from '../../lib/mediosDePago';
 import { ShoppingCart, Search, LogOut, Utensils, Truck, User, Printer, Check, ChevronDown } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatTicketNumber } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
@@ -932,7 +932,7 @@ const POSPage: React.FC = () => {
               
               <div className="bg-surface-base rounded-xl p-3 mb-3 border border-white/5">
                 <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">Orden</p>
-                <p className="text-2xl font-black text-primary">#{String(lastOrder.ticketNumber || '???').padStart(3, '0')}</p>
+                <p className="text-2xl font-black text-primary">#{formatTicketNumber(lastOrder.ticketNumber)}</p>
               </div>
 
               {printerError && (

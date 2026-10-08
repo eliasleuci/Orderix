@@ -16,7 +16,7 @@ import {
   Bike
 } from 'lucide-react';
 import { Order } from '../../types/domain';
-import { cn } from '../../lib/utils';
+import { cn, formatTicketNumber } from '../../lib/utils';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -407,7 +407,7 @@ const DashboardPage: React.FC = () => {
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 sm:gap-6 min-w-0">
                         <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/5 rounded-2xl flex items-center justify-center font-black text-xs text-text-muted border border-white/5 group-hover:text-primary transition-colors shrink-0">
-                          #{(order.id || '').substring(0, 4).toUpperCase()}
+                          #{formatTicketNumber(order.ticket_number)}
                         </div>
                         <div className="min-w-0">
                           <h4 className="font-bold text-lg text-text-primary leading-none mb-1 group-hover:text-primary transition-colors truncate">
@@ -510,7 +510,7 @@ const DashboardPage: React.FC = () => {
         onConfirm={executeDeleteSingle}
         isLoading={loading}
         title="Eliminar Pedido"
-        message={`¿Estás seguro de eliminar el pedido #${orderToDelete?.id?.substring(0, 6).toUpperCase()} de ${orderToDelete?.customer_name || 'Consumidor Final'}?`}
+        message={`¿Estás seguro de eliminar el pedido #${formatTicketNumber(orderToDelete?.ticket_number)} de ${orderToDelete?.customer_name || 'Consumidor Final'}?`}
         confirmText="Eliminar Pedido"
         variant="danger"
       />

@@ -51,6 +51,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  ticket_number?: number;
   branch_id: string;
   user_id?: string;
   customer_name?: string;

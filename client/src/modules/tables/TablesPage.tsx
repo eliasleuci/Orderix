@@ -11,7 +11,7 @@ import {
   ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link, UserRound, Receipt
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '../../lib/utils';
+import { cn, formatTicketNumber } from '../../lib/utils';
 import { ANIMATIONS } from '../../lib/motion';
 import Toast from '../../components/Toast';
 import Button from '../../components/ui/Button';
@@ -511,7 +511,7 @@ const PayBillModal: React.FC<{
                 {bill?.orders.map(o => (
                   <div key={o.id} className="bg-surface-base p-3 rounded-2xl border border-white/5">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-black text-primary">N° {(o.id).substring(0,4).toUpperCase()}</span>
+                      <span className="text-xs font-black text-primary">N° {formatTicketNumber(o.ticket_number)}</span>
                       <span className="text-xs font-bold">${Number(o.total).toLocaleString()}</span>
                     </div>
                     {o.order_items.map((i: any) => (

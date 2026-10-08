@@ -207,7 +207,7 @@ export class WebshopRepository {
   async findPedidos(branchId: string, estados: string[], limit: number) {
     return prisma.webOrder.findMany({
       where: { branchId, status: { in: estados } },
-      include: { items: true, deliveryZone: { select: { name: true } } },
+      include: { items: true, deliveryZone: { select: { name: true } }, order: { select: { orderNumber: true } } },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
@@ -216,7 +216,7 @@ export class WebshopRepository {
   async findPedido(id: string, branchId: string) {
     return prisma.webOrder.findFirst({
       where: { id, branchId },
-      include: { items: true, deliveryZone: { select: { name: true } } },
+      include: { items: true, deliveryZone: { select: { name: true } }, order: { select: { orderNumber: true } } },
     });
   }
 
@@ -231,7 +231,17 @@ export class WebshopRepository {
         ${id}::uuid, ${userId}::uuid, ${aceptarCambioDePrecio}::boolean
       )
     `;
-    return filas[0]?.confirmar_pedido_web;
+    const res = filas[0]?.confirmar_pedido_web;
+
+    // El número que ve cocina es el correlativo del pedido creado, no el código
+    // del pedido web: se devuelve para que el ticket impreso lleve el mismo.
+    if (res?.status === 'success' && res.order_id) {
+      const orden = await basePrisma.$queryRaw<{ ticket_number: number }[]>`
+        SELECT ticket_number FROM public.orders WHERE id = ${res.order_id}::uuid
+      `;
+      res.ticket_number = orden[0]?.ticket_number ?? null;
+    }
+    return res;
   }
 
   async rechazar(id: string, branchId: string, motivo: string | null) {

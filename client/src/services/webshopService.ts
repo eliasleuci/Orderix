@@ -91,6 +91,7 @@ export interface PedidoWeb {
   confirmadoEn: string | null;
   motivoRechazo: string | null;
   orderId: string | null;
+  ticketNumber: number | null;
   items: ItemPedidoWeb[];
 }
 
@@ -114,7 +115,7 @@ export interface NuevoPedido {
 }
 
 export type ResultadoConfirmar =
-  | { estado: 'confirmado'; orderId: string; total: number; advertencias: any[] }
+  | { estado: 'confirmado'; orderId: string; ticketNumber: number | null; total: number; advertencias: any[] }
   | { estado: 'precio_cambiado'; cambios: any[]; totalHoy: number }
   | { estado: 'productos_no_disponibles'; faltantes: any[] };
 
