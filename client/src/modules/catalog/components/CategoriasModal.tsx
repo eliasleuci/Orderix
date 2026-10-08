@@ -4,6 +4,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { productService } from '../../../services/productService';
 import { Category } from '../../../types/domain';
 import Modal from '../../../components/ui/Modal';
+import { Tooltip } from '../../../components/ui/Tooltip';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ConfirmModal from '../../../components/ui/ConfirmModal';
@@ -157,28 +158,35 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                 }`}
               >
                 <div className="flex flex-col shrink-0">
-                  <button
-                    onClick={() => mover(i, -1)}
-                    disabled={i === 0}
-                    className="p-1 text-text-muted hover:text-primary disabled:opacity-20 disabled:hover:text-text-muted"
-                  >
-                    <ChevronUp size={16} />
-                  </button>
-                  <button
-                    onClick={() => mover(i, 1)}
-                    disabled={i === categorias.length - 1}
-                    className="p-1 text-text-muted hover:text-primary disabled:opacity-20 disabled:hover:text-text-muted"
-                  >
-                    <ChevronDown size={16} />
-                  </button>
+                  <Tooltip titulo="Subir" detalle="Se muestra antes en el pedido web">
+                    <button
+                      onClick={() => mover(i, -1)}
+                      disabled={i === 0}
+                      aria-label="Subir"
+                      className="p-1 text-text-muted hover:text-primary disabled:opacity-20 disabled:hover:text-text-muted"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                  </Tooltip>
+                  <Tooltip titulo="Bajar" detalle="Se muestra después en el pedido web">
+                    <button
+                      onClick={() => mover(i, 1)}
+                      disabled={i === categorias.length - 1}
+                      aria-label="Bajar"
+                      className="p-1 text-text-muted hover:text-primary disabled:opacity-20 disabled:hover:text-text-muted"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                  </Tooltip>
                 </div>
 
                 {/* Sin foto se muestra como un recuadro punteado que dice
                     "Foto": antes era un cuadradito gris que parecía decoración
                     y la única pista de que se podía tocar aparecía al pasar el
                     mouse por encima, cosa que en un celular no pasa nunca. */}
+                <Tooltip titulo={cat.image_url ? 'Cambiar la foto' : 'Agregar una foto'}>
                 <label
-                  title={cat.image_url ? 'Cambiar la foto' : 'Agregar una foto'}
+                  aria-label={cat.image_url ? 'Cambiar la foto' : 'Agregar una foto'}
                   className={`w-16 h-16 rounded-xl overflow-hidden flex flex-col items-center justify-center shrink-0 cursor-pointer relative group transition-colors ${
                     cat.image_url
                       ? 'bg-white/5 border border-white/10'
@@ -207,6 +215,7 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                     onChange={(e) => e.target.files?.[0] && subirFoto(cat, e.target.files[0])}
                   />
                 </label>
+                </Tooltip>
 
                 <input
                   defaultValue={cat.name}
@@ -214,31 +223,43 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                   className="flex-1 min-w-0 bg-transparent font-black tracking-tight text-sm focus:outline-none border-b border-transparent focus:border-primary/40 py-1"
                 />
 
-                <button
-                  onClick={() => alternarVisibleEnCarta(cat)}
-                  title={
+                <Tooltip
+                  titulo={cat.show_in_carta === false ? 'Solo en pedidos web' : 'En la carta del salón y en la web'}
+                  detalle={
                     cat.show_in_carta === false
-                      ? 'No se muestra en la carta del salón (sí en pedidos online). Click para mostrarla.'
-                      : 'Se muestra en la carta del salón. Click para ocultarla ahí (sigue en pedidos online).'
+                      ? 'No aparece en la carta de las mesas (QR). Tocá para mostrarla también ahí.'
+                      : 'Aparece en la carta de las mesas (QR). Tocá para dejarla solo en pedidos web.'
                   }
-                  className="p-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors shrink-0"
                 >
-                  {cat.show_in_carta === false ? <UtensilsCrossed size={16} /> : <Utensils size={16} />}
-                </button>
-                <button
-                  onClick={() => alternarPausa(cat)}
-                  title={cat.is_active === false ? 'Reactivar' : 'Pausar'}
-                  className="p-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors shrink-0"
+                  <button
+                    onClick={() => alternarVisibleEnCarta(cat)}
+                    aria-label={cat.show_in_carta === false ? 'Solo en pedidos web' : 'En la carta del salón y en la web'}
+                    className="p-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors shrink-0"
+                  >
+                    {cat.show_in_carta === false ? <UtensilsCrossed size={16} /> : <Utensils size={16} />}
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  titulo={cat.is_active === false ? 'Pausada' : 'Activa'}
+                  detalle={cat.is_active === false ? 'Tocá para reactivarla.' : 'Tocá para pausarla sin borrarla.'}
                 >
-                  {cat.is_active === false ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-                <button
-                  onClick={() => setBorrando(cat)}
-                  title="Eliminar"
-                  className="p-2 rounded-xl text-text-muted hover:text-danger hover:bg-danger/10 transition-colors shrink-0"
-                >
-                  <Trash2 size={16} />
-                </button>
+                  <button
+                    onClick={() => alternarPausa(cat)}
+                    aria-label={cat.is_active === false ? 'Reactivar' : 'Pausar'}
+                    className="p-2 rounded-xl text-text-muted hover:text-primary hover:bg-white/5 transition-colors shrink-0"
+                  >
+                    {cat.is_active === false ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </Tooltip>
+                <Tooltip titulo="Eliminar categoría" detalle="Te pide confirmación antes de borrar.">
+                  <button
+                    onClick={() => setBorrando(cat)}
+                    aria-label="Eliminar categoría"
+                    className="p-2 rounded-xl text-text-muted hover:text-danger hover:bg-danger/10 transition-colors shrink-0"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </Tooltip>
               </div>
             ))}
           </div>
