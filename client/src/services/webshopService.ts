@@ -37,6 +37,10 @@ export interface CategoriaVidriera {
 export interface ConfigPedidos {
   habilitado: boolean;
   pausado: boolean;
+  /** Fuera del horario de atención. */
+  cerrado: boolean;
+  /** "hoy a las 20:00", "mañana a las 12:00"… sólo si está cerrado. */
+  abre: string | null;
   whatsapp: string | null;
   minimo: number;
   aceptaEfectivo: boolean;
@@ -212,7 +216,15 @@ export interface ConfigWeb {
   transfer_info: string | null;
   takeaway_enabled: boolean;
   prep_minutes: number | null;
+  /** Turnos por día (clave 0 = domingo). null: toma pedidos a cualquier hora. */
+  schedule: HorarioWeb | null;
 }
+
+export interface TurnoWeb {
+  desde: string;
+  hasta: string;
+}
+export type HorarioWeb = Record<string, TurnoWeb[]>;
 
 /**
  * La configuración va directo a Supabase y no por Express: la política de la
@@ -241,6 +253,7 @@ export const webConfigService = {
         transfer_info: null,
         takeaway_enabled: true,
         prep_minutes: null,
+        schedule: null,
       },
       error: null,
     };
@@ -264,6 +277,7 @@ export const webConfigService = {
           transfer_info: config.transfer_info || null,
           takeaway_enabled: config.takeaway_enabled,
           prep_minutes: config.prep_minutes,
+          schedule: config.schedule,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'branch_id' }

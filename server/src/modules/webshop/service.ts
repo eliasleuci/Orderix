@@ -2,11 +2,18 @@ import { Prisma } from '@prisma/client';
 import { WebshopRepository } from './repository';
 import { AppError } from '../../common/exceptions/AppError';
 import { getContext } from '../../common/utils/context';
+import { logger } from '../../common/utils/logger';
+import sharp from 'sharp';
+import { estaAbierto, proximaApertura, type Horario } from './horario';
 
 const webshopRepository = new WebshopRepository();
 
 const aNumero = (v: unknown) => Number(v ?? 0);
 const redondear = (n: number) => Math.round(n * 100) / 100;
+
+// Lo mismo que genera el panel al subir una foto (client/src/lib/imagenes.ts).
+const LADO_MINIATURA = 300;
+const CALIDAD_MINIATURA = 70;
 
 export interface ItemDelCarrito {
   productId: string;
@@ -182,6 +189,8 @@ export class WebshopService {
     // El envío sólo se ofrece si el local reparte Y tiene zonas cargadas: sin
     // zonas no hay forma de cotizarlo y el cliente pediría a ciegas.
     const haceEnvios = envio?.deliveryEnabled !== false && zonas.length > 0;
+    const horario = (config?.schedule ?? null) as Horario | null;
+    const cerrado = Boolean(horario) && !estaAbierto(horario!);
 
     return {
       local: { nombre: tenant.name, slug: tenant.slug },
@@ -195,8 +204,10 @@ export class WebshopService {
       // Sin fila de configuración el canal está apagado: la página se comporta
       // como la carta de sólo lectura de siempre.
       pedidos: {
-        habilitado: Boolean(config?.enabled) && !config?.paused,
+        habilitado: Boolean(config?.enabled) && !config?.paused && !cerrado,
         pausado: Boolean(config?.paused),
+        cerrado,
+        abre: cerrado ? proximaApertura(horario!) : null,
         whatsapp: config?.whatsappPhone ?? null,
         minimo: aNumero(config?.minOrder),
         aceptaEfectivo: config?.acceptsCash !== false,
@@ -230,11 +241,12 @@ export class WebshopService {
     const sucursalId = await webshopRepository.findBranchIdParaImagen(slug, branchId);
     if (!sucursalId) throw new AppError('Local no encontrado', 404);
 
-    const guardada =
+    const fila =
       tipo === 'producto'
-        ? (await webshopRepository.findProductImage(sucursalId, id))?.image
-        : (await webshopRepository.findCategoryImage(id))?.imageUrl;
+        ? await webshopRepository.findProductImage(sucursalId, id)
+        : await webshopRepository.findCategoryImage(id);
 
+    const guardada = fila?.miniatura ?? fila?.original;
     if (!guardada) throw new AppError('Imagen no encontrada', 404);
 
     // Si algún día las fotos pasan a un bucket, el valor guardado va a ser una
@@ -246,10 +258,29 @@ export class WebshopService {
     const match = /^data:([^;,]+);base64,(.*)$/s.exec(guardada);
     if (!match) throw new AppError('Imagen no encontrada', 404);
 
-    return {
-      contentType: match[1]!,
-      contenido: Buffer.from(match[2]!, 'base64'),
-    };
+    const contentType = match[1]!;
+    const contenido = Buffer.from(match[2]!, 'base64');
+    if (fila?.miniatura) return { contentType, contenido };
+
+    // Fotos cargadas antes de que existieran las miniaturas: la carta las
+    // muestra a 80px y bajaban de hasta 1400px (más de 1 MB cada una). Se
+    // achica una sola vez y se guarda; si algo falla, se sirve la original.
+    try {
+      const chica = await sharp(contenido)
+        .rotate()
+        .resize(LADO_MINIATURA, LADO_MINIATURA, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: CALIDAD_MINIATURA })
+        .toBuffer();
+      if (chica.length >= contenido.length) return { contentType, contenido };
+
+      await webshopRepository
+        .guardarMiniatura(tipo, id, guardada, `data:image/webp;base64,${chica.toString('base64')}`)
+        .catch((e) => logger.warn(`No se pudo guardar la miniatura de ${tipo} ${id}: ${e}`));
+      return { contentType: 'image/webp', contenido: chica };
+    } catch (e) {
+      logger.warn(`No se pudo achicar la imagen de ${tipo} ${id}: ${e}`);
+      return { contentType, contenido };
+    }
   }
 
   /**
@@ -267,6 +298,11 @@ export class WebshopService {
     const config = await webshopRepository.findWebSettings(sucursal.id);
     if (!config?.enabled) throw new AppError('Este local no está tomando pedidos online', 409);
     if (config.paused) throw new AppError('El local no está tomando pedidos en este momento', 409);
+    const horario = (config.schedule ?? null) as Horario | null;
+    if (horario && !estaAbierto(horario)) {
+      const abre = proximaApertura(horario);
+      throw new AppError(`El local está cerrado${abre ? `. Toma pedidos ${abre}` : ''}`, 409);
+    }
 
     if (entrada.orderType === 'TAKEAWAY' && !config.takeawayEnabled) {
       throw new AppError('Este local no permite retirar por el local', 409);

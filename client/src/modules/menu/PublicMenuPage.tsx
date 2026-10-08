@@ -339,10 +339,12 @@ const PublicMenuPage: React.FC<Props> = ({ modoPedido = false }) => {
 
       {/* Aviso de que el local no está tomando pedidos ahora mismo. La carta se
           puede seguir mirando: cerrar no es lo mismo que no existir. */}
-      {carta.pedidos.pausado && !categoriaSeleccionada && (
+      {modoPedido && (carta.pedidos.pausado || carta.pedidos.cerrado) && !categoriaSeleccionada && (
         <div className="max-w-3xl mx-auto px-6 pt-8">
           <p className="rounded-2xl border border-warning/30 bg-warning/10 px-5 py-4 text-sm font-bold text-warning text-center">
-            En este momento no estamos tomando pedidos online. Podés ver la carta igual.
+            {carta.pedidos.pausado
+              ? 'En este momento no estamos tomando pedidos online. Podés ver la carta igual.'
+              : `Ahora estamos cerrados${carta.pedidos.abre ? `: tomamos pedidos ${carta.pedidos.abre}` : ''}. Podés ver la carta igual.`}
           </p>
         </div>
       )}

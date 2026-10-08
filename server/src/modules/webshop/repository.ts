@@ -103,11 +103,12 @@ export class WebshopRepository {
   /**
    * Un hash corto de cada imagen, para colgárselo a la URL. Cambia sola cuando
    * el dueño sube otra foto, así la respuesta puede cachearse para siempre sin
-   * que nadie quede viendo la imagen vieja.
+   * que nadie quede viendo la imagen vieja. El ':mini' cambió todas las URLs de
+   * una vez: las viejas quedaron cacheadas un año con la foto completa.
    */
   async findImageVersions(branchId: string): Promise<Array<{ id: string; v: string }>> {
     return prisma.$queryRaw`
-      SELECT id::text AS id, substring(md5(image_url), 1, 10) AS v
+      SELECT id::text AS id, substring(md5(image_url || ':mini'), 1, 10) AS v
         FROM products
        WHERE branch_id = ${branchId}::uuid
          AND is_active = true
@@ -118,7 +119,7 @@ export class WebshopRepository {
   /** Lo mismo para las categorías, que se guardan por local y no por sucursal. */
   async findCategoryImageVersions(tenantId: string): Promise<Array<{ id: string; v: string }>> {
     return prisma.$queryRaw`
-      SELECT id::text AS id, substring(md5(image_url), 1, 10) AS v
+      SELECT id::text AS id, substring(md5(image_url || ':mini'), 1, 10) AS v
         FROM categories
        WHERE tenant_id = ${tenantId}::uuid
          AND image_url IS NOT NULL
@@ -134,8 +135,8 @@ export class WebshopRepository {
    * (se escribe directo desde el cliente vía Supabase), de ahí el raw query.
    */
   async findProductImage(branchId: string, productId: string) {
-    const filas = await prisma.$queryRaw<Array<{ image: string | null }>>`
-      SELECT COALESCE(thumbnail_url, image_url) AS image
+    const filas = await prisma.$queryRaw<Array<{ miniatura: string | null; original: string | null }>>`
+      SELECT thumbnail_url AS miniatura, image_url AS original
         FROM products
        WHERE id = ${productId}::uuid
          AND branch_id = ${branchId}::uuid
@@ -147,13 +148,32 @@ export class WebshopRepository {
 
   /** Igual que findProductImage: prioriza la miniatura sobre la foto completa. */
   async findCategoryImage(categoryId: string) {
-    const filas = await prisma.$queryRaw<Array<{ imageUrl: string | null }>>`
-      SELECT COALESCE(thumbnail_url, image_url) AS "imageUrl"
+    const filas = await prisma.$queryRaw<Array<{ miniatura: string | null; original: string | null }>>`
+      SELECT thumbnail_url AS miniatura, image_url AS original
         FROM categories
        WHERE id = ${categoryId}::uuid
        LIMIT 1
     `;
     return filas[0] ?? null;
+  }
+
+  /**
+   * Guarda la miniatura generada en el servidor para fotos cargadas antes de que
+   * existiera la columna. Sólo si sigue vacía y la original es la misma que se
+   * achicó: si el dueño cambió la foto en el medio, gana la suya.
+   */
+  async guardarMiniatura(tipo: 'producto' | 'categoria', id: string, original: string, miniatura: string) {
+    if (tipo === 'producto') {
+      await basePrisma.$executeRaw`
+        UPDATE products SET thumbnail_url = ${miniatura}
+         WHERE id = ${id}::uuid AND thumbnail_url IS NULL AND image_url = ${original}
+      `;
+    } else {
+      await basePrisma.$executeRaw`
+        UPDATE categories SET thumbnail_url = ${miniatura}
+         WHERE id = ${id}::uuid AND thumbnail_url IS NULL AND image_url = ${original}
+      `;
+    }
   }
 
   /**

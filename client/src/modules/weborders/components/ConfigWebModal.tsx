@@ -6,6 +6,7 @@ import { menuService } from '../../../services/menuService';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import HorarioWebEditor, { horarioPorDefecto, validarHorario } from './HorarioWebEditor';
 
 interface Props {
   isOpen: boolean;
@@ -83,6 +84,8 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
     if (config.enabled && !config.accepts_cash && !config.accepts_transfer) {
       return onAviso('Tenés que aceptar al menos una forma de pago', 'error');
     }
+    const errorHorario = config.schedule ? validarHorario(config.schedule) : null;
+    if (errorHorario) return onAviso(errorHorario, 'error');
 
     setGuardando(true);
     const { error } = await webConfigService.guardar({
@@ -132,6 +135,27 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
                 titulo="Pausar por hoy"
                 detalle="Para cuando no dan abasto. No pierde la configuración."
               />
+
+              <div className="space-y-3">
+                <Switch
+                  activo={Boolean(config.schedule)}
+                  onToggle={() =>
+                    setConfig({ ...config, schedule: config.schedule ? null : horarioPorDefecto() })
+                  }
+                  titulo="Horario de atención"
+                  detalle={
+                    config.schedule
+                      ? 'Fuera de horario la carta se ve, pero no se puede pedir'
+                      : 'Apagado: se puede pedir a cualquier hora'
+                  }
+                />
+                {config.schedule && (
+                  <HorarioWebEditor
+                    horario={config.schedule}
+                    onChange={(schedule) => setConfig({ ...config, schedule })}
+                  />
+                )}
+              </div>
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-text-muted mb-2">
