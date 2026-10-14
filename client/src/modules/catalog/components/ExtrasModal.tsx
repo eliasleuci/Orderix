@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, GripVertical, Pencil, Check, X, Copy, Search } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, X, Copy, Search, ChevronUp, ChevronDown, ArrowRightLeft } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import { modifierService, GrupoDeExtras, OpcionDeExtra } from '../../../services/modifierService';
 import { productService } from '../../../services/productService';
@@ -125,6 +125,36 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
     cargar();
   };
 
+  // Los grupos nuevos se crean todos con orden 0: al mover uno se renumeran
+  // todos según la posición en pantalla, así el orden queda fijo.
+  const moverGrupo = async (index: number, direccion: -1 | 1) => {
+    const destino = index + direccion;
+    if (destino < 0 || destino >= grupos.length) return;
+    const orden = [...grupos];
+    [orden[index], orden[destino]] = [orden[destino]!, orden[index]!];
+    setGrupos(orden);
+
+    const cambios = orden
+      .map((g, i) => ({ g, i }))
+      .filter(({ g, i }) => g.display_order !== i);
+    const resultados = await Promise.all(
+      cambios.map(({ g, i }) => modifierService.actualizarGrupo(g.id, { display_order: i }))
+    );
+    const fallo = resultados.find((r) => r.error);
+    if (fallo) onAviso(fallo.error!, 'error');
+    cargar();
+  };
+
+  const moverOpcion = async (opcion: OpcionDeExtra, grupoDestinoId: string) => {
+    if (!grupoDestinoId || grupoDestinoId === opcion.group_id) return;
+    const { error } = await modifierService.actualizarOpcion(opcion.id, {
+      group_id: grupoDestinoId,
+      display_order: (opciones[grupoDestinoId] ?? []).length,
+    });
+    if (error) return onAviso(error, 'error');
+    cargar();
+  };
+
   const guardarPrecio = async (opcionId: string) => {
     const precio = parseFloat(precioEditado);
     const { error } = await modifierService.actualizarOpcion(opcionId, {
@@ -210,7 +240,7 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
           </p>
         ) : (
           <div className="space-y-4">
-            {grupos.map((g) => {
+            {grupos.map((g, indice) => {
               const seleccion: Seleccion = g.max_select === 1 ? 'una' : 'varias';
               const opcionesDelGrupo = opciones[g.id] ?? [];
               const form = nuevaOpcion[g.id] ?? { nombre: '', precio: '' };
@@ -219,7 +249,26 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
                 <div key={g.id} className="rounded-3xl border border-white/10 bg-surface-base p-5">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="flex items-center gap-2 min-w-0">
-                      <GripVertical size={16} className="text-text-muted shrink-0" />
+                      {grupos.length > 1 && (
+                        <div className="flex flex-col shrink-0">
+                          <button
+                            onClick={() => moverGrupo(indice, -1)}
+                            disabled={indice === 0}
+                            title="Subir grupo"
+                            className="p-0.5 text-text-muted hover:text-primary disabled:opacity-20 disabled:hover:text-text-muted"
+                          >
+                            <ChevronUp size={16} />
+                          </button>
+                          <button
+                            onClick={() => moverGrupo(indice, 1)}
+                            disabled={indice === grupos.length - 1}
+                            title="Bajar grupo"
+                            className="p-0.5 text-text-muted hover:text-primary disabled:opacity-20 disabled:hover:text-text-muted"
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                        </div>
+                      )}
                       <h3 className="font-black tracking-tight truncate">{g.name}</h3>
                     </div>
                     <button
@@ -299,6 +348,29 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
                               {o.price > 0 ? `+$${o.price.toLocaleString()}` : 'Sin costo'}
                               <Pencil size={12} className="text-text-muted" />
                             </button>
+                            {grupos.length > 1 && (
+                              <label
+                                title="Mover a otro grupo"
+                                className="relative p-1.5 text-text-muted hover:text-primary transition-colors cursor-pointer"
+                              >
+                                <ArrowRightLeft size={14} />
+                                <select
+                                  value=""
+                                  onChange={(e) => moverOpcion(o, e.target.value)}
+                                  aria-label={`Mover ${o.name} a otro grupo`}
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                >
+                                  <option value="" disabled>Mover a…</option>
+                                  {grupos
+                                    .filter((otro) => otro.id !== g.id)
+                                    .map((otro) => (
+                                      <option key={otro.id} value={otro.id}>
+                                        {otro.name}
+                                      </option>
+                                    ))}
+                                </select>
+                              </label>
+                            )}
                             <button
                               onClick={() => setBorrando({ tipo: 'opcion', id: o.id, nombre: o.name })}
                               className="p-1.5 text-text-muted hover:text-danger transition-colors"

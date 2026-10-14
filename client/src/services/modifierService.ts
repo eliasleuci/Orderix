@@ -31,17 +31,18 @@ class ModifierService {
   async getExtrasDeSucursal(branchId: string): Promise<ServiceResponse<Record<string, GrupoExtras[]>>> {
     const { data, error } = await supabase
       .from('modifier_groups')
-      .select('id, product_id, name, min_select, max_select, display_order, modifier_options(id, name, price, display_order, is_active)')
+      .select('id, product_id, name, min_select, max_select, display_order, modifier_options(id, name, price, display_order, is_active, created_at)')
       .eq('branch_id', branchId)
       .eq('is_active', true)
-      .order('display_order');
+      .order('display_order')
+      .order('created_at');
     if (error) return { data: null, error: error.message };
 
     const porProducto: Record<string, GrupoExtras[]> = {};
     for (const g of data ?? []) {
       const opciones = ((g as any).modifier_options ?? [])
         .filter((o: any) => o.is_active)
-        .sort((a: any, b: any) => a.display_order - b.display_order)
+        .sort((a: any, b: any) => a.display_order - b.display_order || a.created_at.localeCompare(b.created_at))
         .map((o: any) => ({ id: o.id, nombre: o.name, precio: Number(o.price) || 0 }));
       if (opciones.length === 0) continue;
       (porProducto[g.product_id] ??= []).push({
@@ -60,7 +61,8 @@ class ModifierService {
       .from('modifier_groups')
       .select('*')
       .eq('product_id', productId)
-      .order('display_order');
+      .order('display_order')
+      .order('created_at');
     return { data, error: error?.message || null };
   }
 
@@ -70,7 +72,8 @@ class ModifierService {
       .from('modifier_options')
       .select('*')
       .in('group_id', groupIds)
-      .order('display_order');
+      .order('display_order')
+      .order('created_at');
     return { data, error: error?.message || null };
   }
 
