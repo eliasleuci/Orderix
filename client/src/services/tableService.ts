@@ -266,6 +266,66 @@ class TableService {
     if (error) return { data: null, error: error.message };
     return { data: { closed_count: data?.orders_closed || 0 }, error: null };
   }
+
+  /** Pedidos de mesas que cobró el otro local y todavía no se le reclamaron. */
+  async getPendientesOtroLocal(branchId: string): Promise<ServiceResponse<PendienteOtroLocal[]>> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, ticket_number, total, created_at, tables(label, number), waiters(name)')
+      .eq('branch_id', branchId)
+      .eq('payment_method', 'OTHER_LOCAL')
+      .order('created_at', { ascending: false });
+    if (error) return { data: null, error: error.message };
+
+    return {
+      data: (data ?? []).map((o: any) => ({
+        id: o.id,
+        ticketNumber: o.ticket_number,
+        total: Number(o.total ?? 0),
+        fecha: o.created_at,
+        mesa: o.tables?.label || (o.tables?.number ? `Mesa ${o.tables.number}` : null),
+        mozo: o.waiters?.name ?? null,
+      })),
+      error: null,
+    };
+  }
+
+  /**
+   * El otro local pagó: los pedidos pasan al medio con que llegó la plata y
+   * guardan cuándo, que es el día en que la caja los cuenta.
+   */
+  async marcarCobradosOtroLocal(orderIds: string[], medio: string): Promise<ServiceResponse<number>> {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ payment_method: medio, collected_at: new Date().toISOString() })
+      .in('id', orderIds)
+      .eq('payment_method', 'OTHER_LOCAL')
+      .select('id');
+    return { data: data?.length ?? 0, error: error?.message || null };
+  }
+
+  async getLocalCompartido(branchId: string): Promise<ServiceResponse<string | null>> {
+    const { data, error } = await supabase
+      .from('branches')
+      .select('shared_tables_partner')
+      .eq('id', branchId)
+      .maybeSingle();
+    return { data: data?.shared_tables_partner ?? null, error: error?.message || null };
+  }
+
+  async setLocalCompartido(nombre: string): Promise<ServiceResponse<boolean>> {
+    const { error } = await supabase.rpc('set_shared_tables_partner', { p_nombre: nombre });
+    return { data: !error, error: error?.message || null };
+  }
+}
+
+export interface PendienteOtroLocal {
+  id: string;
+  ticketNumber: number | null;
+  total: number;
+  fecha: string;
+  mesa: string | null;
+  mozo: string | null;
 }
 
 export const tableService = new TableService();

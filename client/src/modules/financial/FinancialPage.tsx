@@ -24,7 +24,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import BotonReporte from '../reports/BotonReporte';
 import { tableService, Mozo } from '../../services/tableService';
-import { etiquetaMedioPago, etiquetaCorta, esEfectivo, estaCobrado } from '../../lib/mediosDePago';
+import { etiquetaMedioPago, etiquetaCorta, esEfectivo, estaCobrado, pendienteDeCobro } from '../../lib/mediosDePago';
 
 type DateFilter = 'hoy' | 'ayer' | 'semana' | 'mes' | 'personalizado';
 
@@ -124,7 +124,7 @@ const FinancialPage: React.FC = () => {
 
       setPedidos(filteredOrders);
 
-      const sinCobrar = filteredOrders.filter((o: any) => o.payment_method === 'UNPAID');
+      const sinCobrar = filteredOrders.filter((o: any) => pendienteDeCobro(o.payment_method));
 
       setStats({
         totalSales,
@@ -604,7 +604,7 @@ const FinancialPage: React.FC = () => {
                             {delTipo.map((o: any) => {
                               const envio = Number(o.delivery_fee ?? 0);
                               const mesa = o.tables?.label || (o.tables?.number ? `Mesa ${o.tables.number}` : null);
-                              const sinCobrar = o.payment_method === 'UNPAID';
+                              const sinCobrar = pendienteDeCobro(o.payment_method);
 
                               return (
                                 <div

@@ -92,12 +92,19 @@ export class CashRepository {
    * Ventas de la sucursal en la ventana del turno, agrupadas por forma de pago.
    * Se usa `createdAt` a propósito, para que los números coincidan con los del
    * Financiero y los reportes: si cada pantalla contara distinto, cuadrar la
-   * caja sería imposible.
+   * caja sería imposible. La excepción son las mesas que cobró el otro local:
+   * esa plata entra el día que paga, así que cuentan por `collectedAt`.
    */
   async sumarVentas(branchId: string, desde: Date, hasta: Date) {
     return prisma.order.groupBy({
       by: ['payment_method'],
-      where: { branchId, createdAt: { gte: desde, lte: hasta } },
+      where: {
+        branchId,
+        OR: [
+          { collectedAt: null, createdAt: { gte: desde, lte: hasta } },
+          { collectedAt: { gte: desde, lte: hasta } },
+        ],
+      },
       _sum: { total: true },
       _count: { _all: true },
     });

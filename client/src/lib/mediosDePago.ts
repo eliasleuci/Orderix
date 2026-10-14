@@ -22,7 +22,11 @@ export const MEDIOS_DE_PAGO: { id: MedioPago; label: string; corto: string }[] =
 const LEGADO: Record<string, string> = {
   DIGITAL: 'QR / Transf.',
   UNPAID: 'Sin cobrar',
+  OTHER_LOCAL: 'A cobrar (otro local)',
 };
+
+/** Mesa que le cobró al cliente el local con el que se comparte el salón. */
+export const COBRA_OTRO_LOCAL = 'OTHER_LOCAL';
 
 export const etiquetaMedioPago = (medio?: string | null): string => {
   if (!medio) return '—';
@@ -37,5 +41,8 @@ export const etiquetaCorta = (medio?: string | null): string => {
 /** Lo que entra al cajón. Todo lo demás es electrónico. */
 export const esEfectivo = (medio?: string | null) => medio === 'CASH';
 
-/** Cobrado, en cualquier forma. UNPAID es una mesa abierta, no un cobro. */
-export const estaCobrado = (medio?: string | null) => Boolean(medio) && medio !== 'UNPAID';
+/** Consumido pero la plata todavía no entró: mesa abierta, o la cobró el otro local. */
+export const pendienteDeCobro = (medio?: string | null) => medio === 'UNPAID' || medio === COBRA_OTRO_LOCAL;
+
+/** Cobrado, en cualquier forma. */
+export const estaCobrado = (medio?: string | null) => Boolean(medio) && !pendienteDeCobro(medio);

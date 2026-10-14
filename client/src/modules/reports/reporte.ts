@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { orderService } from '../../services/orderService';
 import type { Order } from '../../types/domain';
-import { esEfectivo, estaCobrado } from '../../lib/mediosDePago';
+import { esEfectivo, estaCobrado, pendienteDeCobro } from '../../lib/mediosDePago';
 
 export type Periodo = 'dia' | 'semana' | 'mes';
 
@@ -146,7 +146,7 @@ export const obtenerDatos = async (
   };
 
   // Mesas abiertas: suman al total pero todavía no se cobraron.
-  const pendientes = ordenes.filter((o) => o.payment_method === 'UNPAID');
+  const pendientes = ordenes.filter((o) => pendienteDeCobro(o.payment_method));
 
   const { negocio, sucursal } = await obtenerEncabezado(branchId);
 

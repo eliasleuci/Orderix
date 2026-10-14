@@ -3,12 +3,13 @@ import { useAuthStore } from '../../store/authStore';
 import { tableService, Table, TableStatus, Mozo, ConsumoMesa } from '../../services/tableService';
 import MozosModal from './components/MozosModal';
 import ConsumoModal from './components/ConsumoModal';
-import { MEDIOS_DE_PAGO, MedioPago, etiquetaCorta } from '../../lib/mediosDePago';
+import { MEDIOS_DE_PAGO, MedioPago, etiquetaCorta, COBRA_OTRO_LOCAL } from '../../lib/mediosDePago';
+import PendientesOtroLocalModal from './components/PendientesOtroLocalModal';
 import AsignarMozoModal from './components/AsignarMozoModal';
 import { supabase } from '../../lib/supabase';
 import {
   UtensilsCrossed, Plus, X, Check, Clock, Users, Edit3, Trash2,
-  ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link, UserRound, Receipt
+  ChevronDown, Star, RefreshCw, HandPlatter, Banknote, Link, UserRound, Receipt, Store
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn, formatTicketNumber } from '../../lib/utils';
@@ -448,12 +449,14 @@ const ActionModal: React.FC<ActionModalProps> = ({ isOpen, mode, table, mozos, o
 const PayBillModal: React.FC<{
   isOpen: boolean;
   table: Table | null;
+  /** Nombre del local con el que se comparte el salón, si está cargado. */
+  localCompartido: string | null;
   onClose: () => void;
-  onSuccess: () => void;
-}> = ({ isOpen, table, onClose, onSuccess }) => {
+  onSuccess: (cobroOtroLocal: boolean) => void;
+}> = ({ isOpen, table, localCompartido, onClose, onSuccess }) => {
   const [bill, setBill] = useState<{ orders: any[], total: number } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [method, setMethod] = useState<MedioPago>('CASH');
+  const [method, setMethod] = useState<MedioPago | typeof COBRA_OTRO_LOCAL>('CASH');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -474,7 +477,7 @@ const PayBillModal: React.FC<{
     const { error } = await tableService.closeTableBill(table.id, method);
     setLoading(false);
     if (error) setError(error);
-    else onSuccess();
+    else onSuccess(method === COBRA_OTRO_LOCAL);
   };
 
   return (
@@ -545,6 +548,25 @@ const PayBillModal: React.FC<{
                     </button>
                   ))}
                 </div>
+                {/* El salón se comparte: a veces le cobra al cliente el otro
+                    local. La mesa se cierra igual, pero queda pendiente de
+                    cobro en vez de figurar como plata que entró. */}
+                <button
+                  onClick={() => setMethod(COBRA_OTRO_LOCAL)}
+                  className={cn(
+                    "mt-2 w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest border transition-all flex items-center justify-center gap-2",
+                    method === COBRA_OTRO_LOCAL
+                      ? "bg-warning text-white border-warning shadow-lg shadow-warning/20"
+                      : "bg-surface-base border-white/5 text-text-muted hover:bg-white/5"
+                  )}
+                >
+                  <Store size={14} /> La cobró {localCompartido || 'el otro local'}
+                </button>
+                {method === COBRA_OTRO_LOCAL && (
+                  <p className="text-[11px] text-warning font-bold mt-2">
+                    Queda en "A cobrar" hasta que {localCompartido || 'el otro local'} te pague.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -553,7 +575,7 @@ const PayBillModal: React.FC<{
         {bill && bill.orders.length > 0 && (
           <div className="p-6 border-t border-white/5 flex gap-3 shrink-0">
             <Button fullWidth size="lg" variant="success" onClick={handlePay} disabled={loading} leftIcon={<Check size={20} />}>
-              Cerrar Mesa
+              {method === COBRA_OTRO_LOCAL ? 'Cerrar mesa · queda a cobrar' : 'Cerrar Mesa'}
             </Button>
           </div>
         )}
@@ -653,6 +675,9 @@ const TablesPage: React.FC = () => {
   const [consumos, setConsumos] = useState<Record<string, ConsumoMesa>>({});
   const [consumoAbierto, setConsumoAbierto] = useState<Table | null>(null);
   const [asignandoMozo, setAsignandoMozo] = useState<Table | null>(null);
+  const [pendientesAbierto, setPendientesAbierto] = useState(false);
+  const [localCompartido, setLocalCompartido] = useState<string | null>(null);
+  const [aCobrar, setACobrar] = useState({ cantidad: 0, total: 0 });
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean }>({
     message: '', type: 'success', visible: false,
@@ -682,6 +707,20 @@ const TablesPage: React.FC = () => {
   }, [branchId]);
 
   useEffect(() => { loadMozos(); }, [loadMozos]);
+
+  const loadACobrar = useCallback(async () => {
+    if (!branchId) return;
+    const { data } = await tableService.getPendientesOtroLocal(branchId);
+    const lista = data ?? [];
+    setACobrar({ cantidad: lista.length, total: lista.reduce((s, p) => s + p.total, 0) });
+  }, [branchId]);
+
+  useEffect(() => { loadACobrar(); }, [loadACobrar]);
+
+  useEffect(() => {
+    if (!branchId) return;
+    tableService.getLocalCompartido(branchId).then(({ data }) => setLocalCompartido(data));
+  }, [branchId]);
 
   // Realtime subscription
   const reloadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -789,10 +828,11 @@ const TablesPage: React.FC = () => {
     loadTables();
   };
 
-  const handleBillSuccess = () => {
+  const handleBillSuccess = (cobroOtroLocal: boolean) => {
     setBillModalState({ open: false, table: null });
-    showToast('Mesa cobrada y liberada', 'success');
+    showToast(cobroOtroLocal ? 'Mesa liberada · queda pendiente de cobro' : 'Mesa cobrada y liberada', 'success');
     loadTables();
+    if (cobroOtroLocal) loadACobrar();
   };
 
   const filtered = useMemo(() => {
@@ -837,6 +877,14 @@ const TablesPage: React.FC = () => {
           </button>
           <Button variant="secondary" leftIcon={<UserRound size={18} />} onClick={() => setMozosModalOpen(true)}>
             Mozos
+          </Button>
+          <Button
+            variant="secondary"
+            leftIcon={<Store size={18} />}
+            onClick={() => setPendientesAbierto(true)}
+            className={aCobrar.cantidad > 0 ? 'border-warning/40 text-warning' : undefined}
+          >
+            A cobrar{aCobrar.cantidad > 0 ? ` · $${aCobrar.total.toLocaleString('es-AR')}` : ''}
           </Button>
           <Button leftIcon={<Plus size={18} />} onClick={() => setModal({ open: true, mode: 'create', table: null })}>
             Nueva Mesa
@@ -949,10 +997,19 @@ const TablesPage: React.FC = () => {
           <PayBillModal
             isOpen={billModalState.open}
             table={billModalState.table}
+            localCompartido={localCompartido}
             onClose={() => setBillModalState({ open: false, table: null })}
             onSuccess={handleBillSuccess}
           />
         )}
+        <PendientesOtroLocalModal
+          isOpen={pendientesAbierto}
+          onClose={() => setPendientesAbierto(false)}
+          localCompartido={localCompartido}
+          onLocalCompartidoGuardado={setLocalCompartido}
+          onAviso={showToast}
+          onCambio={loadACobrar}
+        />
         <AsignarMozoModal
           isOpen={Boolean(asignandoMozo)}
           onClose={() => setAsignandoMozo(null)}

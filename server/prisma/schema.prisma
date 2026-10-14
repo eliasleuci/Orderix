@@ -247,6 +247,8 @@ model Order {
   /// Se congela al crear el pedido: subirle la comisión a un mozo no puede
   /// cambiar lo que ya se le liquidó.
   waiterCommissionPct Decimal? @map("waiter_commission_pct") @db.Decimal(5, 2)
+  /// Cuándo se cobró un pedido que cobró el otro local. NULL: se cobró al momento.
+  collectedAt      DateTime?   @map("collected_at") @db.Timestamptz(6)
   createdAt        DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   tenantId         String      @map("tenant_id") @db.Uuid

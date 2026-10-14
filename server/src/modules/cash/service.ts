@@ -57,7 +57,8 @@ export class CashService {
       const monto = aNumero(fila._sum.total);
       const medio = fila.payment_method;
 
-      if (medio === 'UNPAID') continue;
+      // Mesas abiertas y mesas que cobró el otro local: la plata no entró.
+      if (medio === 'UNPAID' || medio === 'OTHER_LOCAL') continue;
 
       cantidad += fila._count._all;
       // Todo lo que no sea efectivo va al cajón virtual: así, si mañana se
