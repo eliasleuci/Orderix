@@ -71,6 +71,8 @@ const PAGO = {
  * ("2x Extra carne"). Los de la caja ya traen su signo ("- Sin tomate"); los
  * del pedido web no traen ninguno y son agregados.
  */
+const esMedallon = (e) => /medall|doble|triple|cu[aá]druple|carne/i.test(e.nombre);
+
 const extrasDe = (item) => {
   const porNombre = new Map();
   for (const m of item.modifiers || []) {
@@ -84,7 +86,10 @@ const extrasDe = (item) => {
     if (actual) actual.cantidad += 1;
     else porNombre.set(clave, { signo, nombre, precio, cantidad: 1 });
   }
-  return [...porNombre.values()];
+  // Lo que define cuántos medallones lleva va siempre primero: es lo que
+  // cocina tiene que ver antes que nada. El resto sigue en el orden elegido.
+  const extras = [...porNombre.values()];
+  return [...extras.filter(esMedallon), ...extras.filter((e) => !esMedallon(e))];
 };
 
 const textoExtra = (e) => `${e.signo} ${e.cantidad > 1 ? `${e.cantidad}x ` : ''}${e.nombre}`;
@@ -312,6 +317,7 @@ export async function imprimirTicketCliente(order) {
   l.push(`Pago: ${PAGO[order.paymentMethod] || order.paymentMethod || '-'}`);
   l.push('');
   l.push(centrar('Gracias por su compra'));
+  l.push(centrar('No válido como factura'));
   l.push('');
 
   const texto = l.join('\n');
@@ -361,6 +367,7 @@ export async function imprimirTicketCliente(order) {
     impresora.newLine();
     impresora.alignCenter();
     impresora.println('Gracias por su compra');
+    impresora.println('No válido como factura');
     impresora.cut();
   }
 
