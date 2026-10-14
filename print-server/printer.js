@@ -72,16 +72,28 @@ const enLinea = (izq, der) => {
   return izq + ' '.repeat(libre) + der;
 };
 
+// FS . : apaga el modo de caracteres chinos. Algunas térmicas genéricas lo
+// traen prendido (el selftest dice "Chinese character: Yes") y en ese modo una
+// letra con tilde se junta con la siguiente y sale un ideograma: "ELECCIÓN"
+// se imprimía "ELECC部N". Se manda en cada ticket porque un reset de la
+// impresora lo vuelve a prender.
+const APAGAR_MODO_CHINO = Buffer.from([0x1c, 0x2e]);
+
+const conModoChinoApagado = (impresora) => {
+  impresora.add(APAGAR_MODO_CHINO);
+  return impresora;
+};
+
 const crearImpresora = () => {
   if (config.modo === 'red') {
-    return new ThermalPrinter({
+    return conModoChinoApagado(new ThermalPrinter({
       type: PrinterTypes.EPSON,
       interface: `tcp://${config.host}:${config.puerto}`,
       characterSet: CharacterSet.PC858_EURO,
       removeSpecialCharacters: false,
       width: ANCHO,
       options: { timeout: 5000 },
-    });
+    }));
   }
 
   if (config.modo === 'windows') {
@@ -98,14 +110,14 @@ const crearImpresora = () => {
       );
     }
 
-    return new ThermalPrinter({
+    return conModoChinoApagado(new ThermalPrinter({
       type: PrinterTypes.EPSON,
       interface: `printer:${config.nombre}`,
       characterSet: CharacterSet.PC858_EURO,
       removeSpecialCharacters: false,
       width: ANCHO,
       driver,
-    });
+    }));
   }
 
   return null; // simulación
