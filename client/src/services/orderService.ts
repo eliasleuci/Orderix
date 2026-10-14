@@ -68,6 +68,16 @@ class OrderService implements IOrderService {
     return { data, error: error?.message || null };
   }
 
+  async findByTicketNumber(branchId: string, ticketNumber: number): Promise<ServiceResponse<Order[]>> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*, tables(*), order_items(*, products(*))')
+      .eq('branch_id', branchId)
+      .eq('ticket_number', ticketNumber);
+
+    return { data, error: error?.message || null };
+  }
+
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<ServiceResponse<Order>> {
     const now = new Date().toISOString();
     const updatePayload: Record<string, any> = { status, updated_at: now };

@@ -13,7 +13,9 @@ import {
   CheckCircle,
   ArrowUpRight,
   RefreshCw,
-  Bike
+  Bike,
+  Search,
+  X
 } from 'lucide-react';
 import { Order } from '../../types/domain';
 import { cn, formatTicketNumber } from '../../lib/utils';
@@ -172,6 +174,35 @@ const DashboardPage: React.FC = () => {
   const [reasignando, setReasignando] = useState<Order | null>(null);
   const [avisoRepartidor, setAvisoRepartidor] = useState<{ texto: string; tipo: ToastType } | null>(null);
 
+  // Búsqueda por número de orden: va contra la base y no contra la lista, que
+  // sólo tiene los pedidos en curso del día elegido.
+  const [buscando, setBuscando] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [resultados, setResultados] = useState<Order[] | null>(null);
+  const [cargandoBusqueda, setCargandoBusqueda] = useState(false);
+  const inputBusquedaRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const numero = parseInt(busqueda.replace(/\D/g, ''), 10);
+    if (!branchId || !numero) {
+      setResultados(null);
+      return;
+    }
+    setCargandoBusqueda(true);
+    const t = setTimeout(async () => {
+      const { data } = await orderService.findByTicketNumber(branchId, numero);
+      setResultados(data ?? []);
+      setCargandoBusqueda(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [busqueda, branchId]);
+
+  const cerrarBusqueda = () => {
+    setBuscando(false);
+    setBusqueda('');
+    setResultados(null);
+  };
+
   const fetchStats = useCallback(async (silent = false) => {
     if (!branchId) return;
     if (!silent) setLoading(true);
@@ -273,6 +304,7 @@ const DashboardPage: React.FC = () => {
       alert(`Error: ${error}`);
     } else {
       fetchStats(true);
+      setResultados((prev) => prev && prev.filter((o) => o.id !== orderToDelete.id));
     }
     setIsConfirmDeleteSingleOpen(false);
     setOrderToDelete(null);
@@ -389,16 +421,62 @@ const DashboardPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-8">
             {/* RECENT ACTIVITY */}
             <Card variant="solid" padding="large" className="border-white/5 bg-surface-elevated/40">
-              <div className="flex items-center justify-between mb-10">
-                <div className="flex items-center gap-3">
-                  <History className="text-primary" size={24} />
-                  <h2 className="text-xl font-black uppercase tracking-tight">Actividad Reciente</h2>
+              <div className="flex items-center justify-between gap-3 mb-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <History className="text-primary shrink-0" size={24} />
+                  <h2 className={cn('text-xl font-black uppercase tracking-tight truncate', buscando && 'hidden sm:block')}>
+                    {resultados ? 'Búsqueda' : 'Actividad Reciente'}
+                  </h2>
                 </div>
-                <Button variant="ghost" size="md">Ver Todo</Button>
+                {buscando ? (
+                  <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end">
+                    <div className="relative w-full sm:w-64">
+                      <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                      <input
+                        ref={inputBusquedaRef}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="N° de orden"
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Escape' && cerrarBusqueda()}
+                        className="w-full bg-surface-base border border-border-subtle rounded-xl py-2.5 pl-10 pr-3 text-sm font-bold text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      />
+                    </div>
+                    <button
+                      onClick={cerrarBusqueda}
+                      aria-label="Cerrar búsqueda"
+                      className="p-2.5 rounded-xl text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors shrink-0"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setBuscando(true);
+                      setTimeout(() => inputBusquedaRef.current?.focus(), 0);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border-subtle text-text-secondary hover:text-primary hover:border-primary/40 transition-colors shrink-0"
+                  >
+                    <Search size={16} />
+                    <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Buscar pedido</span>
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4">
-                {stats.recentOrders.map((order: Order) => (
+                {cargandoBusqueda && (
+                  <div className="flex justify-center py-10">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                {!cargandoBusqueda && resultados?.length === 0 && (
+                  <div className="py-16 text-center text-text-muted font-bold">
+                    No hay ningún pedido con el número #{formatTicketNumber(busqueda.replace(/\D/g, ''))}
+                  </div>
+                )}
+                {!cargandoBusqueda && (resultados ?? stats.recentOrders).map((order: Order) => (
                   <div key={order.id} className="group flex flex-col p-4 sm:p-5 rounded-[2rem] bg-surface-base/50 border border-white/5 hover:border-primary/30 transition-all cursor-default overflow-hidden">
                     {/* En el celular el nombre del cliente empujaba todo hacia
                         afuera y el tachito quedaba cortado contra el borde. El
@@ -415,13 +493,16 @@ const DashboardPage: React.FC = () => {
                           </h4>
                           <div className="flex items-center gap-3">
                             <span className="text-xs text-text-muted font-medium">
-                              {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {resultados && new Date(order.created_at).toDateString() !== new Date().toDateString()
+                                ? new Date(order.created_at).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                : new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             <div className="w-1 h-1 bg-white/10 rounded-full" />
                             <div className="flex gap-2">
                               {order.status === 'READY' ? <Badge variant="success">Listo</Badge> :
                                order.status === 'PREPARING' ? <Badge variant="warning">En Cocina</Badge> :
                                order.status === 'DELIVERED' ? <Badge variant="neutral">Entregado</Badge> :
+                               order.status === 'CANCELLED' ? <Badge variant="danger">Cancelado</Badge> :
                                <Badge variant="neutral">Pendiente</Badge>}
                             </div>
                           </div>
@@ -475,7 +556,7 @@ const DashboardPage: React.FC = () => {
                     <MiniTimeline order={order} />
                   </div>
                 ))}
-                {stats.recentOrders.length === 0 && (
+                {!resultados && stats.recentOrders.length === 0 && (
                   <div className="py-20 text-center text-text-muted opacity-20 italic font-bold uppercase tracking-widest">
                     Sin actividad reciente
                   </div>
@@ -523,12 +604,9 @@ const DashboardPage: React.FC = () => {
         title={reasignando?.delivery_driver_id ? 'Cambiar repartidor' : '¿Quién lo lleva?'}
         onAsignado={(id, nombre) => {
           // Se refleja en la lista sin esperar al refresco de 20 segundos.
-          setStats((prev: any) => ({
-            ...prev,
-            recentOrders: prev.recentOrders.map((o: Order) =>
-              o.id === reasignando?.id ? { ...o, delivery_driver_id: id } : o
-            ),
-          }));
+          const actualizar = (o: Order) => (o.id === reasignando?.id ? { ...o, delivery_driver_id: id } : o);
+          setStats((prev: any) => ({ ...prev, recentOrders: prev.recentOrders.map(actualizar) }));
+          setResultados((prev) => prev && prev.map(actualizar));
           setAvisoRepartidor({
             texto: nombre ? `Ahora lo lleva ${nombre}` : 'Se quitó el repartidor',
             tipo: 'success',
