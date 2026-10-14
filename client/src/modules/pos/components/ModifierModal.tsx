@@ -5,10 +5,14 @@ import Button from '../../../components/ui/Button';
 import { ANIMATIONS } from '../../../lib/motion';
 
 import { CartItem, CartModifier } from '../../../store/cartStore';
+import type { GrupoExtras } from '../../../services/webshopService';
+import SelectorDeExtras, { Elegidas, opcionesElegidas } from '../../../components/extras/SelectorDeExtras';
 
 interface ModifierModalProps {
   isOpen: boolean;
   item: CartItem | null;
+  /** Los extras del producto cargados en Catálogo (los mismos del pedido web). */
+  grupos?: GrupoExtras[];
   onClose: () => void;
   onSave: (cartItemId: string, modifiers: CartModifier[], notes: string) => void;
 }
@@ -48,9 +52,14 @@ function saveModifiers(mods: Modifier[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(mods));
 }
 
-const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, onClose, onSave }) => {
+// Constante y no `= []` en los props: un arreglo nuevo en cada render dispara
+// el efecto que carga la selección y borraría lo que se va marcando.
+const SIN_GRUPOS: GrupoExtras[] = [];
+
+const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SIN_GRUPOS, onClose, onSave }) => {
   const [modifiers, setModifiers] = useState<Modifier[]>(loadModifiers);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, number>>({});
+  const [elegidas, setElegidas] = useState<Elegidas>({});
   const [notes, setNotes] = useState('');
 
   // Inline editor state
@@ -67,16 +76,28 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, onClose, on
   // Sync state when modal opens
   useEffect(() => {
     if (isOpen && item) {
+      // Lo que coincide con una opción del producto se marca arriba; el resto
+      // son extras de la caja y van a la sección de siempre.
+      const marcadas: Elegidas = {};
       const initial: Record<string, number> = {};
       item.modifiers?.forEach(m => {
+        const grupo = grupos.find(g =>
+          g.opciones.some(o => o.nombre === m.label && !marcadas[g.id]?.has(o.id))
+        );
+        const opcion = grupo?.opciones.find(o => o.nombre === m.label && !marcadas[grupo.id]?.has(o.id));
+        if (grupo && opcion) {
+          (marcadas[grupo.id] ??= new Set()).add(opcion.id);
+          return;
+        }
         initial[m.label] = (initial[m.label] || 0) + 1;
       });
+      setElegidas(marcadas);
       setSelectedModifiers(initial);
       setNotes(item.notes || '');
       setEditingId(null);
       setShowNewForm(false);
     }
-  }, [isOpen, item]);
+  }, [isOpen, item, grupos]);
 
   // Focus new label input when form opens
   useEffect(() => {
@@ -165,10 +186,15 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, onClose, on
   // ── Save ──────────────────────────────────────────────────────────────────
 
   const handleSave = () => {
-    const modsToSave: CartModifier[] = [];
+    const modsToSave: CartModifier[] = opcionesElegidas(grupos, elegidas).map(o => ({
+      label: o.nombre,
+      price: o.precio,
+    }));
     Object.entries(selectedModifiers).forEach(([label, count]) => {
       const found = modifiers.find(m => m.label === label);
-      const price = found ? found.price : 0;
+      // Un extra que ya no está en la lista de la caja conserva el precio con
+      // el que se agregó, en vez de pasar a valer $0.
+      const price = found ? found.price : item.modifiers?.find(m => m.label === label)?.price ?? 0;
       for (let i = 0; i < count; i++) {
         modsToSave.push({ label, price });
       }
@@ -220,10 +246,19 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, onClose, on
           {/* CONTENT */}
           <div className="p-6 overflow-y-auto flex-1 space-y-8">
 
+            {grupos.length > 0 && (
+              <section className="space-y-5">
+                <h3 className="text-sm font-black text-text-muted uppercase tracking-widest">Opciones del producto</h3>
+                <SelectorDeExtras grupos={grupos} elegidas={elegidas} onChange={setElegidas} />
+              </section>
+            )}
+
             {/* EXTRAS (con precio editable) */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-black text-text-muted uppercase tracking-widest">Extras</h3>
+                <h3 className="text-sm font-black text-text-muted uppercase tracking-widest">
+                  {grupos.length > 0 ? 'Otros extras' : 'Extras'}
+                </h3>
                 <span className="text-[10px] text-text-muted/50 font-bold uppercase tracking-widest">
                   Toca el precio para editar
                 </span>

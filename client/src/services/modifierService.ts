@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ServiceResponse } from '../types/domain';
+import type { GrupoExtras } from './webshopService';
 
 export interface GrupoDeExtras {
   id: string;
@@ -22,6 +23,38 @@ export interface OpcionDeExtra {
 }
 
 class ModifierService {
+  /**
+   * Los extras activos de todos los productos de la sucursal, de una sola vez:
+   * la caja los necesita al instante al tocar un producto, no una consulta por
+   * toque. Grupos sin opciones activas no se devuelven (no hay nada que elegir).
+   */
+  async getExtrasDeSucursal(branchId: string): Promise<ServiceResponse<Record<string, GrupoExtras[]>>> {
+    const { data, error } = await supabase
+      .from('modifier_groups')
+      .select('id, product_id, name, min_select, max_select, display_order, modifier_options(id, name, price, display_order, is_active)')
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .order('display_order');
+    if (error) return { data: null, error: error.message };
+
+    const porProducto: Record<string, GrupoExtras[]> = {};
+    for (const g of data ?? []) {
+      const opciones = ((g as any).modifier_options ?? [])
+        .filter((o: any) => o.is_active)
+        .sort((a: any, b: any) => a.display_order - b.display_order)
+        .map((o: any) => ({ id: o.id, nombre: o.name, precio: Number(o.price) || 0 }));
+      if (opciones.length === 0) continue;
+      (porProducto[g.product_id] ??= []).push({
+        id: g.id,
+        nombre: g.name,
+        minimo: g.min_select,
+        maximo: g.max_select,
+        opciones,
+      });
+    }
+    return { data: porProducto, error: null };
+  }
+
   async getGrupos(productId: string): Promise<ServiceResponse<GrupoDeExtras[]>> {
     const { data, error } = await supabase
       .from('modifier_groups')

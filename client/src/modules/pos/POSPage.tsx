@@ -26,6 +26,9 @@ import CategoryBar from './components/CategoryBar';
 import ProductCard from './components/ProductCard';
 import CartItem from './components/CartItem';
 import ModifierModal from './components/ModifierModal';
+import ExtrasProductoModal, { ProductoConExtras } from './components/ExtrasProductoModal';
+import { modifierService } from '../../services/modifierService';
+import type { GrupoExtras } from '../../services/webshopService';
 
 const POSPage: React.FC = () => {
   const { items, addItem, updateQuantity, removeItem, updateItemModifiers, clearCart, getTotal } = useCartStore();
@@ -90,6 +93,8 @@ const POSPage: React.FC = () => {
   // Modal State
   const [isModifierModalOpen, setIsModifierModalOpen] = useState(false);
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
+  const [extrasPorProducto, setExtrasPorProducto] = useState<Record<string, GrupoExtras[]>>({});
+  const [personalizando, setPersonalizando] = useState<ProductoConExtras | null>(null);
   
   // Search Input Ref
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -104,14 +109,16 @@ const POSPage: React.FC = () => {
 
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, tableRes, zonaRes, configRes, mozoRes] = await Promise.all([
+        const [prodRes, catRes, tableRes, zonaRes, configRes, mozoRes, extrasRes] = await Promise.all([
           productService.getBranchProducts(branchId),
           productService.getCategories(),
           tableService.getBranchTables(branchId),
           deliveryService.getZonas(branchId),
           deliveryService.getConfig(branchId),
-          tableService.getMozos(branchId)
+          tableService.getMozos(branchId),
+          modifierService.getExtrasDeSucursal(branchId)
         ]);
+        setExtrasPorProducto(extrasRes.data || {});
         setProducts(prodRes.data || []);
         setCategories(catRes.data || []);
         setTables(tableRes.data || []);
@@ -249,6 +256,25 @@ const POSPage: React.FC = () => {
       price: Number(product.price) 
     });
   }, [addItem]);
+
+  const handlePersonalizar = useCallback((product: any) => {
+    setPersonalizando({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price),
+      grupos: extrasPorProducto[product.id] ?? [],
+    });
+  }, [extrasPorProducto]);
+
+  const handleAgregarPersonalizado = useCallback((modifiers: any[], notas: string) => {
+    if (!personalizando) return;
+    addItem(
+      { id: personalizando.id, name: personalizando.name, price: personalizando.price },
+      modifiers,
+      notas
+    );
+    setPersonalizando(null);
+  }, [addItem, personalizando]);
 
   const handleUpdateQuantity = useCallback((id: string, qty: number) => {
     updateQuantity(id, qty);
@@ -528,6 +554,7 @@ const POSPage: React.FC = () => {
                 key={p.id} 
                 product={p} 
                 onAdd={handleAddItem}
+                onPersonalizar={extrasPorProducto[p.id]?.length ? handlePersonalizar : undefined}
               />
             ))}
           </AnimatePresence>
@@ -984,8 +1011,15 @@ const POSPage: React.FC = () => {
       <ModifierModal 
         isOpen={isModifierModalOpen}
         item={editingCartItem}
+        grupos={editingCartItem ? extrasPorProducto[editingCartItem.id] : undefined}
         onClose={() => setIsModifierModalOpen(false)}
         onSave={handleSaveModifiers}
+      />
+
+      <ExtrasProductoModal
+        producto={personalizando}
+        onCerrar={() => setPersonalizando(null)}
+        onAgregar={handleAgregarPersonalizado}
       />
     </div>
   );

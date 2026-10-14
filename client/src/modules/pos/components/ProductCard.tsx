@@ -8,18 +8,36 @@ import Badge from '../../../components/ui/Badge';
 interface ProductCardProps {
   product: any;
   onAdd: (product: any) => void;
+  /** Si el producto tiene extras: tocar la tarjeta los abre; el + agrega simple. */
+  onPersonalizar?: (product: any) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) => {
+const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd, onPersonalizar }) => {
   const isOutOfStock = product.stock === 0;
   const isLowStock = product.stock > 0 && product.stock <= 5;
 
+  const tocarTarjeta = () => {
+    if (isOutOfStock) return;
+    if (onPersonalizar) onPersonalizar(product);
+    else onAdd(product);
+  };
+
+  // div y no button: adentro va el botón +, y un botón no puede contener otro.
   return (
-    <motion.button
+    <motion.div
+      role="button"
+      tabIndex={isOutOfStock ? -1 : 0}
       whileTap={isOutOfStock ? undefined : { scale: 0.96 }}
-      onClick={() => !isOutOfStock && onAdd(product)}
+      onClick={tocarTarjeta}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          tocarTarjeta();
+        }
+      }}
       className={cn(
-        "group relative flex text-left transition-all",
+        "group relative flex text-left transition-all cursor-pointer",
         isOutOfStock && "opacity-50 pointer-events-none grayscale"
       )}
     >
@@ -62,20 +80,29 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd }) 
             {product.name}
           </h3>
           <p className="text-text-muted text-[10px] uppercase font-bold tracking-widest line-clamp-1 mb-3">
-            {product.category_name || "Producto"}
+            {onPersonalizar ? <span className="text-primary">Con extras</span> : product.category_name || "Producto"}
           </p>
 
           <div className="flex items-center justify-between">
             <span className="text-2xl font-black text-primary tracking-tighter">
               ${Number(product.price)}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-primary text-surface-base flex items-center justify-center font-black transition-transform group-hover:rotate-90">
+            <button
+              type="button"
+              aria-label={onPersonalizar ? `Agregar ${product.name} simple` : `Agregar ${product.name}`}
+              title={onPersonalizar ? 'Agregar simple, sin extras' : undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isOutOfStock) onAdd(product);
+              }}
+              className="w-10 h-10 rounded-xl bg-primary text-surface-base flex items-center justify-center font-black transition-transform hover:rotate-90 active:scale-90"
+            >
               +
-            </div>
+            </button>
           </div>
         </div>
       </Card>
-    </motion.button>
+    </motion.div>
   );
 });
 
