@@ -26,6 +26,8 @@ interface OrderData {
   customerAddress?: string;
   orderType: string;
   table?: string;
+  /** Mozo de la mesa, para el ticket. */
+  mozo?: string;
   items: Array<{
     name: string;
     quantity: number;

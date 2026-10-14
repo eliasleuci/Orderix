@@ -220,6 +220,7 @@ export async function imprimirTicketCocina(order) {
   l.push(`ORDEN #${numero}`);
   l.push(destino);
   l.push(`${hora}  ${fecha}`);
+  if (order.mozo) l.push(`Mozo: ${order.mozo}`);
   if (order.customerName) l.push(`Cliente: ${order.customerName}`);
   l.push(repetir('-'));
   l.push('');
@@ -258,6 +259,7 @@ export async function imprimirTicketCocina(order) {
     impresora.setTextNormal();
     impresora.bold(false);
     impresora.println(`${hora}  ${fecha}`);
+    if (order.mozo) impresora.println(`Mozo: ${order.mozo}`);
     if (order.customerName) impresora.println(`Cliente: ${order.customerName}`);
     impresora.drawLine();
     impresora.newLine();
@@ -294,6 +296,7 @@ export async function imprimirTicketCliente(order) {
   l.push(`${hora}  ${fecha}`);
   l.push(`Tipo: ${TIPO[order.orderType] || order.orderType || '-'}`);
   if (order.table) l.push(`Mesa: ${order.table}`);
+  if (order.mozo) l.push(`Mozo: ${order.mozo}`);
   if (order.customerName) l.push(`Cliente: ${order.customerName}`);
   if (order.customerAddress) l.push(`Direccion: ${order.customerAddress}`);
   l.push(repetir('-'));
@@ -341,6 +344,7 @@ export async function imprimirTicketCliente(order) {
     impresora.println(`${hora}  ${fecha}`);
     impresora.println(`Tipo: ${TIPO[order.orderType] || order.orderType || '-'}`);
     if (order.table) impresora.println(`Mesa: ${order.table}`);
+    if (order.mozo) impresora.println(`Mozo: ${order.mozo}`);
     if (order.customerName) impresora.println(`Cliente: ${order.customerName}`);
     if (order.customerAddress) impresora.println(`Direccion: ${order.customerAddress}`);
     impresora.drawLine();

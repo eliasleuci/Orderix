@@ -400,6 +400,7 @@ const POSPage: React.FC = () => {
       customerAddress: customerAddress.trim() || undefined,
       orderType,
       table: tableLabel,
+      mozo: orderType === 'MESA' ? mozos.find((m) => m.id === mozoId)?.name : undefined,
       items: items.map(item => ({
         name: item.name,
         quantity: item.quantity,
@@ -441,7 +442,7 @@ const POSPage: React.FC = () => {
         searchInputRef.current?.focus();
       }
     }, 2000);
-  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables, envio, modoEnvio, zonaId, km, zonas.length, mozoId]);
+  }, [branchId, user?.id, items, customerName, customerAddress, orderType, selectedTableId, paymentMethod, getTotal, clearCart, checkoutStatus, tables, envio, modoEnvio, zonaId, km, zonas.length, mozoId, mozos]);
 
   const handleSignOut = async () => {
     await signOut();
