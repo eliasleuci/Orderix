@@ -368,7 +368,8 @@ const ExtrasModal: React.FC<Props> = ({ isOpen, onClose, productId, productName,
           <p className="text-sm text-text-secondary">
             Se crea una copia de este grupo y sus opciones en cada producto que elijas. Son
             copias independientes: si después cambiás un precio acá, no se actualiza en las
-            demás.
+            demás. Si el producto ya tiene un grupo llamado "{copiando?.name}", se reemplaza
+            por éste (no se duplica).
           </p>
 
           <Input

@@ -133,33 +133,68 @@ class ModifierService {
    * para no tener que tipear la misma lista de extras producto por producto
    * cuando varios comparten los mismos.
    */
+  /**
+   * Copia un grupo con sus opciones a otros productos. Si el producto ya tiene
+   * un grupo con el mismo nombre, lo reemplaza en vez de sumar otro: copiar dos
+   * veces el mismo grupo dejaba las opciones repetidas en la carta.
+   * Los pedidos ya hechos no se tocan: guardan sus extras por nombre y precio.
+   */
   async copiarGrupoAProductos(
     grupo: GrupoDeExtras,
     opciones: OpcionDeExtra[],
     productIds: string[],
     tenantId: string
   ): Promise<ServiceResponse<number>> {
+    const mismoNombre = (n: string) => n.trim().toLowerCase() === grupo.name.trim().toLowerCase();
+    const { data: existentes, error: errExistentes } = await supabase
+      .from('modifier_groups')
+      .select('id, product_id, name')
+      .in('product_id', productIds);
+    if (errExistentes) return { data: 0, error: errExistentes.message };
+
     let copiados = 0;
 
     for (const productId of productIds) {
-      const { data: nuevoGrupo, error: errGrupo } = await this.crearGrupo({
-        tenant_id: tenantId,
-        branch_id: grupo.branch_id,
-        product_id: productId,
-        name: grupo.name,
-        min_select: grupo.min_select,
-        max_select: grupo.max_select,
-      });
-      if (errGrupo || !nuevoGrupo) return { data: copiados, error: errGrupo || 'No se pudo copiar el grupo' };
+      const iguales = (existentes ?? []).filter((g) => g.product_id === productId && mismoNombre(g.name));
+      const [aReemplazar, ...sobrantes] = iguales;
+
+      if (sobrantes.length > 0) {
+        const { error } = await supabase.from('modifier_groups').delete().in('id', sobrantes.map((g) => g.id));
+        if (error) return { data: copiados, error: error.message };
+      }
+
+      let destinoId: string;
+      if (aReemplazar) {
+        const { error: errGrupo } = await supabase
+          .from('modifier_groups')
+          .update({ name: grupo.name, min_select: grupo.min_select, max_select: grupo.max_select, is_active: true })
+          .eq('id', aReemplazar.id);
+        if (errGrupo) return { data: copiados, error: errGrupo.message };
+        const { error: errBorrar } = await supabase.from('modifier_options').delete().eq('group_id', aReemplazar.id);
+        if (errBorrar) return { data: copiados, error: errBorrar.message };
+        destinoId = aReemplazar.id;
+      } else {
+        const { data: nuevoGrupo, error: errGrupo } = await this.crearGrupo({
+          tenant_id: tenantId,
+          branch_id: grupo.branch_id,
+          product_id: productId,
+          name: grupo.name,
+          min_select: grupo.min_select,
+          max_select: grupo.max_select,
+        });
+        if (errGrupo || !nuevoGrupo) return { data: copiados, error: errGrupo || 'No se pudo copiar el grupo' };
+        destinoId = nuevoGrupo.id;
+      }
 
       if (opciones.length > 0) {
         const { error: errOpciones } = await supabase.from('modifier_options').insert(
           opciones.map((o) => ({
             tenant_id: tenantId,
-            group_id: nuevoGrupo.id,
+            group_id: destinoId,
             name: o.name,
             price: o.price,
             display_order: o.display_order,
+            is_active: o.is_active,
           }))
         );
         if (errOpciones) return { data: copiados, error: errOpciones.message };
