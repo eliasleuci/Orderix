@@ -66,6 +66,42 @@ const PAGO = {
   UNPAID: 'Pendiente de pago',
 };
 
+/**
+ * Los extras de un ítem, uno por renglón y con los repetidos juntos
+ * ("2x Extra carne"). Los de la caja ya traen su signo ("- Sin tomate"); los
+ * del pedido web no traen ninguno y son agregados.
+ */
+const extrasDe = (item) => {
+  const porNombre = new Map();
+  for (const m of item.modifiers || []) {
+    const crudo = String(typeof m === 'string' ? m : m?.label || '').trim();
+    if (!crudo) continue;
+    const signo = crudo.startsWith('-') ? '-' : '+';
+    const nombre = crudo.replace(/^[+-]\s*/, '');
+    const precio = typeof m === 'string' ? 0 : Number(m.price) || 0;
+    const clave = `${signo}${nombre.toLowerCase()}|${precio}`;
+    const actual = porNombre.get(clave);
+    if (actual) actual.cantidad += 1;
+    else porNombre.set(clave, { signo, nombre, precio, cantidad: 1 });
+  }
+  return [...porNombre.values()];
+};
+
+const textoExtra = (e) => `${e.signo} ${e.cantidad > 1 ? `${e.cantidad}x ` : ''}${e.nombre}`;
+
+/**
+ * El precio de un ítem ya trae sumados sus extras. En el ticket del cliente el
+ * producto va con su precio base y cada extra con el suyo, así los renglones
+ * suman el total en vez de parecer cobrados dos veces.
+ */
+const importesDe = (item) => {
+  const cantidad = Number(item.quantity || 0);
+  const extras = extrasDe(item);
+  const unitarioExtras = extras.reduce((suma, e) => suma + e.precio * e.cantidad, 0);
+  const base = (Number(item.price || 0) - unitarioExtras) * cantidad;
+  return { base, extras: extras.map((e) => ({ ...e, importe: e.precio * e.cantidad * cantidad })) };
+};
+
 /** Dos columnas: texto a la izquierda, importe pegado a la derecha. */
 const enLinea = (izq, der) => {
   const libre = Math.max(1, ANCHO - izq.length - der.length);
@@ -186,12 +222,9 @@ export async function imprimirTicketCocina(order) {
   for (const item of order.items || []) {
     l.push(`${item.quantity}x ${String(item.name || '').toUpperCase()}`);
 
-    const mods = (item.modifiers || [])
-      .map((m) => (typeof m === 'string' ? m : m.label))
-      .filter(Boolean);
     // Los agregados y las aclaraciones son lo que más se lee mal en cocina:
-    // van indentados y en mayúscula para que se distingan del producto.
-    if (mods.length) l.push('   + ' + mods.join(', ').toUpperCase());
+    // van indentados, uno por renglón y en mayúscula.
+    for (const e of extrasDe(item)) l.push('   ' + textoExtra(e).toUpperCase());
     if (item.notes) l.push('   ** ' + String(item.notes).toUpperCase());
     l.push('');
   }
@@ -231,10 +264,7 @@ export async function imprimirTicketCocina(order) {
       impresora.setTextNormal();
       impresora.bold(false);
 
-      const mods = (item.modifiers || [])
-        .map((m) => (typeof m === 'string' ? m : m.label))
-        .filter(Boolean);
-      if (mods.length) impresora.println('   + ' + mods.join(', ').toUpperCase());
+      for (const e of extrasDe(item)) impresora.println('   ' + textoExtra(e).toUpperCase());
       if (item.notes) impresora.println('   ** ' + String(item.notes).toUpperCase());
       impresora.newLine();
     }
@@ -264,14 +294,10 @@ export async function imprimirTicketCliente(order) {
   l.push(repetir('-'));
 
   for (const item of order.items || []) {
-    const importe = Number(item.price || 0) * Number(item.quantity || 0);
-    l.push(enLinea(`${item.quantity}x ${item.name}`, plata(importe)));
-
-    const mods = (item.modifiers || [])
-      .map((m) => (typeof m === 'string' ? { label: m, price: 0 } : m))
-      .filter((m) => m && m.label);
-    for (const m of mods) {
-      l.push(enLinea(`   + ${m.label}`, m.price ? plata(m.price) : ''));
+    const { base, extras } = importesDe(item);
+    l.push(enLinea(`${item.quantity}x ${item.name}`, plata(base)));
+    for (const e of extras) {
+      l.push(enLinea(`   ${textoExtra(e)}`, e.importe ? plata(e.importe) : ''));
     }
   }
 
@@ -314,14 +340,10 @@ export async function imprimirTicketCliente(order) {
     impresora.drawLine();
 
     for (const item of order.items || []) {
-      const importe = Number(item.price || 0) * Number(item.quantity || 0);
-      impresora.leftRight(`${item.quantity}x ${item.name}`, plata(importe));
-
-      const mods = (item.modifiers || [])
-        .map((m) => (typeof m === 'string' ? { label: m, price: 0 } : m))
-        .filter((m) => m && m.label);
-      for (const m of mods) {
-        impresora.leftRight(`   + ${m.label}`, m.price ? plata(m.price) : '');
+      const { base, extras } = importesDe(item);
+      impresora.leftRight(`${item.quantity}x ${item.name}`, plata(base));
+      for (const e of extras) {
+        impresora.leftRight(`   ${textoExtra(e)}`, e.importe ? plata(e.importe) : '');
       }
     }
 
