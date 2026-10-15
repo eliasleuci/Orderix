@@ -305,13 +305,17 @@ const DeliveryPage: React.FC = () => {
               Todavía no hay zonas cargadas. Agregá la primera acá arriba.
             </p>
           ) : (
-            <div className="space-y-3">
+            // Con muchas zonas la lista empujaba el resto de la pantalla (cobro
+            // por distancia, repartidores) muy abajo: scrollea dentro de su caja.
+            <div className="space-y-2 max-h-[26rem] overflow-y-auto pr-1">
               {zonas.map((z) => (
                 <Card
                   key={z.id}
                   variant="solid"
                   padding="normal"
-                  className={`border-white/5 bg-surface-elevated/40 flex items-center gap-4 ${
+                  // flex-row: Card es una columna por defecto y apilaba nombre,
+                  // precio y botones en tres renglones.
+                  className={`border-white/5 bg-surface-elevated/40 flex-row items-center gap-4 rounded-2xl py-3 ${
                     z.is_active ? '' : 'opacity-50'
                   }`}
                 >
@@ -488,13 +492,13 @@ const DeliveryPage: React.FC = () => {
           {repartidores.length === 0 ? (
             <p className="text-text-muted text-sm text-center py-8">Todavía no hay repartidores cargados.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 max-h-[26rem] overflow-y-auto pr-1">
               {repartidores.map((r) => (
                 <Card
                   key={r.id}
                   variant="solid"
                   padding="normal"
-                  className={`border-white/5 bg-surface-elevated/40 flex items-center gap-4 ${
+                  className={`border-white/5 bg-surface-elevated/40 flex-row items-center gap-4 rounded-2xl py-3 ${
                     r.is_active ? '' : 'opacity-50'
                   }`}
                 >
