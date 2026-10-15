@@ -213,11 +213,19 @@ export interface ConfigWeb {
   min_order: number;
   accepts_cash: boolean;
   accepts_transfer: boolean;
+  /** El alias en uso: es el que ve el cliente. */
   transfer_info: string | null;
+  /** Todos los alias cargados; uno solo activo. */
+  transfer_aliases: AliasTransferencia[] | null;
   takeaway_enabled: boolean;
   prep_minutes: number | null;
   /** Turnos por día (clave 0 = domingo). null: toma pedidos a cualquier hora. */
   schedule: HorarioWeb | null;
+}
+
+export interface AliasTransferencia {
+  alias: string;
+  activo: boolean;
 }
 
 export interface TurnoWeb {
@@ -251,6 +259,7 @@ export const webConfigService = {
         accepts_cash: true,
         accepts_transfer: false,
         transfer_info: null,
+        transfer_aliases: null,
         takeaway_enabled: true,
         prep_minutes: null,
         schedule: null,
@@ -275,6 +284,7 @@ export const webConfigService = {
           accepts_cash: config.accepts_cash,
           accepts_transfer: config.accepts_transfer,
           transfer_info: config.transfer_info || null,
+          transfer_aliases: config.transfer_aliases,
           takeaway_enabled: config.takeaway_enabled,
           prep_minutes: config.prep_minutes,
           schedule: config.schedule,

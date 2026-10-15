@@ -7,6 +7,8 @@ import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import HorarioWebEditor, { horarioPorDefecto, validarHorario } from './HorarioWebEditor';
+import AliasTransferenciaEditor from './AliasTransferenciaEditor';
+import type { AliasTransferencia } from '../../../services/webshopService';
 
 interface Props {
   isOpen: boolean;
@@ -35,6 +37,10 @@ const Switch: React.FC<{
     </span>
   </button>
 );
+
+/** Si todavía no se usó la lista, el alias que estaba cargado pasa a ser el primero. */
+const aliasesDe = (config: ConfigWeb): AliasTransferencia[] =>
+  config.transfer_aliases ?? (config.transfer_info?.trim() ? [{ alias: config.transfer_info, activo: true }] : []);
 
 const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
   const { branchId, tenantId } = useAuthStore();
@@ -87,10 +93,18 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
     const errorHorario = config.schedule ? validarHorario(config.schedule) : null;
     if (errorHorario) return onAviso(errorHorario, 'error');
 
+    const aliases = aliasesDe(config)
+      .map((a) => ({ ...a, alias: a.alias.trim() }))
+      .filter((a) => a.alias);
+    const enUso = aliases.find((a) => a.activo) ?? aliases[0];
+
     setGuardando(true);
     const { error } = await webConfigService.guardar({
       ...config,
       tenant_id: tenantId!,
+      // El que ve el cliente es siempre el que está en uso.
+      transfer_info: enUso?.alias ?? null,
+      transfer_aliases: aliases.length > 0 ? aliases.map((a) => ({ ...a, activo: a === enUso })) : null,
       whatsapp_phone: soloDigitos || null,
       min_order: parseFloat(minimo) || 0,
       prep_minutes: parseInt(minutos, 10) || null,
@@ -226,10 +240,9 @@ const ConfigWebModal: React.FC<Props> = ({ isOpen, onClose, onAviso }) => {
                   detalle="Se arregla con el cliente por WhatsApp"
                 />
                 {config.accepts_transfer && (
-                  <Input
-                    placeholder="Alias o CBU que se le muestra al cliente"
-                    value={config.transfer_info ?? ''}
-                    onChange={(e) => setConfig({ ...config, transfer_info: e.target.value })}
+                  <AliasTransferenciaEditor
+                    aliases={aliasesDe(config)}
+                    onChange={(transfer_aliases) => setConfig({ ...config, transfer_aliases })}
                   />
                 )}
               </div>
