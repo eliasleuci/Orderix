@@ -404,8 +404,8 @@ const CatalogPage: React.FC = () => {
                     </label>
                     <div className="flex gap-4 items-center">
                       <div className="w-16 h-16 rounded-xl bg-surface-base border border-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                        {editingProduct.image_url ? (
-                          <img src={editingProduct.image_url} alt="Preview" className="w-full h-full object-cover" />
+                        {editingProduct.thumbnail_url || editingProduct.image_url ? (
+                          <img src={editingProduct.thumbnail_url || editingProduct.image_url} alt="Preview" className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon size={20} className="text-white/20" />
                         )}
@@ -422,7 +422,7 @@ const CatalogPage: React.FC = () => {
                             onChange={handleImageUpload} 
                           />
                         </label>
-                        {editingProduct.image_url && (
+                        {(editingProduct.thumbnail_url || editingProduct.image_url) && (
                           <button 
                             type="button"
                             onClick={() => setEditingProduct({ ...editingProduct, image_url: '', thumbnail_url: '' })}

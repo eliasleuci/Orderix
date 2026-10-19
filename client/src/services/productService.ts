@@ -9,6 +9,31 @@ import { ServiceResponse, Product, Category } from '../types/domain';
  *  borrado lo invalida al toque. */
 const CACHE_TTL_MS = 30_000;
 
+/**
+ * Las fotos se guardan en base64 dentro de la fila. Con `select('*')` Catálogo
+ * y Venta bajaban la foto completa (hasta 1400px) de cada producto y categoría
+ * para mostrar una tarjeta: varios megas antes de pintar la pantalla. Las
+ * listas traen sólo la miniatura, que es lo único que se muestra.
+ */
+const COLUMNAS_PRODUCTO =
+  'id, tenant_id, branch_id, category_id, name, description, price, is_active, created_at, thumbnail_url, categories(id, name)';
+const COLUMNAS_CATEGORIA = 'id, name, tenant_id, display_order, is_active, show_in_carta, thumbnail_url';
+
+/**
+ * Las filas cargadas antes de que existieran las miniaturas no tienen una: a
+ * esas (y sólo a esas) se les trae la foto original para no mostrarlas vacías.
+ */
+async function completarSinMiniatura<T extends { id: string; thumbnail_url?: string | null; image_url?: string | null }>(
+  tabla: 'products' | 'categories',
+  filas: T[]
+): Promise<T[]> {
+  const ids = filas.filter((f) => !f.thumbnail_url).map((f) => f.id);
+  if (ids.length === 0) return filas;
+  const { data } = await supabase.from(tabla).select('id, image_url').in('id', ids).not('image_url', 'is', null);
+  const original = new Map((data ?? []).map((f: any) => [f.id, f.image_url as string]));
+  return filas.map((f) => (original.has(f.id) ? { ...f, image_url: original.get(f.id) } : f));
+}
+
 class ProductService implements IProductService {
   private cache = new Map<string, { data: Product[]; ts: number }>();
 
@@ -25,27 +50,29 @@ class ProductService implements IProductService {
 
     let query = supabase
       .from('products')
-      .select('*, categories(*)')
+      .select(COLUMNAS_PRODUCTO)
       .eq('branch_id', branchId);
 
     if (!includeInactive) {
       query = query.eq('is_active', true);
     }
 
-    const { data, error } = await query;
-    if (!error && data) {
-      this.cache.set(cacheKey, { data, ts: Date.now() });
-    }
-    return { data, error: error?.message || null };
+    const { data: filas, error } = await query;
+    if (error) return { data: null, error: error.message };
+
+    const data = (await completarSinMiniatura('products', (filas ?? []) as any[])) as Product[];
+    this.cache.set(cacheKey, { data, ts: Date.now() });
+    return { data, error: null };
   }
 
   async getCategories(): Promise<ServiceResponse<Category[]>> {
-    const { data, error } = await supabase
+    const { data: filas, error } = await supabase
       .from('categories')
-      .select('*')
+      .select(COLUMNAS_CATEGORIA)
       .order('display_order');
+    if (error) return { data: null, error: error.message };
 
-    return { data, error: error?.message || null };
+    return { data: await completarSinMiniatura('categories', (filas ?? []) as Category[]), error: null };
   }
 
   async createProduct(product: Partial<Product>): Promise<ServiceResponse<Product>> {

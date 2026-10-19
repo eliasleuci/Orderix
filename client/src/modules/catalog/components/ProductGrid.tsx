@@ -25,7 +25,7 @@ const ProductGrid: React.FC<ProductGridProps> = React.memo(({ products, onEdit, 
           <Card variant="glass" padding="normal" className={`relative flex flex-col border ${p.is_active ? 'border-primary/10 hover:border-primary/30' : 'border-danger/20 opacity-70'} transition-all duration-300 group shadow-sm hover:shadow-xl`}>
 
             <div className="aspect-[4/3] rounded-2xl bg-surface-base/50 mb-4 flex items-center justify-center overflow-hidden relative border border-border-subtle">
-              {p.image_url ? (
+              {p.thumbnail_url || p.image_url ? (
                 <img
                   src={p.thumbnail_url || p.image_url}
                   alt={p.name}

@@ -184,18 +184,18 @@ const CategoriasModal: React.FC<Props> = ({ isOpen, onClose, onCambios, onAviso 
                     "Foto": antes era un cuadradito gris que parecía decoración
                     y la única pista de que se podía tocar aparecía al pasar el
                     mouse por encima, cosa que en un celular no pasa nunca. */}
-                <Tooltip titulo={cat.image_url ? 'Cambiar la foto' : 'Agregar una foto'}>
+                <Tooltip titulo={(cat.thumbnail_url || cat.image_url) ? 'Cambiar la foto' : 'Agregar una foto'}>
                 <label
-                  aria-label={cat.image_url ? 'Cambiar la foto' : 'Agregar una foto'}
+                  aria-label={(cat.thumbnail_url || cat.image_url) ? 'Cambiar la foto' : 'Agregar una foto'}
                   className={`w-16 h-16 rounded-xl overflow-hidden flex flex-col items-center justify-center shrink-0 cursor-pointer relative group transition-colors ${
-                    cat.image_url
+                    (cat.thumbnail_url || cat.image_url)
                       ? 'bg-white/5 border border-white/10'
                       : 'border-2 border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10'
                   }`}
                 >
-                  {cat.image_url ? (
+                  {(cat.thumbnail_url || cat.image_url) ? (
                     <>
-                      <img src={cat.thumbnail_url || cat.image_url} alt="" className="w-full h-full object-cover" />
+                      <img src={cat.thumbnail_url || cat.image_url || undefined} alt="" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <ImagePlus size={16} className="text-white" />
                       </div>

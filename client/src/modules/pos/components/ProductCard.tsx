@@ -51,7 +51,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({ product, onAdd, on
       >
         {/* IMAGE / ICON */}
         <div className="aspect-square bg-surface-base rounded-2xl mb-3 flex items-center justify-center overflow-hidden border-b border-border-subtle relative">
-          {product.image_url ? (
+          {product.thumbnail_url || product.image_url ? (
             <img
               src={product.thumbnail_url || product.image_url}
               alt={product.name}
