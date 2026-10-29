@@ -99,7 +99,12 @@ const POSPage: React.FC = () => {
   // Search Input Ref
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const editingCartItem = useMemo(() => 
+  const usaExtrasDeCatalogo = useMemo(
+    () => Object.values(extrasPorProducto).some((grupos) => grupos.length > 0),
+    [extrasPorProducto]
+  );
+
+  const editingCartItem = useMemo(() =>
     items.find(i => i.cartItemId === editingCartItemId) || null
   , [items, editingCartItemId]);
 
@@ -1013,6 +1018,7 @@ const POSPage: React.FC = () => {
         isOpen={isModifierModalOpen}
         item={editingCartItem}
         grupos={editingCartItem ? extrasPorProducto[editingCartItem.id] : undefined}
+        usaExtrasDeCatalogo={usaExtrasDeCatalogo}
         onClose={() => setIsModifierModalOpen(false)}
         onSave={handleSaveModifiers}
       />

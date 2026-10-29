@@ -13,6 +13,8 @@ interface ModifierModalProps {
   item: CartItem | null;
   /** Los extras del producto cargados en Catálogo (los mismos del pedido web). */
   grupos?: GrupoExtras[];
+  /** La sucursal ya carga extras en Catálogo (en al menos un producto). */
+  usaExtrasDeCatalogo?: boolean;
   onClose: () => void;
   onSave: (cartItemId: string, modifiers: CartModifier[], notes: string) => void;
 }
@@ -56,15 +58,16 @@ function saveModifiers(mods: Modifier[]) {
 // el efecto que carga la selección y borraría lo que se va marcando.
 const SIN_GRUPOS: GrupoExtras[] = [];
 
-const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SIN_GRUPOS, onClose, onSave }) => {
+const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SIN_GRUPOS, usaExtrasDeCatalogo = false, onClose, onSave }) => {
   const [modifiers, setModifiers] = useState<Modifier[]>(loadModifiers);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, number>>({});
   const [elegidas, setElegidas] = useState<Elegidas>({});
   const [notes, setNotes] = useState('');
-  // Los extras de la caja son una lista única pensada para hamburguesas: en un
-  // producto con extras propios (una gaseosa con sus sabores) sobran y
-  // confunden. Sólo se muestran si el producto no tiene los suyos, o si el
-  // ítem ya trae alguno de la caja, para poder sacárselo.
+  // Los extras de la caja son una lista única pensada para hamburguesas, y se
+  // ofrecían en cualquier producto (una gaseosa, una cerveza). Un local que ya
+  // carga sus extras en Catálogo no la necesita: ahí sólo se muestra si el
+  // ítem ya trae alguno de la caja, para poder sacárselo. El que nunca cargó
+  // extras en Catálogo la sigue teniendo como siempre.
   const [mostrarExtrasDeCaja, setMostrarExtrasDeCaja] = useState(true);
 
   // Inline editor state
@@ -98,12 +101,12 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
       });
       setElegidas(marcadas);
       setSelectedModifiers(initial);
-      setMostrarExtrasDeCaja(grupos.length === 0 || Object.keys(initial).length > 0);
+      setMostrarExtrasDeCaja(!usaExtrasDeCatalogo || Object.keys(initial).length > 0);
       setNotes(item.notes || '');
       setEditingId(null);
       setShowNewForm(false);
     }
-  }, [isOpen, item, grupos]);
+  }, [isOpen, item, grupos, usaExtrasDeCatalogo]);
 
   // Focus new label input when form opens
   useEffect(() => {
