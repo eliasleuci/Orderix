@@ -6,7 +6,7 @@ import { ANIMATIONS } from '../../../lib/motion';
 
 import { CartItem, CartModifier } from '../../../store/cartStore';
 import type { GrupoExtras } from '../../../services/webshopService';
-import SelectorDeExtras, { Elegidas, opcionesElegidas } from '../../../components/extras/SelectorDeExtras';
+import SelectorDeExtras, { Elegidas, faltaElegir as buscarFaltante, opcionesElegidas } from '../../../components/extras/SelectorDeExtras';
 
 interface ModifierModalProps {
   isOpen: boolean;
@@ -61,6 +61,11 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, number>>({});
   const [elegidas, setElegidas] = useState<Elegidas>({});
   const [notes, setNotes] = useState('');
+  // Los extras de la caja son una lista única pensada para hamburguesas: en un
+  // producto con extras propios (una gaseosa con sus sabores) sobran y
+  // confunden. Sólo se muestran si el producto no tiene los suyos, o si el
+  // ítem ya trae alguno de la caja, para poder sacárselo.
+  const [mostrarExtrasDeCaja, setMostrarExtrasDeCaja] = useState(true);
 
   // Inline editor state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -93,6 +98,7 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
       });
       setElegidas(marcadas);
       setSelectedModifiers(initial);
+      setMostrarExtrasDeCaja(grupos.length === 0 || Object.keys(initial).length > 0);
       setNotes(item.notes || '');
       setEditingId(null);
       setShowNewForm(false);
@@ -185,7 +191,10 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
+  const faltaElegir = buscarFaltante(grupos, elegidas);
+
   const handleSave = () => {
+    if (faltaElegir) return;
     const modsToSave: CartModifier[] = opcionesElegidas(grupos, elegidas).map(o => ({
       label: o.nombre,
       price: o.precio,
@@ -253,6 +262,7 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
               </section>
             )}
 
+            {mostrarExtrasDeCaja && (<>
             {/* EXTRAS (con precio editable) */}
             <section>
               <div className="flex items-center justify-between mb-4">
@@ -488,6 +498,7 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
                 </motion.section>
               )}
             </AnimatePresence>
+            </>)}
 
             {/* NOTAS LIBRES */}
             <section>
@@ -503,8 +514,8 @@ const ModifierModal: React.FC<ModifierModalProps> = ({ isOpen, item, grupos = SI
 
           {/* FOOTER */}
           <footer className="p-6 border-t border-white/5 bg-surface-base">
-            <Button size="lg" fullWidth leftIcon={<Check size={20} />} onClick={handleSave}>
-              Guardar Modificaciones
+            <Button size="lg" fullWidth leftIcon={<Check size={20} />} disabled={Boolean(faltaElegir)} onClick={handleSave}>
+              {faltaElegir ? `Elegí ${faltaElegir.nombre.toLowerCase()}` : 'Guardar Modificaciones'}
             </Button>
           </footer>
         </motion.div>
